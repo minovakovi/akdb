@@ -19,7 +19,7 @@
  */
 
 /**
- * @author Dino Laktašić, abstracted by Tomislav Mikulček,updated by Nikola Miljancic
+ * @author Dino Laktašić, abstracted by Tomislav Mikulček,updated by Nikola Miljancic, updated by Fran Turković
  * @brief  Function that compares values according to their data type, checks arithmetic statement which is part of expression given in 
  *   	  the function below. For every type of arithmetic operator, there is switch-case statement which examines type of el and
            casts void operands to this type.
@@ -32,7 +32,7 @@
 
 #include "expression_check.h"
 
-//int AK_check_arithmetic_statement(AK_list_elem el, const char *op, const char *a, const char *b) {
+//int AK_check_arithmetic_statement(AK_list_elem el, const char *op, const char *a, const char *b){
 int AK_check_arithmetic_statement(struct list_node *el, const char *op, const char *a, const char *b) {  
   AK_PRO;
   char **numericStringEnd=NULL; //A pointer to the location where the numeric part of the string ends
@@ -167,6 +167,35 @@ int AK_check_arithmetic_statement(struct list_node *el, const char *op, const ch
 				AK_EPI;
 				return EXIT_ERROR;
 		}
+	}else if(strcmp(op, "=") == 0){
+	
+		switch (el->type) {
+
+				case TYPE_INT:
+					return *(int *) a == *(int *) b;
+				case TYPE_FLOAT:
+					return *((float *) a) == *((float *) b);
+				case TYPE_NUMBER:
+					return *((double *) a) == *((double *) b);
+				case TYPE_VARCHAR:
+					return strcmp((const char *) a, (const char *) b) == 0;
+
+			}
+	}
+	else if(strcmp(op, "!=") == 0){
+	
+		switch (el->type) {
+
+				case TYPE_INT:
+					return *(int *) a != *(int *) b;
+				case TYPE_FLOAT:
+					return *((float *) a) != *((float *) b);
+				case TYPE_NUMBER:
+					return *((double *) a) != *((double *) b);
+				case TYPE_VARCHAR:
+					return strcmp((const char *) a, (const char *) b) != 0;
+
+			}
 	}
 	return 0;
 }
@@ -282,7 +311,7 @@ int AK_check_regex_operator_expression(const char * value, const char * expressi
     return isMatched;
 }
 /**
- * @author Matija Šestak, updated by Dino Laktašić,Nikola Miljancic, abstracted by Tomislav Mikulček
+ * @author Matija Šestak, updated by Dino Laktašić,Nikola Miljancic, abstracted by Tomislav Mikulček, updated by Fran Turković
  * @brief  Function that evaluates whether one record (row) satisfies logical expression. It goes through
            given row. If it comes to logical operator, it evaluates by itself. For arithmetic operators
            function AK_check_arithmetic_statement() is called.
@@ -432,6 +461,377 @@ int AK_check_if_row_satisfies_expression(struct list_node *row_root, struct list
 	            else{
 	            	AK_InsertAtEnd_L3(TYPE_INT, &false, sizeof (int), temp_result);
 	            }
+			}else if(strcmp(el->data,"IN")==0 || strcmp(el->data,"=ANY")==0 || strcmp(el->data,"= ANY")==0){
+            	
+            	int rs;
+				const char *my_str_literal = b->data;
+				char *token, *str, *tofree;
+				tofree = str = strdup(my_str_literal);  
+				while ((token = strsep(&str, ","))){
+					if(b->type==TYPE_INT){
+						int token2 = atoi(token);
+						rs = AK_check_arithmetic_statement(b, "=", a->data, (char *)&token2);
+					}
+					else if(b->type==TYPE_FLOAT){
+						float token2 = atof(token);
+						rs = AK_check_arithmetic_statement(b, "=", a->data, (char *)&token2);
+					}
+					else{
+						rs = AK_check_arithmetic_statement(b, "=", a->data, token);
+					}
+					if(rs){
+						break;
+					}
+				}
+				free(tofree);
+
+	            if(rs){
+	            	AK_InsertAtEnd_L3(TYPE_INT, &true, sizeof (int), temp_result);
+	            }
+	            else{
+	            	AK_InsertAtEnd_L3(TYPE_INT, &false, sizeof (int), temp_result);
+	            }
+			}else if(strcmp(el->data,">ANY")==0 || strcmp(el->data,"> ANY")==0){
+            	
+            	int rs;
+				const char *my_str_literal = b->data;
+				char *token, *str, *tofree;
+				tofree = str = strdup(my_str_literal);
+				int firstPassed = 0;  
+				while ((token = strsep(&str, ","))){
+					if(b->type==TYPE_INT){
+						int token2 = atoi(token);
+						rs = AK_check_arithmetic_statement(b, ">", a->data, (char *)&token2);
+					}
+					else if(b->type==TYPE_FLOAT){
+						float token2 = atof(token);
+						rs = AK_check_arithmetic_statement(b, ">", a->data, (char *)&token2);
+					}
+					else{
+						rs = AK_check_arithmetic_statement(b, ">", a->data, token);
+					}
+					if(rs){
+						break;
+					}
+				}
+				free(tofree);
+
+	            if(rs){
+	            	AK_InsertAtEnd_L3(TYPE_INT, &true, sizeof (int), temp_result);
+	            }
+	            else{
+	            	AK_InsertAtEnd_L3(TYPE_INT, &false, sizeof (int), temp_result);
+	            }
+			}else if(strcmp(el->data,"<ANY")==0 || strcmp(el->data,"< ANY")==0){
+            	
+            	int rs;
+				const char *my_str_literal = b->data;
+				char *token, *str, *tofree;
+				tofree = str = strdup(my_str_literal);
+				int firstPassed = 0;  
+				while ((token = strsep(&str, ","))){
+					if(b->type==TYPE_INT){
+						int token2 = atoi(token);
+						rs = AK_check_arithmetic_statement(b, "<", a->data, (char *)&token2);
+					}
+					else if(b->type==TYPE_FLOAT){
+						float token2 = atof(token);
+						rs = AK_check_arithmetic_statement(b, "<", a->data, (char *)&token2);
+					}
+					else{
+						rs = AK_check_arithmetic_statement(b, "<", a->data, token);
+					}
+					if(rs){
+						break;
+					}
+				}
+				free(tofree);
+
+	            if(rs){
+	            	AK_InsertAtEnd_L3(TYPE_INT, &true, sizeof (int), temp_result);
+	            }
+	            else{
+	            	AK_InsertAtEnd_L3(TYPE_INT, &false, sizeof (int), temp_result);
+	            }
+			}else if(strcmp(el->data,"<=ANY")==0 || strcmp(el->data,"<= ANY")==0){
+            	
+            	int rs;
+				const char *my_str_literal = b->data;
+				char *token, *str, *tofree;
+				tofree = str = strdup(my_str_literal);
+				int firstPassed = 0;  
+				while ((token = strsep(&str, ","))){
+					if(b->type==TYPE_INT){
+						int token2 = atoi(token);
+						rs = AK_check_arithmetic_statement(b, "<=", a->data, (char *)&token2);
+					}
+					else if(b->type==TYPE_FLOAT){
+						float token2 = atof(token);
+						rs = AK_check_arithmetic_statement(b, "<=", a->data, (char *)&token2);
+					}
+					else{
+						rs = AK_check_arithmetic_statement(b, "<=", a->data, token);
+					}
+					if(rs){
+						break;
+					}
+				}
+				free(tofree);
+
+	            if(rs){
+	            	AK_InsertAtEnd_L3(TYPE_INT, &true, sizeof (int), temp_result);
+	            }
+	            else{
+	            	AK_InsertAtEnd_L3(TYPE_INT, &false, sizeof (int), temp_result);
+	            }
+			}else if(strcmp(el->data,">=ANY")==0 || strcmp(el->data,">= ANY")==0){
+            	
+            	int rs;
+				const char *my_str_literal = b->data;
+				char *token, *str, *tofree;
+				tofree = str = strdup(my_str_literal);
+				int firstPassed = 0;  
+				while ((token = strsep(&str, ","))){
+					if(b->type==TYPE_INT){
+						int token2 = atoi(token);
+						rs = AK_check_arithmetic_statement(b, ">=", a->data, (char *)&token2);
+					}
+					else if(b->type==TYPE_FLOAT){
+						float token2 = atof(token);
+						rs = AK_check_arithmetic_statement(b, ">=", a->data, (char *)&token2);
+					}
+					else{
+						rs = AK_check_arithmetic_statement(b, ">=", a->data, token);
+					}
+					if(rs){
+						break;
+					}
+				}
+				free(tofree);
+
+	            if(rs){
+	            	AK_InsertAtEnd_L3(TYPE_INT, &true, sizeof (int), temp_result);
+	            }
+	            else{
+	            	AK_InsertAtEnd_L3(TYPE_INT, &false, sizeof (int), temp_result);
+	            }
+			}else if(strcmp(el->data,"!=ANY")==0 || strcmp(el->data,"!= ANY")==0 || strcmp(el->data,"<>ANY")==0 || strcmp(el->data,"<> ANY")==0){
+            	
+            	int rs;
+				const char *my_str_literal = b->data;
+				char *token, *str, *tofree;
+				tofree = str = strdup(my_str_literal);
+				int firstPassed = 0;  
+				while ((token = strsep(&str, ","))){
+					if(b->type==TYPE_INT){
+						int token2 = atoi(token);
+						rs = AK_check_arithmetic_statement(b, "!=", a->data, (char *)&token2);
+					}
+					else if(b->type==TYPE_FLOAT){
+						float token2 = atof(token);
+						rs = AK_check_arithmetic_statement(b, "!=", a->data, (char *)&token2);
+					}
+					else{
+						rs = AK_check_arithmetic_statement(b, "!=", a->data, token);
+					}
+					if(rs){
+						break;
+					}
+				}
+				free(tofree);
+
+	            if(rs){
+	            	AK_InsertAtEnd_L3(TYPE_INT, &true, sizeof (int), temp_result);
+	            }
+	            else{
+	            	AK_InsertAtEnd_L3(TYPE_INT, &false, sizeof (int), temp_result);
+	            }
+			}else if(strcmp(el->data,">ALL")==0 || strcmp(el->data,"> ALL")==0){
+            	
+            	int rs;
+				const char *my_str_literal = b->data;
+				char *token, *str, *tofree;
+				tofree = str = strdup(my_str_literal);
+				int firstPassed = 0;  
+				while ((token = strsep(&str, ","))){
+					if(b->type==TYPE_INT){
+						int token2 = atoi(token);
+						rs = AK_check_arithmetic_statement(b, "<", a->data, (char *)&token2);
+					}
+					else if(b->type==TYPE_FLOAT){
+						float token2 = atof(token);
+						rs = AK_check_arithmetic_statement(b, "<", a->data, (char *)&token2);
+					}
+					else{
+						rs = AK_check_arithmetic_statement(b, "<", a->data, token);
+					}
+					if(rs){
+						break;
+					}
+				}
+				free(tofree);
+
+	            if(!rs){
+	            	AK_InsertAtEnd_L3(TYPE_INT, &true, sizeof (int), temp_result);
+	            }
+	            else{
+	            	AK_InsertAtEnd_L3(TYPE_INT, &false, sizeof (int), temp_result);
+	            }
+			}else if(strcmp(el->data,"<ALL")==0 || strcmp(el->data,"< ALL")==0){
+            	
+            	int rs;
+				const char *my_str_literal = b->data;
+				char *token, *str, *tofree;
+				tofree = str = strdup(my_str_literal);
+				int firstPassed = 0;  
+				while ((token = strsep(&str, ","))){
+					if(b->type==TYPE_INT){
+						int token2 = atoi(token);
+						rs = AK_check_arithmetic_statement(b, ">", a->data, (char *)&token2);
+					}
+					else if(b->type==TYPE_FLOAT){
+						float token2 = atof(token);
+						rs = AK_check_arithmetic_statement(b, ">", a->data, (char *)&token2);
+					}
+					else{
+						rs = AK_check_arithmetic_statement(b, ">", a->data, token);
+					}
+					if(rs){
+						break;
+					}
+				}
+				free(tofree);
+
+	            if(!rs){
+	            	AK_InsertAtEnd_L3(TYPE_INT, &true, sizeof (int), temp_result);
+	            }
+	            else{
+	            	AK_InsertAtEnd_L3(TYPE_INT, &false, sizeof (int), temp_result);
+	            }
+			}else if(strcmp(el->data,">=ALL")==0 || strcmp(el->data,">= ALL")==0){
+            	
+            	int rs;
+				const char *my_str_literal = b->data;
+				char *token, *str, *tofree;
+				tofree = str = strdup(my_str_literal);
+				int firstPassed = 0;  
+				while ((token = strsep(&str, ","))){
+					if(b->type==TYPE_INT){
+						int token2 = atoi(token);
+						rs = AK_check_arithmetic_statement(b, "<=", a->data, (char *)&token2);
+					}
+					else if(b->type==TYPE_FLOAT){
+						float token2 = atof(token);
+						rs = AK_check_arithmetic_statement(b, "<=", a->data, (char *)&token2);
+					}
+					else{
+						rs = AK_check_arithmetic_statement(b, "<=", a->data, token);
+					}
+					if(rs){
+						break;
+					}
+				}
+				free(tofree);
+
+	            if(!rs){
+	            	AK_InsertAtEnd_L3(TYPE_INT, &true, sizeof (int), temp_result);
+	            }
+	            else{
+	            	AK_InsertAtEnd_L3(TYPE_INT, &false, sizeof (int), temp_result);
+	            }
+			}else if(strcmp(el->data,"<=ALL")==0 || strcmp(el->data,"<= ALL")==0){
+            	
+            	int rs;
+				const char *my_str_literal = b->data;
+				char *token, *str, *tofree;
+				tofree = str = strdup(my_str_literal);
+				int firstPassed = 0;  
+				while ((token = strsep(&str, ","))){
+					if(b->type==TYPE_INT){
+						int token2 = atoi(token);
+						rs = AK_check_arithmetic_statement(b, ">=", a->data, (char *)&token2);
+					}
+					else if(b->type==TYPE_FLOAT){
+						float token2 = atof(token);
+						rs = AK_check_arithmetic_statement(b, ">=", a->data, (char *)&token2);
+					}
+					else{
+						rs = AK_check_arithmetic_statement(b, ">=", a->data, token);
+					}
+					if(rs){
+						break;
+					}
+				}
+				free(tofree);
+
+	            if(!rs){
+	            	AK_InsertAtEnd_L3(TYPE_INT, &true, sizeof (int), temp_result);
+	            }
+	            else{
+	            	AK_InsertAtEnd_L3(TYPE_INT, &false, sizeof (int), temp_result);
+	            }
+			}else if(strcmp(el->data,"!=ALL")==0 || strcmp(el->data,"!= ALL")==0 || strcmp(el->data,"<>ALL")==0 || strcmp(el->data,"<> ALL")==0){
+            	
+            	int rs;
+				const char *my_str_literal = b->data;
+				char *token, *str, *tofree;
+				tofree = str = strdup(my_str_literal);
+				int firstPassed = 0;  
+				while ((token = strsep(&str, ","))){
+					if(b->type==TYPE_INT){
+						int token2 = atoi(token);
+						rs = AK_check_arithmetic_statement(b, "=", a->data, (char *)&token2);
+					}
+					else if(b->type==TYPE_FLOAT){
+						float token2 = atof(token);
+						rs = AK_check_arithmetic_statement(b, "=", a->data, (char *)&token2);
+					}
+					else{
+						rs = AK_check_arithmetic_statement(b, "=", a->data, token);
+					}
+					if(rs){
+						break;
+					}
+				}
+				free(tofree);
+
+	            if(!rs){
+	            	AK_InsertAtEnd_L3(TYPE_INT, &true, sizeof (int), temp_result);
+	            }
+	            else{
+	            	AK_InsertAtEnd_L3(TYPE_INT, &false, sizeof (int), temp_result);
+	            }
+			}else if(strcmp(el->data,"=ALL")==0 || strcmp(el->data,"= ALL")==0){
+            	
+            	int rs;
+				const char *my_str_literal = b->data;
+				char *token, *str, *tofree;
+				tofree = str = strdup(my_str_literal);
+				int firstPassed = 0;  
+				while ((token = strsep(&str, ","))){
+					if(b->type==TYPE_INT){
+						int token2 = atoi(token);
+						rs = AK_check_arithmetic_statement(b, "!=", a->data, (char *)&token2);
+					}
+					else if(b->type==TYPE_FLOAT){
+						float token2 = atof(token);
+						rs = AK_check_arithmetic_statement(b, "!=", a->data, (char *)&token2);
+					}
+					else{
+						rs = AK_check_arithmetic_statement(b, "!=", a->data, token);
+					}
+					if(rs){
+						break;
+					}
+				}
+				free(tofree);
+
+	            if(!rs){
+	            	AK_InsertAtEnd_L3(TYPE_INT, &true, sizeof (int), temp_result);
+	            }
+	            else{
+	            	AK_InsertAtEnd_L3(TYPE_INT, &false, sizeof (int), temp_result);
+	            }
 
             }else if(strcmp(el->data,"LIKE")==0 || strcmp(el->data,"~~")==0){
 
@@ -507,8 +907,10 @@ int AK_check_if_row_satisfies_expression(struct list_node *row_root, struct list
 //TODO: Add description
 TestResult AK_expression_check_test()
 {
+	printf("EXPRESSION CHECK TEST STARTS\n");
     AK_PRO;
 
+	printf("EXPRESSION CHECK TEST 1:\n");
     struct list_node *elem = (struct list_node *) AK_malloc(sizeof(struct list_node));
     elem->type = TYPE_INT;
     const char *op = "+";
@@ -518,6 +920,8 @@ TestResult AK_expression_check_test()
     int outcome2;
     int outcome3;
     int successful = 0;
+	int failed = 0;
+	
 
     int likeOutcome1,likeOutcome2,likeOutcome3,likeOutcome4,likeOutcome5;
 
@@ -545,6 +949,135 @@ TestResult AK_expression_check_test()
     printf("Like thomas - expression .*thomas.* outcome is %d\n", likeOutcome5);
 	
     AK_free(elem);
+	
+    printf("EXPRESSION CHECK TEST 2 (test relation operation IN):");
+	
+	// list of attributes which will be in the result of selection
+	struct list_node *attributes = (struct list_node *) AK_malloc(sizeof (struct list_node));
+
+	// list of elements which represent the condition for selection
+	struct list_node *condition = (struct list_node *) AK_malloc(sizeof (struct list_node));
+
+
+	char *srcTable="student";
+	char *destTable="select_result";
+
+	printf("TEST ZA OPERATOR IN ZAPOČINJE!\n");
+
+	AK_Init_L3(&attributes);
+	AK_InsertAtEnd_L3(TYPE_ATTRIBS, "firstname", sizeof("firstname"), attributes);
+	AK_InsertAtEnd_L3(TYPE_ATTRIBS, "year", sizeof("year"), attributes);
+	AK_InsertAtEnd_L3(TYPE_ATTRIBS, "weight", sizeof("weight"), attributes);
+
+	AK_Init_L3(&condition);
+	AK_InsertAtEnd_L3(TYPE_ATTRIBS, "firstname", sizeof("firstname"), condition);
+    char conditionAtributes[] = "Marina,Dino";
+
+	AK_InsertAtEnd_L3(TYPE_VARCHAR, conditionAtributes, sizeof(conditionAtributes), condition);
+	AK_InsertAtEnd_L3(TYPE_OPERATOR, "IN", sizeof("IN"), condition);
+
+
+
+    if (AK_select(srcTable, destTable, attributes, condition) == EXIT_SUCCESS)
+    {
+        successful++;
+    }   
+    else
+    {
+        failed++;
+    }
+	
+	AK_DeleteAll_L3(&attributes);
+	AK_DeleteAll_L3(&condition);
+	
+    AK_print_table(srcTable);
+	printf("\n SELECT firstname,year,weight FROM student WHERE firstname IN ('Marina','Dino');\n\n");
+    AK_print_table(destTable);
+	
+	AK_free(attributes);
+	AK_free(condition);
+
+	printf("TEST ZA OPERATOR >ANY ZAPOČINJE!\n");
+
+	struct list_node *attributes2 = (struct list_node *) AK_malloc(sizeof (struct list_node));
+
+	struct list_node *condition2 = (struct list_node *) AK_malloc(sizeof (struct list_node));
+
+	char *destTable2="select_result2";
+	AK_Init_L3(&attributes2);
+	AK_InsertAtEnd_L3(TYPE_ATTRIBS, "firstname", sizeof("firstname"), attributes2);
+	AK_InsertAtEnd_L3(TYPE_ATTRIBS, "year", sizeof("year"), attributes2);
+	AK_InsertAtEnd_L3(TYPE_ATTRIBS, "weight", sizeof("weight"), attributes2);
+
+	AK_Init_L3(&condition2);
+	AK_InsertAtEnd_L3(TYPE_ATTRIBS, "year", sizeof("year"), condition2);
+    char conditionAtributes2[] = "2008,2009,2010,2011";
+
+	AK_InsertAtEnd_L3(TYPE_INT, conditionAtributes2, sizeof(conditionAtributes2), condition2);
+	AK_InsertAtEnd_L3(TYPE_OPERATOR, ">ANY", sizeof(">ANY"), condition2);
+
+
+
+    if (AK_select(srcTable, destTable2, attributes2, condition2) == EXIT_SUCCESS)
+    {
+        successful++;
+    }   
+    else
+    {
+        failed++;
+    }
+	
+	AK_DeleteAll_L3(&attributes2);
+	AK_DeleteAll_L3(&condition2);
+	
+    AK_print_table(srcTable);
+	printf("\n SELECT firstname,year,weight FROM student WHERE year >ANY (2008,2009,2010,2011);\n\n");
+    AK_print_table(destTable2);
+	
+	AK_free(attributes2);
+	AK_free(condition2);
+
+	printf("TEST ZA OPERATOR <=ALL ZAPOČINJE!\n");
+
+	struct list_node *attributes3 = (struct list_node *) AK_malloc(sizeof (struct list_node));
+
+	struct list_node *condition3 = (struct list_node *) AK_malloc(sizeof (struct list_node));
+
+	char *destTable3="select_result3";
+	AK_Init_L3(&attributes3);
+	AK_InsertAtEnd_L3(TYPE_ATTRIBS, "firstname", sizeof("firstname"), attributes3);
+	AK_InsertAtEnd_L3(TYPE_ATTRIBS, "year", sizeof("year"), attributes3);
+	AK_InsertAtEnd_L3(TYPE_ATTRIBS, "weight", sizeof("weight"), attributes3);
+
+	AK_Init_L3(&condition3);
+	AK_InsertAtEnd_L3(TYPE_ATTRIBS, "year", sizeof("year"), condition3);
+    char conditionAtributes3[] = "2012,2013,2014";
+
+	AK_InsertAtEnd_L3(TYPE_INT, conditionAtributes3, sizeof(conditionAtributes3), condition3);
+	AK_InsertAtEnd_L3(TYPE_OPERATOR, "<=ALL", sizeof("<=ALL"), condition3);
+
+
+
+    if (AK_select(srcTable, destTable3, attributes3, condition3) == EXIT_SUCCESS)
+    {
+        successful++;
+    }   
+    else
+    {
+        failed++;
+    }
+	
+	AK_DeleteAll_L3(&attributes3);
+	AK_DeleteAll_L3(&condition3);
+	
+    AK_print_table(srcTable);
+	printf("\n SELECT firstname,year,weight FROM student WHERE year <=ALL (2012,2013,2014);\n\n");
+    AK_print_table(destTable3);
+	
+	AK_free(attributes3);
+	AK_free(condition3);
+
+
     AK_EPI;
-    return TEST_result(successful, 5-successful);
+    return TEST_result(successful, failed);
 }
