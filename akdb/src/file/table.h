@@ -23,20 +23,7 @@
 #ifndef TABLE
 #define TABLE
 
-#include "../auxi/test.h"
 #include "../mm/memoman.h"
-#include "../auxi/mempro.h"
-#include <time.h>
-#include "../sql/drop.h"
-#include "../auxi/test.h"
-#include "../file/table.h"
-#include "../file/fileio.h"
-#include "../file/sequence.h"
-#include "../auxi/mempro.h"
-#include "../auxi/constants.h"
-#include "test.h"
-#include "../dm/dbman.h"
-
 
 
 struct AK_create_table_struct {
