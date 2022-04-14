@@ -20,47 +20,37 @@
 #include "../mm/memoman.h"
 
 /**
- * @author Filip Žmuk
- * @brief Function that implements SELECT relational operator
+ * @author Filip Žmuk, Edited by: Marko Belusic
+ * @brief Helper function in SELECT clause which filters by condition
  * @param srcTable - original table that is used for selection
- * @param destTable - table that contains the result
+ * @param selection_table - table in which result of applied condition is stored
  * @param condition - condition for selection
- * @param attributes - atributes to be selected
- * @param ordering - atributes for result sorting
- * @return EXIT_SUCCESS if cache result in memory and print table else break 
+ * @return EXIT_SUCCESS if there was no error applying condition 
  */
-int AK_select(char *srcTable, char *destTable, struct list_node *attributes, struct list_node *condition, struct list_node *ordering)
-{
-    struct list_node *attribute;
-    AK_PRO;
-
-    //create help table name for selection
-    char selection_table[MAX_ATT_NAME] = "";
+int AK_apply_select_by_condition(char *srcTable, char *selection_table, struct list_node *condition){
     strcat(selection_table, srcTable);
-
     if(condition != NULL)
     {
         strcat(selection_table, "__selection");
-
         //select required rows
         if (AK_selection(srcTable, selection_table, condition) != EXIT_SUCCESS)
         {
-            AK_EPI;
             return EXIT_ERROR;
         }
     }
+    return EXIT_SUCCESS;
+}
 
-    // create copy of attributes
-    struct list_node *projectionAttributes = (struct list_node *)AK_malloc(sizeof(struct list_node));
-    AK_Init_L3(&projectionAttributes);
-    for (attribute = AK_First_L2(attributes); attribute; attribute = AK_Next_L2(attribute))
-    {
-        AK_InsertAtEnd_L3(TYPE_ATTRIBS, attribute->data, strlen(attribute->data), projectionAttributes);
-    }
-
-
-    //create help table name for sorting
-    char sorted_table[ MAX_ATT_NAME ] = "";
+/**
+ * @author Filip Žmuk, Edited by: Marko Belusic
+ * @brief Helper function in SELECT clause which does the ordering
+ * @param projectionAttributes - copy of the attributes given
+ * @param ordering - condition on which to order
+ * @param sorted_table - table in which result of applied ordering is stored
+ * @param selection_table - table in which result of applied condition is stored
+ * @return EXIT_SUCCESS if there was no error ordering
+ */
+int AK_apply_select_by_sorting(char *sorted_table, char *selection_table, struct list_node *ordering, struct list_node *projectionAttributes){
     strcat(sorted_table, selection_table);
     //sort required rows
     if (ordering != NULL)
@@ -70,21 +60,20 @@ int AK_select(char *srcTable, char *destTable, struct list_node *attributes, str
         {
             AK_DeleteAll_L3(&projectionAttributes);
             AK_free(projectionAttributes);
-            AK_EPI;
             return EXIT_ERROR;
         }
     }
-
-    //project required rows
-    if (AK_projection(sorted_table, destTable, projectionAttributes, NULL) != EXIT_SUCCESS)
-    {
-        AK_DeleteAll_L3(&projectionAttributes);
-        AK_free(projectionAttributes);
-        AK_EPI;
-        return EXIT_ERROR;
-    }
-
-    // free temp tables
+    return EXIT_SUCCESS;
+}
+/**
+ * @author Filip Žmuk, Edited by: Marko Belusic
+ * @brief Function that clears temporary tables
+ * @param sorted_table - table in which result of applied ordering is stored
+ * @param selection_table - table in which result of applied condition is stored
+ * @param srcTable - original table that is used for selection
+ * @return EXIT_SUCCESS
+ */
+int AK_apply_select_free_temp_tables(char *srcTable, char *selection_table, char *sorted_table){
     if(strcmp(srcTable, selection_table) != 0)
     {
         AK_delete_segment(selection_table, SEGMENT_TYPE_TABLE);
@@ -99,6 +88,61 @@ int AK_select(char *srcTable, char *destTable, struct list_node *attributes, str
         {
             AK_delete_segment(sorted_table, SEGMENT_TYPE_TABLE);
         }
+    }
+    return EXIT_SUCCESS;
+}
+
+
+/**
+ * @author Filip Žmuk, Edited by: Marko Belusic
+ * @brief Function that implements SELECT relational operator
+ * @param srcTable - original table that is used for selection
+ * @param destTable - table that contains the result
+ * @param condition - condition for selection
+ * @param attributes - atributes to be selected
+ * @param ordering - atributes for result sorting
+ * @return EXIT_SUCCESS if cache result in memory and print table else break 
+ */
+int AK_select(char *srcTable, char *destTable, struct list_node *attributes, struct list_node *condition, struct list_node *ordering)
+{
+    struct list_node *attribute;
+    AK_PRO;
+    //create help table name for selection
+    char selection_table[MAX_ATT_NAME] = "";
+    if (AK_apply_select_by_condition(srcTable, &selection_table, condition) != EXIT_SUCCESS){
+        AK_EPI;
+        return EXIT_ERROR;
+    }
+
+    // create copy of attributes
+    struct list_node *projectionAttributes = (struct list_node *)AK_malloc(sizeof(struct list_node));
+    AK_Init_L3(&projectionAttributes);
+    for (attribute = AK_First_L2(attributes); attribute; attribute = AK_Next_L2(attribute))
+    {
+        AK_InsertAtEnd_L3(TYPE_ATTRIBS, attribute->data, strlen(attribute->data), projectionAttributes);
+    }
+
+
+    //create help table name for sorting
+    char sorted_table[ MAX_ATT_NAME ] = "";
+    if (AK_apply_select_by_sorting(&sorted_table, &selection_table, ordering, projectionAttributes) != EXIT_SUCCESS){
+        AK_EPI;
+        return EXIT_ERROR;
+    }
+
+    //project required rows
+    if (AK_projection(sorted_table, destTable, projectionAttributes, NULL) != EXIT_SUCCESS)
+    {
+        AK_DeleteAll_L3(&projectionAttributes);
+        AK_free(projectionAttributes);
+        AK_EPI;
+        return EXIT_ERROR;
+    }
+
+    // free temp tables
+    if (AK_apply_select_free_temp_tables(srcTable, &selection_table, &sorted_table) != EXIT_SUCCESS){
+        AK_EPI;
+        return EXIT_ERROR;
     }
 
     AK_DeleteAll_L3(&projectionAttributes);
@@ -180,9 +224,15 @@ TestResult AK_select_test(){
     printf("\n SELECT firstname, year FROM select_result1;\n\n");
     AK_print_table(destTable2);
 	
+    //free memory
 	AK_free(attributes);
 	AK_free(condition);
 	AK_free(ordering);
+
+    // reset all the tables
+    AK_delete_segment(destTable1, SEGMENT_TYPE_TABLE);
+    AK_delete_segment(destTable2, SEGMENT_TYPE_TABLE);
+    AK_delete_segment(srcTable, SEGMENT_TYPE_TABLE);
 	AK_EPI;
 
 	return TEST_result(succesfulTests, failedTests);
