@@ -19,7 +19,7 @@
 #include "privileges.h"
 
 /**
- * @author Kristina Takač.
+ * @author Kristina Takač, edited by Borna Romić
  * @brief  Inserts a new user in the AK_user table 
  * @param *username username of user to be added
  * @param *password password of user to be added
@@ -30,13 +30,15 @@ int AK_user_add(char *username, int *password, int set_id) {
 
     char *tblName = "AK_user";
     int usernameCheck;
+    char check = "";
     AK_PRO;
 
     usernameCheck = AK_user_get_id(username);
     if (usernameCheck != EXIT_ERROR) {
         printf("Username '%s' is not available!\n", username);
+        check = "taken";
         AK_EPI;
-        return EXIT_ERROR;
+        return check;
     }
 
     struct list_node *row_root = (struct list_node *) AK_malloc(sizeof (struct list_node));
@@ -164,7 +166,7 @@ int AK_user_rename(char *old_name, char *new_name, int *password) {
 }
 
 /**
- * @author Kristina Takač, edited by Ljubo Barać
+ * @author Kristina Takač, edited by Ljubo Barać, Borna Romić
  * @brief Function that adds a new group
  * @param *name name of group to be added
  * @param set_id non default id to be passed
@@ -173,13 +175,15 @@ int AK_user_rename(char *old_name, char *new_name, int *password) {
 int AK_group_add(char *name, int set_id) {
     char *tblName = "AK_group";
     int groupNameCheck;
+    char check = "";
     AK_PRO;
 
     groupNameCheck = AK_group_get_id(name);
     if (groupNameCheck != EXIT_ERROR) {
         printf("Name '%s' is not available!\n", name);
+        check = "taken";
         AK_EPI;
-        return EXIT_ERROR;
+        return check;
     }
 
     struct list_node *row_root = (struct list_node *) AK_malloc(sizeof (struct list_node));
@@ -1079,7 +1083,7 @@ TestResult AK_privileges_test() {
     printf("\nTest data: user1 1111; user2 2222; user3 3333; user4 4444;\n\n");
     printf("Result:\n\n");
 
-    if (AK_user_add("user1", 1111, NEW_ID) == EXIT_ERROR) {
+    if (AK_user_add("user1", 1111, NEW_ID) == "taken") {
         printf("Test 1. - Fail!\n\n");
     } else {
         printf("Test 1. - Pass!\n\n");
