@@ -1,6 +1,3 @@
-#!/usr/bin/env python
-#test.py
-
 import kalashnikovDB as AK47
 import test_strings as ts
 

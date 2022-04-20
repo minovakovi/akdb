@@ -1,4 +1,4 @@
-from __future__ import print_function
+
 import os
 import subprocess
 from kalashnikovDB import *
@@ -219,7 +219,7 @@ while(loop==True):
 		exit()
 	else:
 		print ("Nedozvoljeni broj! \n")
-	raw_input("Press Enter to continue...")
+	input("Press Enter to continue...")
 
 
 

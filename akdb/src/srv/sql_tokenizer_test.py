@@ -175,7 +175,7 @@ where_commands = [
     "delete from t1 using t2 where t1.at1 = t2.at2",
     "delete from t1 where t1.at1 in (select * from t2 where at2 > 0 and at3 < 0 or at4 = 0) or t1.at2 in (select * from at3)"
 ]
-parsed_where_tokens = map(sql_tokenizer.AK_parse_where, where_commands)
+parsed_where_tokens = list(map(sql_tokenizer.AK_parse_where, where_commands))
 where_tokens = [parsed_where_token.condition for parsed_where_token in parsed_where_tokens]
 
 

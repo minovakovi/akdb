@@ -1,4 +1,3 @@
-#!/usr/bin/env python2
 import sys
 from client import Client
 
@@ -9,8 +8,8 @@ if len(sys.argv) == 3:
     username = sys.argv[1]
     password = sys.argv[2]
 else:
-    username = raw_input("Username: ")
-    password = raw_input("Password: ")
+    username = input("Username: ")
+    password = input("Password: ")
 
 c = Client(username=username, password=password)
 c.start()

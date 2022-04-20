@@ -6,11 +6,11 @@ from pyparsing import *
 #ALTER TABLE table_name ALTER COLUMN column_name data_type
 #ALTER TABLE table_name MODIFY column_name data_type
 
-LPAR, RPAR, COMMA = map(Suppress,"(),")
+LPAR, RPAR, COMMA = list(map(Suppress,"(),"))
 alter_stmt = Forward().setName("alter table")
 
 #keywords
-(ALTER, TABLE, ADD, DROP, MODIFY, COLUMN ) =  map(CaselessKeyword, """ALTER, TABLE, ADD, DROP, MODIFY, COLUMN""".replace(",","").split())
+(ALTER, TABLE, ADD, DROP, MODIFY, COLUMN ) =  list(map(CaselessKeyword, """ALTER, TABLE, ADD, DROP, MODIFY, COLUMN""".replace(",","").split()))
 
 keyword = MatchFirst((ALTER, TABLE, ADD, DROP, MODIFY, COLUMN )) 
 
@@ -36,10 +36,10 @@ tests = """\
     alter table ime5 drop column stupac alter column stupac tip""".splitlines()
 
 for t in tests:
-    print t
+    print(t)
     try:
-        print alter_stmt.parseString(t).dump()
-    except ParseException, pe:
-        print pe.msg
-    print
+        print(alter_stmt.parseString(t).dump())
+    except ParseException as pe:
+        print(pe.msg)
+    print()
     

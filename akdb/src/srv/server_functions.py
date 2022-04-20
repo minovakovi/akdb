@@ -1,5 +1,3 @@
-#!/usr/bin/env python2
-
 import socket
 import paramiko
 import threading
@@ -60,7 +58,7 @@ class Connection:
             self.transport.add_server_key(paramiko.RSAKey.generate(2048))
             self.transport.start_server(server=ParamikoServer())
             self.channel = self.transport.accept(timeout=1)
-        except Exception, e:
+        except Exception as e:
             self.addr = False
     #Destructor of the class
     def __del__(self):
@@ -80,7 +78,7 @@ class Connection:
             # Perhaps handle other cases differently
             else:
                 self.channel.send(self.pack_output({"success": True, "result": data[1]}))
-        except Exception, e:
+        except Exception as e:
             self.channel.send(self.pack_output({"success": False, "error_msg": "[-] Internal server error: %s" %e}))
     #Function that handles recieving data from the client
     def recv_data(self):
@@ -92,8 +90,8 @@ class Connection:
                 elif "continue" in data:
                     return data["continue"]
             return False
-        except Exception, e:
-            print "[-] Failed while unpacking data: %s" %e
+        except Exception as e:
+            print("[-] Failed while unpacking data: %s" %e)
             return False
 
     #Function that formats data into a JSON format
@@ -105,11 +103,11 @@ class Connection:
     # Function that splits table by newline and sends 1000 by 1000 rows
     def select_protocol(self, table):
         l = table.splitlines()
-        print n
-        print len(l)
+        print(n)
+        print(len(l))
         if (len(l) > n):
             header = [l.pop(0)]
-            for i in xrange(0, len(l), n):
+            for i in range(0, len(l), n):
                 if i+n >= len(l):
                     end = True
                     endrow = len(l)
@@ -122,15 +120,15 @@ class Connection:
                     data = self.pack_output({"startrow": i, "endrow": endrow, "max": len(l),"end": end, "result": '\n'.join(l[i:i + n]), "success": True, "packed_data": True})
                 self.channel.send(data)
                 if end == False:
-                    print "Sent " + str(i+n) + "/" + str(len(l)) + " rows to " + self.addr[0]
+                    print("Sent " + str(i+n) + "/" + str(len(l)) + " rows to " + self.addr[0])
                     res = self.recv_data()
                     if res:
                         continue
                     else:
-                        print "Interrupted by client."
+                        print("Interrupted by client.")
                         break
                 else:
-                    print "Sent all " + str(len(l)) + " rows to " + self.addr[0]
+                    print("Sent all " + str(len(l)) + " rows to " + self.addr[0])
                     break
         else:
             data = self.pack_output({"rows": len(l)-1, "result": table, "success": True})

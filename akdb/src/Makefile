@@ -55,7 +55,7 @@ doc:
 	cp ../doc/latex/refman.pdf ../doc/
 
 swig:
-	export CFLAGS="-Wno-error"; cd swig && swig -python kalashnikovDB.i && python setup.py build_ext --inplace && cd ..
+	export CFLAGS="-w"; cd swig && swig -python -py3 kalashnikovDB.i && python3 setup.py build_ext --inplace && cd ..
 
 swig-tests:
 	export CFLAGS="-Wno-error"; cd swig&& python -m doctest -v tablePropertiesTests.py && python -m doctest -v selectionTests.py && python -m doctest -v relAlgebraTests.py && cd ..
