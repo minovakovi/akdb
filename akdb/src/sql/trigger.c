@@ -20,7 +20,7 @@
 #include "trigger.h"
 
 /**
- * @author Unknown, updated by Mario Peroković, check if data is TYPE_INT
+ * @author Unknown, updated by Mario Peroković, fixed by Josip Susnjara
  * @brief Function that saves conditions for a trigger.
  * @param trigger obj_id of the trigger in question
  * @param *condition AK_list list of conditions
@@ -41,7 +41,6 @@ int AK_trigger_save_conditions(int trigger, struct list_node *condition) {
         return EXIT_ERROR;
     }
 
-    AK_DeleteAll_L3(&row_root);
     while (temp != NULL) {
         memcpy(tempData, temp->data, temp->size);
         tempData[temp->size] = '\0';
@@ -61,6 +60,7 @@ int AK_trigger_save_conditions(int trigger, struct list_node *condition) {
 
 	temp = AK_Next_L2(temp);
         i++;
+        AK_DeleteAll_L3(&row_root);
     }
 
     AK_free(row_root);
@@ -69,7 +69,7 @@ int AK_trigger_save_conditions(int trigger, struct list_node *condition) {
 }
 
 /**
- * @author Unknown updated by Aleksandra Polak
+ * @author Unknown updated by Aleksandra Polak, fixed by Josip Susnjara
  * @brief Function that adds a trigger to the system table.
  * @param *name name of the trigger
  * @param *event event that calls the trigger - this should perhaps be an integer with defined constants...
@@ -121,7 +121,7 @@ int AK_trigger_add(char *name, char* event, struct list_node *condition, char* t
     AK_Insert_New_Element(TYPE_VARCHAR, event, "AK_trigger", "event", row_root);
 
     if (condition == NULL || AK_IsEmpty_L2(condition) == 1) 
-        AK_Insert_New_Element(0, "", "AK_trigger", "condition", row_root);
+        AK_Insert_New_Element(TYPE_VARCHAR, "null", "AK_trigger", "condition", row_root);
     else
         AK_Insert_New_Element(TYPE_VARCHAR, "T", "AK_trigger", "condition", row_root);
 
@@ -138,7 +138,7 @@ int AK_trigger_add(char *name, char* event, struct list_node *condition, char* t
 }
 
 /**
- * @author
+ * @author Unknown, fixed by Josip Susnjara
  * @brief Function that gets obj_id of a trigger defined by name and table.
  * @param *name name of the trigger
  * @param *table name of the table on which the trigger is hooked
@@ -157,7 +157,7 @@ int AK_trigger_get_id(char *name, char *table) {
 
     while ((row = (struct list_node *)AK_get_row(i, "AK_trigger")) != NULL) {
         struct list_node *name_elem = AK_GetNth_L2(2,row);
-        struct list_node *table_elem = AK_GetNth_L2(5,row);
+        struct list_node *table_elem = AK_GetNth_L2(6,row);
         if (strcmp(name_elem->data, name) == 0 && table_id == (int) * table_elem->data) {
             i = (int) * row->next->data;
             AK_free(row);
@@ -180,8 +180,9 @@ int AK_trigger_get_id(char *name, char *table) {
  * @return EXIT_SUCCESS or EXIT_ERROR
  */
 int AK_trigger_remove_by_name(char *name, char *table) {
-    AK_PRO;
-    int trigg_id = AK_trigger_get_id(name, table);
+	int trigg_id;
+    	AK_PRO;
+    	trigg_id = AK_trigger_get_id(name, table);
 	AK_EPI;
 	return AK_trigger_remove_by_obj_id(trigg_id);
 }
@@ -204,7 +205,7 @@ int AK_trigger_remove_by_obj_id(int obj_id) {
 
     if (result == EXIT_ERROR) {
         AK_dbg_messg(HIGH, TRIGGERS, "AK_trigger_remove_by_name: Could not delete trigger.\n");
-		AK_EPI;
+	AK_EPI;
         return EXIT_ERROR;
     }
 
@@ -218,7 +219,7 @@ int AK_trigger_remove_by_obj_id(int obj_id) {
 
 
 /**
- * @author Unknown
+ * @author Unknown, fixed by Josip Susnjara
  * @brief Function that edits information about the trigger in system table. In order to identify the trigger,
  *	  either obj_id or table and name parameters should be defined. The other options should be set to NULL.
  *   	  Values of parameters that aren't changing can be left NULL. If conditions are to be removed,
@@ -228,35 +229,38 @@ int AK_trigger_remove_by_obj_id(int obj_id) {
  * @param *condition list of conditions for trigger (or NULL if it isn't changing; empty list if all conditions are to be removed)
  * @param *table name of the connected table (or NULL id using obj_id)
  * @param *function name of the connected function (or NULL if it isn't changing)
+ * @param *arguments_list arguments of the function (without arguments can't find passed function)
  * @return EXIT_SUCCESS or EXIT_ERROR
- * @IMPORTANT: *AK_dbg_messg.. need to be fixed then we could uncomment lines with this function, by then we use *printf.
  */
 
-int AK_trigger_edit(char *name, char* event, struct list_node *condition, char* table, char* function) {  
+int AK_trigger_edit(char *name, char* event, struct list_node *condition, char* table, char* function, struct list_node *arguments_list) {  
     AK_PRO;
 
     if (name == NULL || table == NULL) {
-        //AK_dbg_messg(HIGH, TRIGGERS, "AK_trigger_edit: Not enough data to identify the trigger.\n");
-	printf("\nAK_trigger_edit: Not enough data to identify the trigger.\n");
+        AK_dbg_messg(HIGH, TRIGGERS, "AK_trigger_edit: Not enough data to identify the trigger.\n");
 	AK_EPI;
         return EXIT_ERROR;
     }
     int table_id = AK_get_table_obj_id(table); 
     int trigger_id = AK_trigger_get_id(name, table);
-    int function_id = AK_get_function_obj_id(function, NULL);
+    int function_id = AK_get_function_obj_id(function, arguments_list);
  
    if (function_id == EXIT_ERROR) {
-        //AK_dbg_messg(HIGH, TRIGGERS, "AK_trigger_edit: Could not update trigger. Function does not exist.\n");
-	printf("\nAK_trigger_edit: Could not update trigger. Function does not exist.\n");	
+        AK_dbg_messg(HIGH, TRIGGERS, "AK_trigger_edit: Could not update trigger. Function does not exist.\n");
 	AK_EPI;
         return EXIT_ERROR;
     }
 
-    if(table_id == -1 || trigger_id == -1){
-        //AK_dbg_messg(HIGH, TRIGGERS, "AK_trigger_edit: Could not update trigger. Table or trigger does not exist.\n");
-	printf("\nAK_trigger_edit: Could not update trigger. Table or trigger does not exist.\n");
+    if(table_id == EXIT_ERROR){
+	AK_dbg_messg(HIGH, TRIGGERS, "\nAK_trigger_edit: Could not update trigger. Table %s does not exist.\n", table);
 	AK_EPI;
-        return EXIT_ERROR;
+	return EXIT_ERROR;
+    }
+    
+    if(trigger_id == EXIT_ERROR){
+	AK_dbg_messg(HIGH, TRIGGERS, "\nAK_trigger_edit: Could not update trigger. Trigger %s does not exist.\n", name);
+	AK_EPI;
+	return EXIT_ERROR;
     }
 
     struct list_node *row_root = (struct list_node *) AK_malloc(sizeof (struct list_node));
@@ -363,14 +367,16 @@ int AK_trigger_rename(char *old_name, char *new_name, char *table){
 
 
 /**
- * @author Unknown updated by Aleksandra Polak
+ * @author Unknown updated by Aleksandra Polak and Josip Susnjara
  * @brief Function for trigger testing
  */
 TestResult AK_trigger_test() {
+	
+	int successfulTests = 0;
+	int failedTests = 0;
     AK_PRO;
 
     printf("trigger.c: Present!\n");
-    int flag = 0;
 
     struct list_node *arguments_list1 = (struct list_node *) AK_malloc(sizeof (struct list_node));
     AK_Init_L3(&arguments_list1);
@@ -383,19 +389,26 @@ TestResult AK_trigger_test() {
     AK_InsertAtEnd_L3(TYPE_INT, "5", sizeof (int), arguments_list1);
     AK_InsertAtEnd_L3(TYPE_VARCHAR, "argument2", sizeof ("argument2"), arguments_list1);
     AK_InsertAtEnd_L3(TYPE_INT, "3", sizeof (int), arguments_list1);
+  
+    if (AK_function_add("dummy_funk_1", 1, arguments_list1) != EXIT_ERROR) {
+		printf("\n Successful added arguments_list1 to dummy_funk_1.\n\n");
+		successfulTests++;
+    }
+    else {
+    	failedTests++;
+    }
 
-    int add1 = AK_function_add("dummy_funk_1", 1, arguments_list1);    
-    if (add1 != EXIT_ERROR) {
-	printf("\n Successful added arguments_list1 to dummy_funk_1.\n\n");
-    }else {flag = 1;}
 
-
-    AK_InsertAtEnd_L3(TYPE_VARCHAR, "argument7", sizeof ("argument1"), arguments_list2);
+    AK_InsertAtEnd_L3(TYPE_VARCHAR, "argument7", sizeof ("argument7"), arguments_list2);
     AK_InsertAtEnd_L3(TYPE_INT, "5", sizeof (int), arguments_list2);
-    int add2 = AK_function_add("dummy_funk_2", 1, arguments_list2);
-    if (add2 != EXIT_ERROR) {
-	printf("\n Successful added arguments_list2 to dummy_funk_2.\n\n");
-    }else {flag = 1;}
+
+    if (AK_function_add("dummy_funk_2", 1, arguments_list2) != EXIT_ERROR) {
+		printf("\n Successful added arguments_list2 to dummy_funk_2.\n\n");
+		successfulTests++;
+    }
+    else {
+    	failedTests++;
+    }
     
     AK_print_table("AK_function");
 
@@ -404,21 +417,46 @@ TestResult AK_trigger_test() {
     strcpy(dummyExpression->data, "");
     
     AK_Init_L3(&expr);
-    char *num = "2002";
    
-    AK_InsertAtEnd_L3(TYPE_ATTRIBS, "year", 4, expr);
-    AK_InsertAtEnd_L3(TYPE_INT, num, 4, expr);
-    AK_InsertAtEnd_L3(TYPE_OPERATOR, ">", 2, expr);
-    AK_InsertAtEnd_L3(TYPE_ATTRIBS, "firstname", 9, expr);
-    AK_InsertAtEnd_L3(TYPE_VARCHAR, "Matija", 6, expr);
-    AK_InsertAtEnd_L3(TYPE_OPERATOR, "=", 2, expr);
-    AK_InsertAtEnd_L3(TYPE_OPERATOR, "OR", 2, expr);
+    AK_InsertAtEnd_L3(TYPE_ATTRIBS, "year", sizeof("year"), expr);
+    AK_InsertAtEnd_L3(TYPE_INT, "2002", sizeof(int), expr);
+    AK_InsertAtEnd_L3(TYPE_OPERATOR, ">", sizeof(">"), expr);
+    AK_InsertAtEnd_L3(TYPE_ATTRIBS, "firstname", sizeof("firstname"), expr);
+    AK_InsertAtEnd_L3(TYPE_VARCHAR, "Matija", sizeof("Matija"), expr);
+    AK_InsertAtEnd_L3(TYPE_OPERATOR, "=", sizeof("="), expr);
+    AK_InsertAtEnd_L3(TYPE_OPERATOR, "OR", sizeof("OR"), expr);
    
 
-    AK_trigger_add("trigg1", "insert", expr, "AK_reference", "dummy_funk_1", arguments_list1);
-    AK_trigger_add("trigg2", "update", expr, "dummy_table", "dummy_funk_1", arguments_list1);
-    AK_trigger_add("trigg3", "delete", dummyExpression, "AK_reference", "dummy_funk", NULL);
-    AK_trigger_add("trigg4", "insert", NULL, "AK_reference", "dummy_funk_2", arguments_list2);
+    if(AK_trigger_add("trigg1", "insert", expr, "AK_reference", "dummy_funk_1", arguments_list1) != EXIT_ERROR){
+    	successfulTests++;
+    }
+    else{
+    	failedTests++;
+    }
+    
+    if(AK_trigger_add("trigg2", "update", expr, "dummy_table", "dummy_funk_1", arguments_list1) == EXIT_ERROR){
+    	//must fail because table "dummy_table" doesn't exist
+    	successfulTests++;
+    }
+    else{
+    	failedTests++;
+    }
+    
+    if(AK_trigger_add("trigg3", "delete", dummyExpression, "AK_reference", "dummy_funk", NULL) == EXIT_ERROR){
+    	//must fail because arguments list is empty
+    	successfulTests++;
+    }
+    else{
+    	failedTests++;
+    }
+    
+    if(AK_trigger_add("trigg4", "insert", NULL, "AK_reference", "dummy_funk_2", arguments_list2) != EXIT_ERROR){
+    	successfulTests++;
+    }
+    else{
+    	failedTests++;
+    }
+
     AK_print_table("AK_trigger");
     AK_print_table("AK_trigger_conditions");
 
@@ -427,23 +465,31 @@ TestResult AK_trigger_test() {
 
     AK_DeleteAll_L3(&expr);
 
-    AK_InsertAtEnd_L3(TYPE_ATTRIBS, "not null", 8, expr);
+    AK_InsertAtEnd_L3(TYPE_ATTRIBS, "not null", sizeof("not null"), expr);
 
     printf("\n\nUpdate trigger:\n\n");
 
 
     //look for 'trigg1' on table 'AK_reference' and change it's event to drop and it's function to 'dummy_funk_1'
-    int edit1 = AK_trigger_edit("trigg1", "drop", expr, "AK_reference", "dummy_funk_2");
-
-    if (edit1 != EXIT_ERROR){
-	printf("\n\nSuccessfully edited trigger.\n\n");
-    }else {flag = 1;}
+    if (AK_trigger_edit("trigg1", "drop", expr, "AK_reference", "dummy_funk_2", arguments_list2) != EXIT_ERROR){
+		printf("\n\nSuccessfully edited trigger.\n\n");
+		successfulTests++;
+    }
+    else {
+    	failedTests++;
+    }
 
     AK_print_table("AK_trigger");
 
     printf("\n\nDelete trigg1 by name.\n\n");
 
-    AK_trigger_remove_by_name("trigg1", "AK_reference");
+    if(AK_trigger_remove_by_name("trigg1", "AK_reference") != EXIT_ERROR){
+    	printf("\n\nSuccessfully deleted trigger.\n\n");
+		successfulTests++;
+    }
+    else{
+    	failedTests++;
+    }
 
     AK_print_table("AK_trigger");
 
@@ -453,17 +499,8 @@ TestResult AK_trigger_test() {
     AK_free(arguments_list2);
     AK_free(dummyExpression);
 
-
-    if (flag == 0){
-	printf("\n\nAll tests has successfully completed!!\n\n");
-    }else {
-	printf("\nThere was some troublle :P \n");
-    }
-
-
     AK_free(expr);
     AK_EPI;
 
-    return TEST_result(0,0);    
+    return TEST_result(successfulTests, failedTests);
 }
-

@@ -78,16 +78,17 @@ int AK_trigger_remove_by_name(char *name, char *table) ;
 int AK_trigger_remove_by_obj_id(int obj_id);
 
 /**
- * @author Unknown
+ * @author Unknown, fixed by Josip Susnjara
  * @brief Function that edits information about the trigger in system table.
  * @param *name name of the trigger (or NULL if using obj_id)
  * @param *event event of the trigger (or NULL if it isn't changing)
  * @param *condition list of conditions for trigger (or NULL if it isn't changing; empty list if all conditions are to be removed)
  * @param *table name of the connected table (or NULL id using obj_id)
  * @param *function name of the connected function (or NULL if it isn't changing)
+ * @param *arguments_list arguments of the function (without arguments can't find passed function) 
  * @return EXIT_SUCCESS or EXIT_ERROR
 */
-int AK_trigger_edit(char *name, char* event, struct list_node* condition, char* table, char* function);
+int AK_trigger_edit(char *name, char* event, struct list_node* condition, char* table, char* function, struct list_node *arguments_list);
 
 /**
  * @author Unknown, updated by Mario Peroković
