@@ -418,4 +418,4 @@ extern AK_header *AK_get_insert_header(int *size, char *tblName, struct list_nod
 extern int AK_insert(char* tableName, struct list_node *columns, struct list_node *values);
 
 
-extern int AK_check_constraint_name(char *constraintName);
+extern int AK_check_constraint_name(char *constraintName, char *constraintTable);

@@ -26,7 +26,7 @@
  * @param char constraintName name which you want to give to constraint which you are trying to create
  * @return EXIT_ERROR or EXIT_SUCCESS
  **/
-int AK_check_constraint_name(char *constraintName) {
+int AK_check_constraint_name(char *constraintName, char *constraintTable) {
 	int i, j;
 	int num_rows;
 
@@ -51,6 +51,12 @@ int AK_check_constraint_name(char *constraintName) {
 	struct list_node *row;
 	struct list_node *attribute;
 
+	// if constraintTable is not null only search through given table, else search every constraint table
+	if(constraintTable != NULL){
+		constraint_table_names_size = 1;
+		strcpy(constraint_table_names[0], constraintTable);
+	}
+
 	AK_PRO;
 
 	for (i = 0; i < constraint_table_names_size; ++i)
@@ -73,13 +79,6 @@ int AK_check_constraint_name(char *constraintName) {
 			AK_free(row);
 		}
 	}
-		
-	//OTHER CONSTRAINTS ARE NOT YET IMPLEMENTED, COMPLETE THIS FUNCTION WHEN THAT HAPPENS!!!
-	//WRITE SIMILIAR CODE TO THE CODE ABOVE, CHECK TABLES AND ATTRIBUTES NAMES IN dbman.c
-	//IF THERE ARE PROBLEMS CHECK, ACCORDING TO SYSTEM CATALOG, IF 1. PARAMETER of AK_GetNth_L2 IS CORRECT (INDEXES START FROM 1!)
-	
-
-		
 	
 	AK_EPI;
 	return EXIT_SUCCESS;
@@ -91,10 +90,15 @@ int AK_check_constraint_name(char *constraintName) {
   * @return No return value
   */
 TestResult AK_constraint_names_test() {
+	char* tableName = "student";
 	char *constraintName1 = "nameUnique";
 	char *constraintName2 = "nameUNIQUE";
+	char attYear[] = "year";
+	char constraintYear[] = "yearUnique";
 	int result;
 
+	int success=0;
+	int failed=0;
 	AK_PRO;
 	
 	printf("\nExisting constraints:\n\n");
@@ -108,15 +112,37 @@ TestResult AK_constraint_names_test() {
 	AK_print_table("AK_constraints_default");
 	
 	printf("\nChecking if constraint name %s would be unique in database...\n", constraintName1);
-	result = AK_check_constraint_name(constraintName1);
+	result = AK_check_constraint_name(constraintName1, AK_CONSTRAINTS_UNIQUE);
 	printf("Yes (0) No (-1): %d\n\n", result);
 	
 	printf("\nChecking if constraint name %s would be unique in database...\n", constraintName2);
-	result = AK_check_constraint_name(constraintName2);
+	result = AK_check_constraint_name(constraintName2, AK_CONSTRAINTS_UNIQUE);
 	printf("Yes (0) No (-1): %d\n\n", result);
-	
-	printf("\nTest succeeded.");
+
+
+	printf("\nSetting year to unique in table student\n");
+	AK_set_constraint_unique(tableName,  attYear, constraintYear);
+	printf("\nChecking if constraint name %s would be unique in database...\n", constraintYear);
+	result = AK_check_constraint_name(constraintYear, AK_CONSTRAINTS_UNIQUE);
+	if(result==EXIT_ERROR){
+		success++;
+		printf("\nSUCCESS\n\n");
+	}else{
+		failed++;
+		printf("\nFAILED\n\n");
+	}
+
+	printf("\nDeleting constraint year unique in table student\n");
+	AK_delete_constraint_unique("AK_constraints_unique", constraintYear);
+	result = AK_check_constraint_name(constraintYear, AK_CONSTRAINTS_UNIQUE);
+	if(result==EXIT_SUCCESS){
+		success++;
+		printf("\nSUCCESS\n\n");
+	}else{
+		failed++;
+		printf("\nFAILED\n\n");
+	}
 
 	AK_EPI;
-	return TEST_result(1,0);
+	return TEST_result(success,failed);
 }
