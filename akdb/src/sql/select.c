@@ -232,7 +232,6 @@ TestResult AK_select_test(){
     // reset all the tables
     AK_delete_segment(destTable1, SEGMENT_TYPE_TABLE);
     AK_delete_segment(destTable2, SEGMENT_TYPE_TABLE);
-    AK_delete_segment(srcTable, SEGMENT_TYPE_TABLE);
 	AK_EPI;
 
 	return TEST_result(succesfulTests, failedTests);

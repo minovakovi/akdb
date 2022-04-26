@@ -120,7 +120,7 @@ TestResult AK_constraint_names_test() {
 	printf("Yes (0) No (-1): %d\n\n", result);
 
 
-	printf("\nSetting year to unique in table student\n");
+	printf("\nSetting year attribute to UNIQUE in table student\n");
 	AK_set_constraint_unique(tableName,  attYear, constraintYear);
 	printf("\nChecking if constraint name %s would be unique in database...\n", constraintYear);
 	result = AK_check_constraint_name(constraintYear, AK_CONSTRAINTS_UNIQUE);
@@ -132,7 +132,7 @@ TestResult AK_constraint_names_test() {
 		printf("\nFAILED\n\n");
 	}
 
-	printf("\nDeleting constraint year unique in table student\n");
+	printf("\nDeleting the UNIQUE constraint on atribute year in table student\n");
 	AK_delete_constraint_unique("AK_constraints_unique", constraintYear);
 	result = AK_check_constraint_name(constraintYear, AK_CONSTRAINTS_UNIQUE);
 	if(result==EXIT_SUCCESS){
