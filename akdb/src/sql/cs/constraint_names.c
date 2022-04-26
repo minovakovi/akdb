@@ -21,9 +21,10 @@
 #include "constraint_names.h"
 
 /**
- * @author Nenad Makar, updated by Matej Lipovača
+ * @author Nenad Makar, updated by Matej Lipovača, updated by Marko Belusic
  * @brief Function that checks if constraint name would be unique in database 
- * @param char constraintName name which you want to give to constraint which you are trying to create
+ * @param constraintName constraintName name which you want to give to constraint which you are trying to create
+ * @param constraintTable name of the constraint table you want to seach, put NULL if you want to seach all constraint tables
  * @return EXIT_ERROR or EXIT_SUCCESS
  **/
 int AK_check_constraint_name(char *constraintName, char *constraintTable) {
