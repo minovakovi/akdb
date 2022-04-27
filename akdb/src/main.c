@@ -252,7 +252,7 @@ int main(int argc, char * argv[])
                     printf("\nTEST:--- %s --- ENDED!\n", fun[ans].name);
                     //if the test started and ended with a success, we will be informed with this message and with the name
                     printf( "\nEverything was fine!\nBye =)\n" );
-
+                    TEST_output_results(fun[ans].func());
                     /* For easyer debugging and GDB usage
                     AK_create_test_tables();
                     AK_view_test();
