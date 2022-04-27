@@ -107,7 +107,7 @@ void AK_set_constraint_between(char* tableName, char* constraintName, char* attN
         }
     }*/
 
-    if (AK_check_constraint_name(constraintName) == EXIT_ERROR) {
+    if (AK_check_constraint_name(constraintName, AK_CONSTRAINTS_BEWTEEN) == EXIT_ERROR) {
         printf("\n*** ERROR ***\nFailed to add 'between constraint' on TABLE: %s\nConstrait '%s' already exists in the database!\n\n", tableName, constraintName);
 
         AK_EPI;
@@ -304,7 +304,7 @@ int AK_delete_constraint_between(char* tableName, char* constraintNamePar){
 
     char* constraint_attr = "constraintName";
 
-    if(AK_check_constraint_name(constraintNamePar) == EXIT_SUCCESS){
+    if(AK_check_constraint_name(constraintNamePar, AK_CONSTRAINTS_BEWTEEN) == EXIT_SUCCESS){
         printf("FAILURE! -- CONSTRAINT with name %s doesn't exist in TABLE %s", constraintNamePar, tableName);
         AK_EPI;
         return EXIT_ERROR;

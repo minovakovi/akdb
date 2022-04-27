@@ -31,7 +31,7 @@
  * @param char constraintName name which you want to give to constraint which you are trying to create
  * @return EXIT_ERROR or EXIT_SUCCESS
  **/
-int AK_check_constraint_name(char *constraintName);
+int AK_check_constraint_name(char *constraintName, char *constraintTable);
 TestResult AK_constraint_names_test();
 
 #endif

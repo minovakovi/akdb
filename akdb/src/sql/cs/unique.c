@@ -140,7 +140,7 @@ int AK_set_constraint_unique(char* tableName, char attName[], char constraintNam
 
 	
 
-	uniqueConstraintName = AK_check_constraint_name(constraintName);
+	uniqueConstraintName = AK_check_constraint_name(constraintName, AK_CONSTRAINTS_UNIQUE);
 
 	if(uniqueConstraintName == EXIT_ERROR)
 	{
@@ -421,7 +421,7 @@ int AK_delete_constraint_unique(char* tableName, char* constraintName){
 
     char* constraint_attr = "constraintName";
 
-    if(AK_check_constraint_name(constraintName) == EXIT_SUCCESS){
+    if(AK_check_constraint_name(constraintName, AK_CONSTRAINTS_UNIQUE) == EXIT_SUCCESS){
         printf("FAILURE! -- CONSTRAINT with name %s doesn't exist in TABLE %s", constraintName, tableName);
         AK_EPI;
         return EXIT_ERROR;

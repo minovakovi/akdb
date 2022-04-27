@@ -167,7 +167,7 @@ int AK_set_check_constraint(char *table_name, char *constraint_name, char *attri
         }
     }
 
-    if (AK_check_constraint_name(constraint_name) == EXIT_ERROR) {
+    if (AK_check_constraint_name(constraint_name, AK_CONSTRAINTS_CHECK_CONSTRAINT) == EXIT_ERROR) {
         printf("\n*** ERROR ***\nFailed to add 'check constraint' on TABLE: %s\nConstrait '%s' already exists in the database!\n\n", table_name, constraint_name);
 
         AK_EPI;
@@ -281,7 +281,7 @@ int AK_delete_check_constraint(char* tableName, char* constraintName){
 
     char* constraint_attr = "constraint_name";
 
-    if(AK_check_constraint_name(constraintName) == EXIT_SUCCESS){
+    if(AK_check_constraint_name(constraintName, AK_CONSTRAINTS_CHECK_CONSTRAINT) == EXIT_SUCCESS){
         printf("FAILURE! -- CONSTRAINT with name %s doesn't exist in TABLE %s", constraintName, tableName);
         AK_EPI;
         return EXIT_ERROR;
