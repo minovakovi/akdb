@@ -19,7 +19,14 @@
 
 #include "../file/table.h"
 
-//TODO: Add description of the function
+
+/**
+ * @author Unknown
+ * @brief Constructs a table parameter struct object
+ * @param type parameter type
+ * @param name parameter name
+ * @return A pointer to the constructed AK_create_table_parameter object
+ */
 AK_create_table_parameter* AK_create_create_table_parameter(int type, char* name) {
     AK_PRO;
     AK_create_table_parameter* par = AK_malloc(sizeof (AK_create_table_parameter));
@@ -28,13 +35,20 @@ AK_create_table_parameter* AK_create_create_table_parameter(int type, char* name
     AK_EPI;
     return par;
 }
-//TODO: Add description of the function
+
+/**
+ * @author Unknown
+ * @brief Creates a table
+ * @param tblName the name of the table
+ * @param parameters table parameters array (each parameter contains name and type)
+ * @param attribute_count the amount of attributes
+ * @return No return value
+ */
 void AK_create_table(char* tblName, AK_create_table_parameter* parameters, int attribute_count) {
-    int i;
     AK_header t_header[ MAX_ATTRIBUTES ];
     AK_header* temp;
     AK_PRO;
-    for (i = 0; i < attribute_count; i++) {
+    for (int i = 0; i < attribute_count; i++) {
         switch (parameters[i].type) {
             case TYPE_INT:
                 temp = (AK_header*) AK_create_header(parameters[i].name, TYPE_INT, FREE_INT, FREE_CHAR, FREE_CHAR);
@@ -67,10 +81,8 @@ void AK_temp_create_table(char *table, AK_header *header, int type_segment) {
 	
 	/* do we really need this???  Edited by Elvis Popovic*/
 	/* AK_block *sys_block = (AK_block *) AK_malloc(sizeof (AK_block)); */
-	AK_block *sys_block;
+	AK_block *sys_block = AK_read_block(1);
 	
-    sys_block = (AK_block *) AK_read_block(1);
-
     int startAddress = AK_initialize_new_segment(table, type_segment, header);
 
     int num = 8;
@@ -140,20 +152,20 @@ int AK_num_attr(char * tblName) {
 int AK_get_num_records(char *tblName) {
     int num_rec = 0;
     AK_PRO;
-    table_addresses *addresses = (table_addresses*) AK_get_table_addresses(tblName);
+    table_addresses *addresses = AK_get_table_addresses(tblName);
     if (addresses->address_from[0] == 0){
         AK_EPI;
         return EXIT_WARNING;
     }
     int i = 0, j, k;
-    AK_mem_block *temp = (AK_mem_block*) AK_get_block(addresses->address_from[0]);
-    while (addresses->address_from[ i ] != 0) {
-        for (j = addresses->address_from[ i ]; j < addresses->address_to[ i ]; j++) {
-            temp = (AK_mem_block*) AK_get_block(j);
+    AK_mem_block *temp = AK_get_block(addresses->address_from[0]);
+    while (addresses->address_from[i] != 0) {
+        for (j = addresses->address_from[i]; j < addresses->address_to[i]; j++) {
+            temp = AK_get_block(j);
             if (temp->block->last_tuple_dict_id == 0)
                 break;
             for (k = 0; k < DATA_BLOCK_SIZE; k++) {
-                if (temp->block->tuple_dict[ k ].size > 0) {
+                if (temp->block->tuple_dict[k].size > 0) {
                     num_rec++;
                 }
             }
@@ -161,7 +173,7 @@ int AK_get_num_records(char *tblName) {
         i++;
     }
 
-AK_free(addresses);
+    AK_free(addresses);
     int num_head = AK_num_attr(tblName);
     AK_EPI;
     return num_rec / num_head;
@@ -182,14 +194,16 @@ AK_free(addresses);
  */
 AK_header *AK_get_header(char *tblName) {
     AK_PRO;
-    table_addresses *addresses = (table_addresses*) AK_get_table_addresses(tblName);
+    table_addresses *addresses = AK_get_table_addresses(tblName);
     if (addresses->address_from[0] == 0){
         AK_EPI;
         return EXIT_WARNING + 2;
     }
-    AK_mem_block *temp = (AK_mem_block*) AK_get_block(addresses->address_from[0]);
+    AK_mem_block *temp = AK_get_block(addresses->address_from[0]);
 
     int num_attr = AK_num_attr(tblName);
+    
+    // Is calloc the right choice here? The memory gets overridden immediately anyway
     AK_header *head = (AK_header*) AK_calloc(num_attr, sizeof (AK_header));
     memcpy(head, temp->block->header, num_attr * sizeof (AK_header));
 	AK_free(addresses);
@@ -234,16 +248,12 @@ int AK_get_attr_index(char *tblName, char *attrName) {
     }
     int num_attr = AK_num_attr(tblName);
     AK_header *header = AK_get_header(tblName);
-    int index = 0;
-    while (index < num_attr) 
-	{
-        if (strcmp(attrName, (header + index)->att_name) == 0)
-		{
+    for(int index = 0; index < num_attr; index++) {
+        if (strcmp(attrName, (header + index)->att_name) == 0) {
 			AK_free(header);
             AK_EPI;
             return index;
         }
-        index++;
     }
 	AK_free(header);
     AK_EPI;
@@ -265,6 +275,7 @@ struct list_node *AK_get_column(int num, char *tblName) {
         return NULL;
     }
     struct list_node *row_root = (struct list_node *) AK_malloc(sizeof (struct list_node));
+
     AK_Init_L3(&row_root);
 
     table_addresses *addresses = (table_addresses*) AK_get_table_addresses(tblName);
@@ -302,8 +313,8 @@ struct list_node *AK_get_column(int num, char *tblName) {
  */
 struct list_node *AK_get_row(int num, char * tblName) {
     AK_PRO;
-    table_addresses *addresses = (table_addresses*) AK_get_table_addresses(tblName);
-    struct list_node *row_root = (struct list_node *)AK_calloc(1, sizeof (struct list_node));
+    table_addresses *addresses = AK_get_table_addresses(tblName);
+    struct list_node *row_root = (struct list_node *) AK_calloc(1, sizeof (struct list_node));
     AK_Init_L3(&row_root);
 
     int num_attr = AK_num_attr(tblName);
@@ -345,6 +356,52 @@ struct list_node *AK_get_row(int num, char * tblName) {
 }
 
 /**
+ * @author Barbara Tatai.
+ * @brief Function that finds the tuple in memory
+ * @param row zero-based row index
+ * @param column zero-based column index
+ * @param num_attr the number of attributes in the table
+ * @param addresses table addresses
+ * @param row_root the root node of the list of rows
+ * @return a pointer to a list_node representing the element tuple
+ */
+struct list_node *AK_find_tuple(int row, int column, int num_attr, table_addresses *addresses, struct list_node *row_root) {
+    int i, j, k, counter;
+    char data[MAX_VARCHAR_LENGTH];
+
+    i = 0;
+    counter = -1;
+    while (addresses->address_from[ i ] != 0) {
+        for (j = addresses->address_from[ i ]; j < addresses->address_to[ i ]; j++) {
+            AK_mem_block *temp = (AK_mem_block*) AK_get_block(j);
+            if (temp->block->last_tuple_dict_id == 0) break;
+            for (k = 0; k < DATA_BLOCK_SIZE; k += num_attr) {
+                if (temp->block->tuple_dict[k].size > 0)
+                    counter++;
+                if (counter == row) {
+					struct list_node *next;
+                    int type = temp->block->tuple_dict[ k + column ].type;
+                    int size = temp->block->tuple_dict[ k + column ].size;
+                    int address = temp->block->tuple_dict[ k + column ].address;
+                    memcpy(data, &(temp->block->data[address]), size);
+                    data[ size ] = '\0';
+                    AK_InsertAtEnd_L3(type, data, size, row_root);
+                    AK_free(addresses);
+					next = AK_First_L2(row_root); //store next
+                    AK_free(row_root);
+					//returns next in row_root leaving base of the list allocated, so we made some corrections
+                    //return (struct list_node *) AK_First_L2(row_root);
+					return next; //returns next
+                }
+            }
+        }
+        i++;
+    }
+    return NULL;
+}
+
+
+/**
  * @author Matija Šestak.
  * @brief Function that fetches a value in some row and column
  * @param row zero-based row index
@@ -357,7 +414,7 @@ struct list_node *AK_get_tuple(int row, int column, char *tblName) {
     int num_rows = AK_get_num_records(tblName);
     int num_attr = AK_num_attr(tblName);
 
-    if (row >= num_rows || column >= num_attr){
+    if (row >= num_rows || column >= num_attr) {
         AK_EPI;
         return NULL;
     }
@@ -367,47 +424,14 @@ struct list_node *AK_get_tuple(int row, int column, char *tblName) {
     struct list_node *row_root = (struct list_node *) AK_malloc(sizeof (struct list_node));
     AK_Init_L3(&row_root);
 
-    int i, j, k, counter;
-    char data[ MAX_VARCHAR_LENGTH ];
-
-    i = 0;
-    counter = -1;
-    while (addresses->address_from[ i ] != 0) 
-	{
-        for (j = addresses->address_from[ i ]; j < addresses->address_to[ i ]; j++) 
-		{
-            AK_mem_block *temp = (AK_mem_block*) AK_get_block(j);
-            if (temp->block->last_tuple_dict_id == 0) break;
-            for (k = 0; k < DATA_BLOCK_SIZE; k += num_attr) 
-			{
-                if (temp->block->tuple_dict[k].size > 0)
-                    counter++;
-                if (counter == row) 
-				{
-					struct list_node *next;
-                    int type = temp->block->tuple_dict[ k + column ].type;
-                    int size = temp->block->tuple_dict[ k + column ].size;
-                    int address = temp->block->tuple_dict[ k + column ].address;
-                    memcpy(data, &(temp->block->data[address]), size);
-                    data[ size ] = '\0';
-                    AK_InsertAtEnd_L3(type, data, size, row_root);
-                    AK_free(addresses);
-					next = AK_First_L2(row_root); //store next
-					AK_free(row_root); //now we can free base
-                    AK_EPI;
-					//returns next in row_root leaving base of the list allocated, so we made some corrections
-                    //return (struct list_node *) AK_First_L2(row_root);
-					return next; //returns next
-                }
-            }
-        }
-        i++;
+    struct list_node* tupleFound = AK_find_tuple(row, column, num_attr, addresses, row_root);
+    if(tupleFound == NULL) {
+        AK_free(addresses);
+        AK_DeleteAll_L3(&row_root);
+        AK_free(row_root);
     }
-    AK_free(addresses);
-	AK_DeleteAll_L3(&row_root);
-	AK_free(row_root);
     AK_EPI;
-    return NULL;
+    return tupleFound;
 }
 
 /**
@@ -1113,11 +1137,12 @@ int AK_rename(char *old_table_name, char *old_attr, char *new_table_name, char *
 
 
 /**
- * @author Unknown
+ * @author Matija Šestak
  * @brief Function for testing table abstraction
- * @return No return value
+ * @return TestResult containing information on the amount of failed/passed tests
 
     @update by Ana-Marija Balen - added getRow function to the test
+    @update by Barbara Tatai - fixed SIGSEGV (caused by storing char pointers into integers), fixed successful/failed counter
  */
 TestResult AK_table_test() {
     AK_PRO;
@@ -1130,20 +1155,23 @@ TestResult AK_table_test() {
     printf("\n");
 
     printf("Table \"student\": AK_table_empty: ");
-    if (AK_table_empty("student"))
+    if (AK_table_empty("student")) {
         printf("true\n");
-    else
+    } else {
         printf("false\n");
+    }
     printf("\n");
 
     printf("Table \"student\": AK_num_attr: ");
     printf("%d\n", AK_num_attr("student"));
     printf("\n");
 	
-    int get_num_records;
+    char get_num_records = AK_get_num_records("student");
     printf("Table \"student\": AK_get_num_records: ");
-    printf("%d\n", get_num_records = AK_get_num_records("student"));
+    printf("%d\n", get_num_records);
     printf("\n");
+
+
 
     printf("Table \"student\": AK_get_row: ");
     
@@ -1160,33 +1188,43 @@ TestResult AK_table_test() {
     printf("\n");
 
     printf("Table \"student\": AK_get_attr_name for index 3: ");
-    int get_attr_name;
-    printf("%s\n", get_attr_name = AK_get_attr_name("student", 3));
+    char *get_attr_name = AK_get_attr_name("student", 3);
+    
+    printf("%s\n", get_attr_name);
     printf("\n");
+
+    
+    
 
     int get_attr_index;
     printf("Table \"student\": AK_get_attr_index of \"year\": ");
     printf("%d\n", get_attr_index = AK_get_attr_index("student", "year"));
     printf("\n");
 	
-    int tuple_to_string;
+    char *tuple_to_string = AK_tuple_to_string(AK_get_tuple(0, 1, "student"));
     printf("Table \"student\": AK_get_tuple for row=0, column=1:");
-    printf("%s\n", tuple_to_string = AK_tuple_to_string(AK_get_tuple(0, 1, "student")));
+    printf("%s\n", tuple_to_string);
 	
-	if (get_num_records != EXIT_WARNING & get_attr_name != NULL & get_attr_index != EXIT_WARNING & tuple_to_string != NULL) {
-	  printf("\nTest succeeded!\n");
-    }
-    else{
-	  printf("\nTest failed!\n");
+    const int testConditions[] = {
+        get_num_records != EXIT_WARNING, 
+        get_attr_name != NULL, 
+        get_attr_index != EXIT_WARNING, 
+        tuple_to_string != NULL
+    };
+    
+    unsigned short successfulTests = 0, failedTests = 0;
+    for(size_t i = 0; i < sizeof testConditions / sizeof testConditions[0]; i++) {
+        successfulTests += testConditions[i];
+        failedTests += !testConditions[i];
     }
 	
     AK_EPI;
-    return TEST_result(0,0);
+    return TEST_result(successfulTests, failedTests);
 }
 /**
  * @author Mislav Čakarić, edited by Ljubo Barać
  * @brief Function for renaming operator testing (moved from rename.c)
- * @return No return value
+ * @return TestResult containing information on the amount of failed/passed tests
  */
 TestResult AK_op_rename_test() {
     AK_PRO;
