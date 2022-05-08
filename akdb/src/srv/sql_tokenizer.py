@@ -208,6 +208,10 @@ class sql_tokenizer:
             return " "*err.loc + "^\n" + err.msg
         print()
 
+        if(tokens.cycle == "cycle"):
+            tokens.cycle = 1
+        else:
+            tokens.cycle = 0
         # definiranje min, max i start default vrijednosti na temelju tipa sequence
         if(tokens.as_value[0] == "smallint"):
             if(tokens.min_value == "no minvalue"):
