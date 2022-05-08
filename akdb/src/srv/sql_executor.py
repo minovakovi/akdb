@@ -975,10 +975,12 @@ class Drop_command:
             print(token)
             return False
         objekt = str(token.objekt)
+        # Removes all []' from string
+        translation_table = str.maketrans("", "", "[]'")
         if(objekt == "table"):
             # izvlacimo ime tablice
             table_name = str(token.ime_objekta)
-            table_name = table_name.translate(None, "'[]")
+            table_name = table_name.translate(translation_table)
             # postoji li tablica
             if (AK47.AK_table_exist(table_name) == 0):
                 print("Error: table '" + table_name + "' does not exist")
@@ -987,7 +989,7 @@ class Drop_command:
         elif(objekt == "index"):
             # izvlacimo ime indexa
             table_name = str(token.ime_objekta)
-            table_name = table_name.translate(None, "'[]")
+            table_name = table_name.translate(translation_table)
             # postoji li index
             if (AK47.AK_table_exist(table_name) == 0):
                 print("Error: index '" + table_name + "' does not exist")
@@ -996,7 +998,7 @@ class Drop_command:
         elif(objekt == "view"):
             # izvlacimo ime view-a
             table_name = str(token.ime_objekta)
-            table_name = table_name.translate(None, "'[]")
+            table_name = table_name.translate(translation_table)
             # postoji li view
             if (AK47.AK_table_exist(table_name) == 0):
                 print("Error: table '" + table_name + "' does not exist")
@@ -1005,7 +1007,7 @@ class Drop_command:
         elif(objekt == "sequence"):
             # izvlacimo ime sequence-a
             table_name = str(token.ime_objekta)
-            table_name = table_name.translate(None, "'[]")
+            table_name = table_name.translate(translation_table)
             # postoji li sequence
             if (AK47.AK_table_exist(table_name) == 0):
                 print("Error: sequence '" + table_name + "' does not exist")
@@ -1014,7 +1016,7 @@ class Drop_command:
         elif(objekt == "trigger"):
             # izvlacimo ime triggera
             table_name = str(token.ime_objekta)
-            table_name = table_name.translate(None, "'[]")
+            table_name = table_name.translate(translation_table)
             # postoji li trigger
             if (AK47.AK_table_exist(table_name) == 0):
                 print("Error: trigger '" + table_name + "' does not exist")
@@ -1023,7 +1025,7 @@ class Drop_command:
         elif(objekt == "function"):
             # izvlacimo ime funkcije
             table_name = str(token.ime_objekta)
-            table_name = table_name.translate(None, "'[]")
+            table_name = table_name.translate(translation_table)
             # postoji li funkcija
             if (AK47.AK_table_exist(table_name) == 0):
                 print("Error: funkcija '" + table_name + "' does not exist")
@@ -1032,7 +1034,7 @@ class Drop_command:
         elif(objekt == "user"):
             # izvlacimo ime usera
             table_name = str(token.ime_objekta)
-            table_name = table_name.translate(None, "'[]")
+            table_name = table_name.translate(translation_table)
             # postoji li user
             if (AK47.AK_table_exist(table_name) == 0):
                 print("Error: user '" + table_name + "' does not exist")
@@ -1041,7 +1043,7 @@ class Drop_command:
         elif(objekt == "group"):
             # izvlacimo ime grupe
             table_name = str(token.ime_objekta)
-            table_name = table_name.translate(None, "'[]")
+            table_name = table_name.translate(translation_table)
             # postoji li grupa
             if (AK47.AK_table_exist(table_name) == 0):
                 print("Error: group '" + table_name + "' does not exist")
@@ -1050,7 +1052,7 @@ class Drop_command:
         elif(objekt == "constraint"):
             # izvlacimo ime constrainta
             table_name = str(token.ime_objekta)
-            table_name = table_name.translate(None, "'[]")
+            table_name = table_name.translate(translation_table)
             # postoji li constraint
             if (AK47.AK_table_exist(table_name) == 0):
                 print("Error: constraint '" + table_name + "' does not exist")
