@@ -27,7 +27,7 @@ def AK_parse_grant_test():
     >>> get_attribute_tokens(grant_tokens, "users")
     [['Elvis', 'Jimmy'], ['Ivica', 'pero22foi1'], ['Hamilton', 'Raikkonen', 'Alonso']]
     >>> get_attribute_tokens(grant_tokens, "grantOption")
-    ['ADMIN OPTION', None, None]
+    [' ADMIN OPTION', None, None]
     """
 
 
@@ -131,7 +131,7 @@ def AK_parse_createIndex_test():
     >>> get_attribute_tokens(createIndex_tokens, "stupci")
     [['stupac1', 'stupac2'], ['stupac1'], ['stupac1', 'stupac2']]
     >>> get_attribute_tokens(createIndex_tokens, "IndexVrsta")
-    ['Btree', 'Btree', 'Hash']
+    [' Btree', ' Btree', ' Hash']
     """
 
 
@@ -185,17 +185,17 @@ def AK_parse_where_test():
     @brief tests parsing of select and delete statements
     @return No return value
 
-    >>> print where_tokens[0]
+    >>> print(where_tokens[0])
     ['WHERE', ['t3', '.', 'at3', '>', '0'], 'AND', ['t2', '.', 'at1', 'IN', ['SELECT', [['COUNT', '*']], 'FROM', 't3']]]
-    >>> print where_tokens[1]
+    >>> print(where_tokens[1])
     ['WHERE', ['t3', 'IN', ['SELECT', ['DISTINCT ON', ['a']], ['a', 'b', 'c'], 'FROM', 't4']]]
-    >>> print where_tokens[2]
+    >>> print(where_tokens[2])
     ['WHERE', ['at2', '=', '2'], 'AND', ['at3', '=', '3']]
-    >>> print where_tokens[3]
+    >>> print(where_tokens[3])
     ['WHERE', ['at4', '=', '4']]
-    >>> print where_tokens[4]
+    >>> print(where_tokens[4])
     ['WHERE', ['t1', '.', 'at1', '=', 't2', '.', 'at2']]
-    >>> print where_tokens[5]
+    >>> print(where_tokens[5])
     ['WHERE', ['t1', '.', 'at1', 'IN', ['SELECT', ['*'], 'FROM', 't2', 'WHERE', ['at2', '>', '0'], 'AND', ['at3', '<', '0'], 'OR', ['at4', '=', '0']]], 'OR', ['t1', '.', 'at2', 'IN', ['SELECT', ['*'], 'FROM', 'at3']]]
     """
 
