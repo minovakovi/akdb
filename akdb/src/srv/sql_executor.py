@@ -417,21 +417,18 @@ class Create_index_command:
         # get index name
         index = str(token.IndexIme)
         # get other expression tokens
-        t = list()
-        t.append(table_name)
-        t.append(token.stupci)
-        t.append(token.IndexVrsta)
-        # executing
-        '''
-            Not working
-            TypeError: in method 'AK_create_Index', argument 2 of type 'AK_list *'
-            Uncomment the next line before testing to see the problem
-        '''
-        # print AK47.AK_create_Index(index, t)
+        args = AK47.list_node()
+        args.attribute_name = token.stupci[0]
+        for stupac in token.stupci[1:]:
+            next = AK47.list_node()
+            next.attribute_name = stupac
+            args.next = next
+
         try:
-            AK47.AK_create_Index(index, t)
+            AK47.AK_create_Index_Table(table_name, args)
             result = "Index created"
-        except:
+        except Exception as e:
+            print(e)
             result = "Error. Creating index failed."
         return result
 
