@@ -880,3 +880,90 @@ int main(int argc, char *argv[]){
 */
 
 // vim: set ts=4 et sw=4 tw=75 
+
+/**
+ * @author Marko Belusic
+ * @brief Function for testing the implementation
+ */
+TestResult AK_iniparser_test(){
+	
+    int succesfulTests = 0;
+    int failedTests = 0;
+    AK_PRO;
+
+    // test if creation of dictionary is working
+    dictionary * dict_to_test = NULL;
+    dict_to_test = dictionary_new(15);
+    if(dict_to_test != NULL){
+        succesfulTests++;
+    }else{
+        failedTests++;
+    }
+
+    // test if adding a value is working
+    iniparser_set(dict_to_test,"people",NULL);
+    iniparser_set(dict_to_test,"people:paul","34");
+    iniparser_set(dict_to_test,"people:ariana","38");
+    iniparser_set(dict_to_test,"people:joe","52");
+    iniparser_set(dict_to_test,"cities",NULL);
+    iniparser_set(dict_to_test,"cities:London","25");
+    if(iniparser_find_entry(dict_to_test, "people:paul") == 1){
+        succesfulTests++;
+    }else{
+        failedTests++;
+    }
+
+    // check if it is the correct value
+    if(strcmp(iniparser_getstring(dict_to_test, "people:paul",NULL),"34") == 0){
+        succesfulTests++;
+    }else{
+        failedTests++;
+    }
+
+    // check if overwriting a value is working
+    iniparser_set(dict_to_test,"people:paul","23");
+    if(strcmp(iniparser_getstring(dict_to_test, "people:paul",NULL),"23") == 0){
+        succesfulTests++;
+    }else{
+        failedTests++;
+    }
+
+    // check if unset a key is working
+    iniparser_unset(dict_to_test, "people:paul");
+    if(iniparser_find_entry(dict_to_test, "people:paul") == 0){
+        succesfulTests++;
+    }else{
+        failedTests++;
+    }
+
+    // check if number of sections is correct
+    if(iniparser_getnsec(dict_to_test) == 2){
+        succesfulTests++;
+    }else{
+        failedTests++;
+    }
+
+    // check if get name of a section is working properly
+    if (strcmp(iniparser_getsecname(dict_to_test,1), "cities") == 0){
+        succesfulTests++;
+    }else{
+        failedTests++;
+    }
+
+    // check if getting number of keys from section is correct
+    if (iniparser_getsecnkeys(dict_to_test,"people") == 2 && iniparser_getsecnkeys(dict_to_test,"cities") == 1){
+        succesfulTests++;
+    }else{
+        failedTests++;
+    }
+    //printing all contents of dictionary
+    iniparser_dump(dict_to_test, stdout);
+    printf("\n");
+    iniparser_dump_ini(dict_to_test, stdout);
+
+    //cleaning dictionary
+    iniparser_AK_freedict(dict_to_test);
+	AK_EPI;
+
+	return TEST_result(succesfulTests, failedTests);
+}

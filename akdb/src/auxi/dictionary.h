@@ -24,6 +24,8 @@
 #include <unistd.h>
 #include "mempro.h"
 
+#include "test.h"
+
 /*---------------------------------------------------------------------------
                                 New types
  ---------------------------------------------------------------------------*/
@@ -162,5 +164,7 @@ void dictionary_unset(dictionary * d, const char * key);
  */
 /*--------------------------------------------------------------------------*/
 void dictionary_dump(dictionary * d, FILE * out);
+
+TestResult AK_dictionary_test();
 
 #endif

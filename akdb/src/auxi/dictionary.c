@@ -14,11 +14,13 @@
                                 Includes
  ---------------------------------------------------------------------------*/
 #include "dictionary.h"
+#include "test.h"
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+
 
 /** Maximum value size for integers and doubles. */
 #define MAXVALSZ    1024
@@ -384,4 +386,67 @@ void dictionary_dump(dictionary * d, FILE * out)
     }
     AK_EPI;
     return ;
+}
+
+/**
+ * @author Marko Belusic
+ * @brief Function for testing the implementation
+ */
+TestResult AK_dictionary_test(){
+	
+    int succesfulTests = 0;
+    int failedTests = 0;
+    AK_PRO;
+
+    // test if creation of dictionary is working
+    dictionary * dict_to_test = NULL;
+    dict_to_test = dictionary_new(15);
+    if(dict_to_test != NULL){
+        succesfulTests++;
+    }else{
+        failedTests++;
+    }
+
+    // test if adding a value is working
+    dictionary_set(dict_to_test,"john","22");
+    dictionary_set(dict_to_test,"paul","34");
+    dictionary_set(dict_to_test,"ariana","38");
+    dictionary_set(dict_to_test,"joe","52");
+    if(dictionary_get(dict_to_test, "john",NULL) != NULL){
+        succesfulTests++;
+    }else{
+        failedTests++;
+    }
+
+    // check if it is the correct value
+    if(strcmp(dictionary_get(dict_to_test, "john",NULL),"22") == 0){
+        succesfulTests++;
+    }else{
+        failedTests++;
+    }
+
+    // check if overwriting a value is working
+    dictionary_set(dict_to_test,"john","23");
+    if(strcmp(dictionary_get(dict_to_test, "john",NULL),"23") == 0){
+        succesfulTests++;
+    }else{
+        failedTests++;
+    }
+
+    // check if unset a key is working
+    dictionary_unset(dict_to_test, "john");
+    if(dictionary_get(dict_to_test, "john",NULL) == NULL){
+        succesfulTests++;
+    }else{
+        failedTests++;
+    }
+
+    //printing all contents of dictionary
+    dictionary_dump(dict_to_test, stdout);
+
+    //cleaning dictionary
+    dictionary_del(dict_to_test);
+	AK_EPI;
+
+	return TEST_result(succesfulTests, failedTests);
 }

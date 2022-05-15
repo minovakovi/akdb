@@ -308,6 +308,8 @@ void iniparser_AK_freedict(dictionary * d);
 
 void AK_inflate_config();
 
+TestResult AK_iniparser_test();
+
 extern dictionary * AK_config;
 //extern char * DB_FILE;
 
