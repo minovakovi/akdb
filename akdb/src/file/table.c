@@ -37,7 +37,7 @@ AK_create_table_parameter* AK_create_create_table_parameter(int type, char* name
 }
 
 /**
- * @author Unknown
+ * @author Unknown, updated by Josip Šušnjara (chained blocks support)
  * @brief Creates a table
  * @param tblName the name of the table
  * @param parameters table parameters array (each parameter contains name and type)
@@ -45,26 +45,34 @@ AK_create_table_parameter* AK_create_create_table_parameter(int type, char* name
  * @return No return value
  */
 void AK_create_table(char* tblName, AK_create_table_parameter* parameters, int attribute_count) {
-    AK_header t_header[ MAX_ATTRIBUTES ];
     AK_header* temp;
+    AK_header t_header[attribute_count + 1];
+    int startAddress;
     AK_PRO;
+    
     for (int i = 0; i < attribute_count; i++) {
-        switch (parameters[i].type) {
-            case TYPE_INT:
-                temp = (AK_header*) AK_create_header(parameters[i].name, TYPE_INT, FREE_INT, FREE_CHAR, FREE_CHAR);
-                memcpy(t_header + i, temp, sizeof ( AK_header));
-                break;
-            case TYPE_VARCHAR:
-                temp = (AK_header*) AK_create_header(parameters[i].name, TYPE_VARCHAR, FREE_INT, FREE_CHAR, FREE_CHAR);
-                memcpy(t_header + i, temp, sizeof ( AK_header));
-                break;
-            case TYPE_FLOAT:
-                temp = (AK_header*) AK_create_header(parameters[i].name, TYPE_FLOAT, FREE_INT, FREE_CHAR, FREE_CHAR);
-                memcpy(t_header + i, temp, sizeof ( AK_header));
-                break;
-        }
-    }
-    memset(t_header + attribute_count, 0, MAX_ATTRIBUTES - attribute_count);
+		    switch (parameters[i].type) {
+		        case TYPE_INT:
+		            temp = (AK_header*) AK_create_header(parameters[i].name, TYPE_INT, FREE_INT, FREE_CHAR, FREE_CHAR);
+		            memcpy(t_header + i, temp, sizeof ( AK_header));
+		            break;
+		        case TYPE_VARCHAR:
+		            temp = (AK_header*) AK_create_header(parameters[i].name, TYPE_VARCHAR, FREE_INT, FREE_CHAR, FREE_CHAR);
+		            memcpy(t_header + i, temp, sizeof ( AK_header));
+		            break;
+		        case TYPE_FLOAT:
+		            temp = (AK_header*) AK_create_header(parameters[i].name, TYPE_FLOAT, FREE_INT, FREE_CHAR, FREE_CHAR);
+		            memcpy(t_header + i, temp, sizeof ( AK_header));
+		            break;
+		    }
+		}
+	temp = (AK_header*) AK_create_header("", TYPE_INTERNAL, FREE_INT, FREE_CHAR, FREE_CHAR);
+	memcpy(t_header + attribute_count, temp, sizeof ( AK_header));
+	startAddress = AK_initialize_new_segment(tblName, SEGMENT_TYPE_TABLE, t_header);
+
+    if (startAddress != EXIT_ERROR)
+        printf("\nTABLE %s CREATED!\n", tblName);
+    
     AK_EPI;
 }
 
@@ -103,7 +111,7 @@ void AK_temp_create_table(char *table, AK_header *header, int type_segment) {
 }
 
 /**
- * @author Matija Šestak.
+ * @author Matija Šestak, updated by Josip Šušnjara (chained blocks support)
  * @brief  Functions that determines the number of attributes in the table
  * <ol>
  * <li>Read addresses of extents</li>
@@ -116,17 +124,26 @@ void AK_temp_create_table(char *table, AK_header *header, int type_segment) {
  */
 int AK_num_attr(char * tblName) {
     int num_attr = 0;
+    int i;
     AK_PRO;
     table_addresses *addresses = (table_addresses*) AK_get_table_addresses(tblName);
     if (addresses->address_from[0] == 0)
         num_attr = -2;
     else {
         AK_mem_block *temp_block = (AK_mem_block*) AK_get_block(addresses->address_from[0]);
-
-        while (strcmp(temp_block->block->header[num_attr].att_name, "\0") != 0) {
-            num_attr++;
-        }
-
+		
+		while(1){
+			i = 0;
+			while (strcmp(temp_block->block->header[i++].att_name, "\0") != 0) {
+            	num_attr++;
+        	}
+        	if(temp_block->block->chained_with != NOT_CHAINED){
+        		temp_block = (AK_mem_block*) AK_get_block(temp_block->block->chained_with);
+        	}
+        	else{
+        		break;
+        	}
+		}
     }
     AK_free(addresses);
     AK_EPI;
@@ -134,7 +151,7 @@ int AK_num_attr(char * tblName) {
 }
 
 /**
- * @author Matija Šestak.
+ * @author Matija Šestak, updated by Josip Šušnjara (chained blocks support)
  * @brief  Function that determines the number of rows in the table
  * <ol>
  * <li>Read addresses of extents</li>
@@ -151,16 +168,20 @@ int AK_num_attr(char * tblName) {
  */
 int AK_get_num_records(char *tblName) {
     int num_rec = 0;
+    int blocks_per_row; //how many chained blocks are needed to store one entry of the table
+    int i = 0, j, k;
+    int num_head;
     AK_PRO;
     table_addresses *addresses = AK_get_table_addresses(tblName);
+    blocks_per_row = (AK_num_attr(tblName) - 1) / MAX_ATTRIBUTES + 1;
     if (addresses->address_from[0] == 0){
         AK_EPI;
         return EXIT_WARNING;
     }
-    int i = 0, j, k;
     AK_mem_block *temp = AK_get_block(addresses->address_from[0]);
+    
     while (addresses->address_from[i] != 0) {
-        for (j = addresses->address_from[i]; j < addresses->address_to[i]; j++) {
+        for (j = addresses->address_from[i]; j < addresses->address_to[i]; j += blocks_per_row) {
             temp = AK_get_block(j);
             if (temp->block->last_tuple_dict_id == 0)
                 break;
@@ -174,13 +195,16 @@ int AK_get_num_records(char *tblName) {
     }
 
     AK_free(addresses);
-    int num_head = AK_num_attr(tblName);
+    num_head = AK_num_attr(tblName);
+    if(num_head > MAX_ATTRIBUTES){
+    	num_head = MAX_ATTRIBUTES;
+    }
     AK_EPI;
     return num_rec / num_head;
 }
 
 /**
- * @author Matija Šestak.
+ * @author Matija Šestak, updated by Josip Šušnjara (chained blocks support)
  * @brief  Function that fetches the table header
  * <ol>
  * <li>Read addresses of extents</li>
@@ -193,6 +217,8 @@ int AK_get_num_records(char *tblName) {
  * @result array of table header
  */
 AK_header *AK_get_header(char *tblName) {
+	int num_attr;
+	int current_attr;
     AK_PRO;
     table_addresses *addresses = AK_get_table_addresses(tblName);
     if (addresses->address_from[0] == 0){
@@ -201,18 +227,31 @@ AK_header *AK_get_header(char *tblName) {
     }
     AK_mem_block *temp = AK_get_block(addresses->address_from[0]);
 
-    int num_attr = AK_num_attr(tblName);
+    num_attr = AK_num_attr(tblName);
     
     // Is calloc the right choice here? The memory gets overridden immediately anyway
-    AK_header *head = (AK_header*) AK_calloc(num_attr, sizeof (AK_header));
-    memcpy(head, temp->block->header, num_attr * sizeof (AK_header));
+    //AK_header *head = (AK_header*) AK_calloc(num_attr, sizeof (AK_header));
+    AK_header *head = AK_malloc(sizeof(AK_header) * num_attr);
+    current_attr = 0;
+    while(1){
+		for(int i = 0; i < MAX_ATTRIBUTES && current_attr < num_attr && temp->block->header[i].att_name != "\0"; i++){
+			memcpy(head + current_attr++, temp->block->header + i, sizeof ( AK_header));
+		}
+		if(temp->block->chained_with != NOT_CHAINED){
+			temp = AK_get_block(temp->block->chained_with);
+		}
+		else{
+			break;
+		}
+	}
+
 	AK_free(addresses);
     AK_EPI;
     return head;
 }
 
 /**
- * @author Matija Šestak.
+ * @author Matija Šestak
  * @brief  Function that fetches attribute name for some zero-based index
  * @param *tblName table name
  * @param index zero-based index
@@ -261,13 +300,15 @@ int AK_get_attr_index(char *tblName, char *attrName) {
 }
 
 /**
- * @author Matija Šestak.
+ * @author Matija Šestak, updated by Josip Šušnjara (chained blocks support)
  * @brief  Function that fetches all values in some column and put on the list
  * @param num zero-based column index
  * @param  *tblName table name
  * @return column values list
  */
 struct list_node *AK_get_column(int num, char *tblName) {
+	int blocks_per_row;
+	int increment;
     AK_PRO;
     int num_attr = AK_num_attr(tblName);
     if (num >= num_attr || num < 0){
@@ -281,13 +322,27 @@ struct list_node *AK_get_column(int num, char *tblName) {
     table_addresses *addresses = (table_addresses*) AK_get_table_addresses(tblName);
     int i, j, k;
     char data[ MAX_VARCHAR_LENGTH ];
+    
+    blocks_per_row = (num_attr - 1) / MAX_ATTRIBUTES + 1;
+    if (blocks_per_row > 1 && (num / MAX_ATTRIBUTES) < blocks_per_row - 1)
+    	increment = MAX_ATTRIBUTES;
+    else if (blocks_per_row > 1)
+    	increment = num_attr % MAX_ATTRIBUTES;
+    else
+    	increment = num_attr;
 
     i = 0;
     while (addresses->address_from[i] != 0) {
-        for (j = addresses->address_from[i]; j < addresses->address_to[i]; j++) {
+        for (j = addresses->address_from[i]; j < addresses->address_to[i]; j += blocks_per_row) {
             AK_mem_block *temp = (AK_mem_block*) AK_get_block(j);
             if (temp->block->last_tuple_dict_id == 0) break;
-            for (k = num; k < DATA_BLOCK_SIZE; k += num_attr) {
+            
+            while(num >= MAX_ATTRIBUTES){
+                temp = (AK_mem_block*) AK_get_block(++j);
+                num -= MAX_ATTRIBUTES;
+            }
+            
+            for (k = num; k < DATA_BLOCK_SIZE; k += increment) {
                 if (temp->block->tuple_dict[k].type != FREE_INT) {
                     int type = temp->block->tuple_dict[k].type;
                     int size = temp->block->tuple_dict[k].size;
@@ -356,7 +411,7 @@ struct list_node *AK_get_row(int num, char * tblName) {
 }
 
 /**
- * @author Barbara Tatai.
+ * @author Barbara Tatai, updated by Josip Šušnjara (chained blocks support)
  * @brief Function that finds the tuple in memory
  * @param row zero-based row index
  * @param column zero-based column index
@@ -366,19 +421,37 @@ struct list_node *AK_get_row(int num, char * tblName) {
  * @return a pointer to a list_node representing the element tuple
  */
 struct list_node *AK_find_tuple(int row, int column, int num_attr, table_addresses *addresses, struct list_node *row_root) {
-    int i, j, k, counter;
+    int i, j, k;
+    int counter;
+    int blocks_per_row;
+    int increment; //if there are e.g. 23 attributes, and MAX_ATTRIBUTES is 10, then 1st block takes 10 atts, 2nd also 10, and 3rd takes 3 atts
     char data[MAX_VARCHAR_LENGTH];
+	AK_PRO;
 
     i = 0;
     counter = -1;
+    blocks_per_row = (num_attr - 1) / MAX_ATTRIBUTES + 1;
+    
+    if (blocks_per_row > 1 && (column / MAX_ATTRIBUTES) < blocks_per_row - 1)
+    	increment = MAX_ATTRIBUTES;
+    else if (blocks_per_row > 1)
+    	increment = num_attr % MAX_ATTRIBUTES;
+    else
+    	increment = num_attr;
+    	
     while (addresses->address_from[ i ] != 0) {
-        for (j = addresses->address_from[ i ]; j < addresses->address_to[ i ]; j++) {
+        for (j = addresses->address_from[ i ]; j < addresses->address_to[ i ]; j += blocks_per_row) {
             AK_mem_block *temp = (AK_mem_block*) AK_get_block(j);
             if (temp->block->last_tuple_dict_id == 0) break;
-            for (k = 0; k < DATA_BLOCK_SIZE; k += num_attr) {
+            while(column >= MAX_ATTRIBUTES){//e.g. 13th column in table is 3rd column in 2nd block of the table
+                temp = (AK_mem_block*) AK_get_block(++j);
+                column -= MAX_ATTRIBUTES;
+            }
+            for (k = 0; k < DATA_BLOCK_SIZE; k += increment) {
                 if (temp->block->tuple_dict[k].size > 0)
                     counter++;
                 if (counter == row) {
+                	
 					struct list_node *next;
                     int type = temp->block->tuple_dict[ k + column ].type;
                     int size = temp->block->tuple_dict[ k + column ].size;
@@ -402,7 +475,7 @@ struct list_node *AK_find_tuple(int row, int column, int num_attr, table_address
 
 
 /**
- * @author Matija Šestak.
+ * @author Matija Šestak
  * @brief Function that fetches a value in some row and column
  * @param row zero-based row index
  * @param column zero-based column index
@@ -577,12 +650,15 @@ int AK_table_exist(char *tblName) {
 }
 
 /**
- * @author Dino Laktašić and Mislav Čakarić (replaced old print table function by new one)
+ * @author Dino Laktašić and Mislav Čakarić (replaced old print table function by new one), updated by Josip Šušnjara (chained blocks support)
  * @brief  Function for printing table
  * @param *tblName table name
  * @return No return value
  */
 void AK_print_table(char *tblName) {
+	int i, j, k, l;
+    int blocks_per_row;
+    
     AK_PRO;
     table_addresses *addresses = (table_addresses*) AK_get_table_addresses(tblName);
     //  || (AK_table_exist(tblName) == 0)
@@ -592,7 +668,6 @@ void AK_print_table(char *tblName) {
     } else {
         AK_header *head = AK_get_header(tblName);
 
-        int i, j, k, l;
         int num_attr = AK_num_attr(tblName);
         int num_rows = AK_get_num_records(tblName);
         int len[num_attr]; //max length for each attribute in row
@@ -603,7 +678,7 @@ void AK_print_table(char *tblName) {
         for (i = 0; i < num_attr; i++) {
             len[i] = strlen((head + i)->att_name);
         }
-
+		
         //for each header attribute iterate through all table rows and check if
         //there is longer element than previously longest and store it in array
         for (i = 0; i < num_attr; i++) {
@@ -681,19 +756,42 @@ void AK_print_table(char *tblName) {
 
             i = 0;
             int type, size, address;
+            
+            int blocks_per_row = (num_attr - 1) / MAX_ATTRIBUTES + 1;
 
             while (addresses->address_from[i] != 0) {
-                for (j = addresses->address_from[i]; j < addresses->address_to[i]; j++) {
-                    AK_mem_block *temp = (AK_mem_block*) AK_get_block(j);
-                    if (temp->block->last_tuple_dict_id == 0)
+                for (j = addresses->address_from[i]; j < addresses->address_to[i]; j += blocks_per_row) {
+                	AK_mem_block *temp[blocks_per_row];
+                    temp[0] = (AK_mem_block*) AK_get_block(j);
+                    
+                    for(int m = 1; temp[m - 1]->block->chained_with != NOT_CHAINED; m++){
+                    	temp[m] = (AK_mem_block*) AK_get_block(temp[m - 1]->block->chained_with);
+                    }
+                    if (temp[0]->block->last_tuple_dict_id == 0)
                         break;
-                    for (k = 0; k < DATA_BLOCK_SIZE; k += num_attr) {
-                        if (temp->block->tuple_dict[k].size > 0 /*&& k / num_attr < num_rows*/) {
+                    int increment = num_attr;
+                    if(num_attr > MAX_ATTRIBUTES)
+                    	increment = MAX_ATTRIBUTES;
+                    for (k = 0; k * increment < DATA_BLOCK_SIZE; k++) {
+                    	
+		                if(num_attr > MAX_ATTRIBUTES)
+		                	increment = MAX_ATTRIBUTES;
+		                else
+		                	increment = num_attr;
+                        if (temp[0]->block->tuple_dict[k * increment].size > 0) {
                             for (l = 0; l < num_attr; l++) {
-                                type = temp->block->tuple_dict[k + l].type;
-                                size = temp->block->tuple_dict[k + l].size;
-                                address = temp->block->tuple_dict[k + l].address;
-                                AK_InsertAtEnd_L3(type, &temp->block->data[address], size, row_root);
+                            	int block_index = 0; //defines in which block of chained blocks is a cell we are looking for
+                            	block_index = l / MAX_ATTRIBUTES;
+                            	if (blocks_per_row > 1 && block_index < blocks_per_row - 1)
+									increment = MAX_ATTRIBUTES;
+								else if (blocks_per_row > 1)
+									increment = num_attr % MAX_ATTRIBUTES;
+								else
+									increment = num_attr;
+                                type = temp[block_index]->block->tuple_dict[k * increment + (l % MAX_ATTRIBUTES)].type;
+                                size = temp[block_index]->block->tuple_dict[k * increment + (l % MAX_ATTRIBUTES)].size;
+                                address = temp[block_index]->block->tuple_dict[k * increment + (l % MAX_ATTRIBUTES)].address;
+                                AK_InsertAtEnd_L3(type, &temp[block_index]->block->data[address], size, row_root);
                             }
                             AK_print_row(len, row_root);
                             AK_print_row_spacer(len, length);
@@ -828,7 +926,7 @@ void AK_print_row_to_file(int col_len[], struct list_node * row) {
 }
 
 /**
- * @author Dino Laktašić and Mislav Čakarić (replaced old print table function by new one)
+ * @author Dino Laktašić and Mislav Čakarić (replaced old print table function by new one), updated by Josip Šušnjara (chained blocks support)
  * update by Luka Rajcevic
  * @brief  Function that prints a table
  * @param *tblName table name
@@ -839,6 +937,7 @@ void AK_print_table_to_file(char *tblName) {
 
 	char* FILEPATH = "table_test.txt";
 	FILE *fp;
+	int blocks_per_row;
     
 	AK_PRO;
     fp = fopen(FILEPATH, "a");
@@ -926,19 +1025,40 @@ void AK_print_table_to_file(char *tblName) {
 
             i = 0;
             int type, size, address;
+            
+            blocks_per_row = (num_attr - 1) / MAX_ATTRIBUTES + 1;
 
             while (addresses->address_from[i] != 0) {
-                for (j = addresses->address_from[i]; j < addresses->address_to[i]; j++) {
-                    AK_mem_block *temp = (AK_mem_block*) AK_get_block(j);
-                    if (temp->block->last_tuple_dict_id == 0)
+                for (j = addresses->address_from[i]; j < addresses->address_to[i]; j += blocks_per_row) {
+                    AK_mem_block *temp[blocks_per_row];
+                    temp[0] = (AK_mem_block*) AK_get_block(j);
+                    for(int m = 1; temp[m - 1]->block->chained_with != NOT_CHAINED; m++){
+                    	temp[m] = (AK_mem_block*) AK_get_block(temp[m - 1]->block->chained_with);
+                    }
+                    if (temp[0]->block->last_tuple_dict_id == 0)
                         break;
-                    for (k = 0; k < DATA_BLOCK_SIZE; k += num_attr) {
-                        if (temp->block->tuple_dict[k].size > 0) {
+                    int increment = num_attr;
+                    if(num_attr > MAX_ATTRIBUTES)
+                    	increment = MAX_ATTRIBUTES;
+                    for (k = 0; k * increment < DATA_BLOCK_SIZE; k++) {
+                    	if(num_attr > MAX_ATTRIBUTES)
+		                	increment = MAX_ATTRIBUTES;
+		                else
+		                	increment = num_attr;
+                        if (temp[0]->block->tuple_dict[k * increment].size > 0) {
                             for (l = 0; l < num_attr; l++) {
-                                type = temp->block->tuple_dict[k + l].type;
-                                size = temp->block->tuple_dict[k + l].size;
-                                address = temp->block->tuple_dict[k + l].address;
-                                AK_InsertAtEnd_L3(type, &(temp->block->data[address]), size, row_root);
+                            	int block_index = 0; //defines in which block of chained blocks is a cell we are looking for
+                            	block_index = l / MAX_ATTRIBUTES;
+                            	if (blocks_per_row > 1 && block_index < blocks_per_row - 1)
+									increment = MAX_ATTRIBUTES;
+								else if (blocks_per_row > 1)
+									increment = num_attr % MAX_ATTRIBUTES;
+								else
+									increment = num_attr;
+                                type = temp[block_index]->block->tuple_dict[k * increment + (l % MAX_ATTRIBUTES)].type;
+                                size = temp[block_index]->block->tuple_dict[k * increment + (l % MAX_ATTRIBUTES)].size;
+                                address = temp[block_index]->block->tuple_dict[k * increment + (l % MAX_ATTRIBUTES)].address;
+                                AK_InsertAtEnd_L3(type, &(temp[block_index]->block->data[address]), size, row_root);
                             }
                             AK_print_row_to_file(len, row_root);
                             AK_print_row_spacer_to_file(len, length);
@@ -1145,6 +1265,147 @@ int AK_rename(char *old_table_name, char *old_attr, char *new_table_name, char *
     @update by Barbara Tatai - fixed SIGSEGV (caused by storing char pointers into integers), fixed successful/failed counter
  */
 TestResult AK_table_test() {
+	
+	
+	/* ------------------------------------------------------------------------------------------------------
+		The commented part was intended for chained blocks implementation testing
+		(if a table has more than MAX_ATTRIBUTES attributes, since no such a table exists in the database)*/
+	
+	/*char * tableName = "test420";
+	AK_create_table_parameter * parameters = (AK_create_table_parameter *) AK_malloc(sizeof(AK_create_table_parameter));
+	AK_create_table_parameter * parameter = (AK_create_table_parameter *) AK_malloc(sizeof(AK_create_table_parameter));
+	char * parName;
+	for(int i = 0; i < 13; i++){
+		switch(i){
+			case 0:{
+				parName = "par0";
+				break;}
+			case 1:{
+				parName = "par1";
+				break;}
+			case 2:{
+				parName = "par2";
+				break;}
+			case 3:{
+				parName = "par3";
+				break;}
+			case 4:{
+				parName = "par4";
+				break;}
+			case 5:{
+				parName = "par5";
+				break;}
+			case 6:{
+				parName = "par6";
+				break;}
+			case 7:{
+				parName = "par7";
+				break;}
+			case 8:{
+				parName = "par8";
+				break;}
+			case 9:{
+				parName = "par9";
+				break;}
+			case 10:{
+				parName = "par10";
+				break;}
+			case 11:{
+				parName = "par11";
+				break;}
+			case 12:{
+				parName = "par12";
+				break;}
+			
+			}
+		parameter = AK_create_create_table_parameter(TYPE_INT, parName);
+		parameters[i] = *parameter;
+		}
+	
+	//AK_InsertAtEnd_L3(TYPE_ATTRIBS, parameter, sizeof(parameter), parameters);
+	AK_create_table(tableName, parameters, 13);
+	
+	struct list_node *row_root = (struct list_node *) AK_malloc(sizeof (struct list_node));
+    AK_Init_L3(&row_root);
+    int par0 = 5;
+    int par1 = 15;
+    int par2 = 25;
+    int par3 = 35;
+    int par4 = 45;
+    int par5 = 55;
+    int par6 = 65;
+    int par7 = 75;
+    int par8 = 85;
+    int par9 = 95;
+    int par10 = 105;
+    int par11 = 115;
+    int par12 = 125;
+    
+    AK_Insert_New_Element(TYPE_INT, &par0, tableName, "par0", row_root);
+    AK_Insert_New_Element(TYPE_INT, &par1, tableName, "par1", row_root);
+    AK_Insert_New_Element(TYPE_INT, &par2, tableName, "par2", row_root);
+    AK_Insert_New_Element(TYPE_INT, &par3, tableName, "par3", row_root);
+    AK_Insert_New_Element(TYPE_INT, &par4, tableName, "par4", row_root);
+    AK_Insert_New_Element(TYPE_INT, &par5, tableName, "par5", row_root);
+    AK_Insert_New_Element(TYPE_INT, &par6, tableName, "par6", row_root);
+    AK_Insert_New_Element(TYPE_INT, &par7, tableName, "par7", row_root);
+    AK_Insert_New_Element(TYPE_INT, &par8, tableName, "par8", row_root);
+    AK_Insert_New_Element(TYPE_INT, &par9, tableName, "par9", row_root);
+    AK_Insert_New_Element(TYPE_INT, &par10, tableName, "par10", row_root);
+    AK_Insert_New_Element(TYPE_INT, &par11, tableName, "par11", row_root);
+    AK_Insert_New_Element(TYPE_INT, &par12, tableName, "par12", row_root);
+    
+    AK_insert_row(row_root);
+    
+    AK_DeleteAll_L3(&row_root);
+    
+    par0 = 8;
+    par1 = 18;
+    par2 = 28;
+    par3 = 38;
+    par4 = 48;
+    par5 = 58;
+    par6 = 68;
+    par7 = 78;
+    par8 = 88;
+    par9 = 98;
+    par10 = 108;
+    par11 = 118;
+    par12 = 128;
+    
+    AK_Insert_New_Element(TYPE_INT, &par0, tableName, "par0", row_root);
+    AK_Insert_New_Element(TYPE_INT, &par1, tableName, "par1", row_root);
+    AK_Insert_New_Element(TYPE_INT, &par2, tableName, "par2", row_root);
+    AK_Insert_New_Element(TYPE_INT, &par3, tableName, "par3", row_root);
+    AK_Insert_New_Element(TYPE_INT, &par4, tableName, "par4", row_root);
+    AK_Insert_New_Element(TYPE_INT, &par5, tableName, "par5", row_root);
+    AK_Insert_New_Element(TYPE_INT, &par6, tableName, "par6", row_root);
+    AK_Insert_New_Element(TYPE_INT, &par7, tableName, "par7", row_root);
+    AK_Insert_New_Element(TYPE_INT, &par8, tableName, "par8", row_root);
+    AK_Insert_New_Element(TYPE_INT, &par9, tableName, "par9", row_root);
+    AK_Insert_New_Element(TYPE_INT, &par10, tableName, "par10", row_root);
+    AK_Insert_New_Element(TYPE_INT, &par11, tableName, "par11", row_root);
+    AK_Insert_New_Element(TYPE_INT, &par12, tableName, "par12", row_root);
+    
+    AK_insert_row(row_root);
+    AK_insert_row(row_root);
+    AK_insert_row(row_root);
+    AK_DeleteAll_L3(&row_root);
+	
+	AK_print_table(tableName);
+	
+	struct list_node * lista = AK_get_column(11, "test420");
+	struct list_node * el = AK_First_L2(lista);
+	void *data = (void *) AK_calloc(MAX_VARCHAR_LENGTH, sizeof (void));
+	memcpy(data, el->data, sizeof (int));
+    printf("\n%*i |\n", 5, *((int *) data));
+    el = AK_Next_L2(el);
+    memcpy(data, el->data, sizeof (int));
+    printf("\n%*i |\n", 5, *((int *) data));*/
+    
+    /* ---------------------------------------------------------------------------------------------- */
+	
+
     AK_PRO;
     printf("table.c: Present!\n");
 
