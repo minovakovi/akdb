@@ -399,49 +399,65 @@ TestResult AK_dictionary_test(){
     AK_PRO;
 
     // test if creation of dictionary is working
+    printf("Testing if creation of dictionary is working\n");
     dictionary * dict_to_test = NULL;
     dict_to_test = dictionary_new(15);
     if(dict_to_test != NULL){
         succesfulTests++;
+        printf("Success\n\n");
     }else{
         failedTests++;
+        printf("Fail\n\n");
     }
 
     // test if adding a value is working
+    printf("Testing if adding a value in dict is working\n");
     dictionary_set(dict_to_test,"john","22");
     dictionary_set(dict_to_test,"paul","34");
     dictionary_set(dict_to_test,"ariana","38");
     dictionary_set(dict_to_test,"joe","52");
     if(dictionary_get(dict_to_test, "john",NULL) != NULL){
         succesfulTests++;
+        printf("Success\n\n");
     }else{
         failedTests++;
+        printf("Fail\n\n");
     }
 
     // check if it is the correct value
+    printf("Testing if we can get the correct value from key\n");
     if(strcmp(dictionary_get(dict_to_test, "john",NULL),"22") == 0){
         succesfulTests++;
+        printf("Success\n\n");
     }else{
         failedTests++;
+        printf("Fail\n\n");
     }
 
     // check if overwriting a value is working
+    printf("Testing if we can overwrite value\n");
     dictionary_set(dict_to_test,"john","23");
     if(strcmp(dictionary_get(dict_to_test, "john",NULL),"23") == 0){
         succesfulTests++;
+        printf("Success\n\n");
     }else{
         failedTests++;
+        printf("Fail\n\n");
     }
 
     // check if unset a key is working
+    printf("Testing if key can be unset\n");
     dictionary_unset(dict_to_test, "john");
     if(dictionary_get(dict_to_test, "john",NULL) == NULL){
         succesfulTests++;
+        printf("Success\n\n");
     }else{
         failedTests++;
+        printf("Fail\n\n");
     }
 
     //printing all contents of dictionary
+    printf("Printing contents of created dictionary\n");
     dictionary_dump(dict_to_test, stdout);
 
     //cleaning dictionary
