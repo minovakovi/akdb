@@ -1204,7 +1204,7 @@ AK_write_block(AK_block * block)
 
 
 /**
- * @author Nikola Bakoš, updated by Dino Laktašić (fixed header BUG), refurbished by dv, updated by Josip Šušnjara (chained blocks support)
+ * @author Nikola Bakoš, updated by Dino Laktašić (fixed header BUG), refurbished by dv
  * @brief Function copy header to blocks. Completely thread-safe
  * @param header Pointer to header which will be copied into each block in blockSet
  * @param blockSet Pointer to array of block addresses into which to copy header
@@ -1218,69 +1218,30 @@ AK_copy_header(AK_header *header, int* blockSet, int blockSetSize)
   int num_blocks = 0;
   int header_att_id = 0;
   AK_block *block;
-  AK_block *next_block;
-  
-  //TODO move blocks' calculation into separate function
-  int atts = 0;
-  int blocks_per_row;
-  AK_header* temp;
-  
+    
   AK_PRO;
-  
-  while(header[atts].type != TYPE_INTERNAL){
-  		atts++;
-  }
-  blocks_per_row = 1 + (atts - 1) / MAX_ATTRIBUTES;
-  
-  AK_header t_header[blocks_per_row][MAX_ATTRIBUTES];
-  int cur_attr = 0;
-  int k;
-
-  for(int i = 0; i < blocks_per_row; i++){
-  		for(k = 0; k < MAX_ATTRIBUTES && (i * MAX_ATTRIBUTES + k < atts); k++){
-	  		temp = (AK_header*) AK_create_header(header[cur_attr].att_name, header[cur_attr].type, FREE_INT, FREE_CHAR, FREE_CHAR);
-			memcpy(t_header[i] + k, temp, sizeof ( AK_header));
-			cur_attr++;
-	  	}
-	  	temp = (AK_header*) AK_create_header("test", TYPE_INTERNAL, FREE_INT, FREE_CHAR, FREE_CHAR);
-	  	memset(t_header[i] + k, 0, MAX_ATTRIBUTES - k);
-	  	
-  }
-		
-  
   for (j = 0; j < blockSetSize; j++)
     {
       block = AK_read_block(blockSet[j]);
-      if(j + 1 < blockSetSize){
-      		next_block = AK_read_block(blockSet[j + 1]);
-      }
 
+      header_att_id = 0;
       //@TODO the check fails second time around if the table has MAX_ATTRIBUTES
-      for(header_att_id = 0; (header_att_id < MAX_ATTRIBUTES) && (header[header_att_id].type != 0); header_att_id++)
+      for( ;(header_att_id < MAX_ATTRIBUTES) && (header[header_att_id].type != 0); ++header_att_id)
 	{
-	  //memcpy(&block->header[header_att_id], &header[header_att_id], sizeof(*header));
-	  memcpy(&block->header[header_att_id], &t_header[j % blocks_per_row][header_att_id], sizeof(*header));
+	  memcpy(&block->header[header_att_id], &header[header_att_id], sizeof(*header));
 	}
       
       block->type = BLOCK_TYPE_NORMAL;
       block->AK_free_space = 0;
       block->last_tuple_dict_id = 0;
-      if(j % blocks_per_row != (blocks_per_row - 1) && blocks_per_row > 1){
-      		block->chained_with = next_block->address;
-      }
-      else{
-      	block->chained_with = NOT_CHAINED;
-      }
       
       if (AK_write_block(block) == EXIT_SUCCESS)
 	{
 	  num_blocks++;
 	}
       
+      AK_free(block);
     }
-    
-    AK_free(block);
-    AK_free(next_block);
   
   AK_EPI;
   return num_blocks;
