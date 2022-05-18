@@ -84,7 +84,7 @@ int AK_insert_row(struct list_node *row_root);
    * @param row_list list of elements which contain data for delete or update
    * @return No return value
 */
-void AK_update_row_from_block(AK_block *temp_block, struct list_node *row_root);
+int AK_update_row_from_block(AK_block *temp_block, struct list_node *row_root);
 
 /**
    * @author Matija Novak, updated by Dino Laktašić, changed by Davorin Vukelic, updated by Mario Peroković
