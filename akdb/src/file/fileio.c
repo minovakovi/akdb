@@ -233,13 +233,13 @@ int AK_insert_row(struct list_node *row_root)
 }
 
 /**
-   * @author Matija Novak, updated by Dino Laktašić, updated by Mario Peroković - separated from deletion
-   * @brief Function updates row from table in given block.
+   * @author Matija Novak, updated by Dino Laktašić, updated by Mario Peroković - separated from deletion, updated by Antun Tkalčec (fixed SIGSEGV)
+   * @brief Function updates row from table in given block if the data in the table is equal to data in attribute used for search. 
    * @param temp_block block to work with
    * @param row_list list of elements which contain data for delete or update
-   * @return No return value
+   * @return Returns an "EXIT_SUCCESS"
 */
-void AK_update_row_from_block(AK_block *temp_block, struct list_node *row_root)
+int AK_update_row_from_block(AK_block *temp_block, struct list_node *row_root)
 {
     int head = 0;                        //counting headers
     int attPlace = 0;                    //place of attribute which are same
