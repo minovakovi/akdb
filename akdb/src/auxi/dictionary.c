@@ -14,11 +14,13 @@
                                 Includes
  ---------------------------------------------------------------------------*/
 #include "dictionary.h"
+#include "test.h"
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+
 
 /** Maximum value size for integers and doubles. */
 #define MAXVALSZ    1024
@@ -384,4 +386,83 @@ void dictionary_dump(dictionary * d, FILE * out)
     }
     AK_EPI;
     return ;
+}
+
+/**
+ * @author Marko Belusic
+ * @brief Function for testing the implementation
+ */
+TestResult AK_dictionary_test(){
+	
+    int succesfulTests = 0;
+    int failedTests = 0;
+    AK_PRO;
+
+    // test if creation of dictionary is working
+    printf("Testing if creation of dictionary is working\n");
+    dictionary * dict_to_test = NULL;
+    dict_to_test = dictionary_new(15);
+    if(dict_to_test != NULL){
+        succesfulTests++;
+        printf("Success\n\n");
+    }else{
+        failedTests++;
+        printf("Fail\n\n");
+    }
+
+    // test if adding a value is working
+    printf("Testing if adding a value in dict is working\n");
+    dictionary_set(dict_to_test,"john","22");
+    dictionary_set(dict_to_test,"paul","34");
+    dictionary_set(dict_to_test,"ariana","38");
+    dictionary_set(dict_to_test,"joe","52");
+    if(dictionary_get(dict_to_test, "john",NULL) != NULL){
+        succesfulTests++;
+        printf("Success\n\n");
+    }else{
+        failedTests++;
+        printf("Fail\n\n");
+    }
+
+    // check if it is the correct value
+    printf("Testing if we can get the correct value from key\n");
+    if(strcmp(dictionary_get(dict_to_test, "john",NULL),"22") == 0){
+        succesfulTests++;
+        printf("Success\n\n");
+    }else{
+        failedTests++;
+        printf("Fail\n\n");
+    }
+
+    // check if overwriting a value is working
+    printf("Testing if we can overwrite value\n");
+    dictionary_set(dict_to_test,"john","23");
+    if(strcmp(dictionary_get(dict_to_test, "john",NULL),"23") == 0){
+        succesfulTests++;
+        printf("Success\n\n");
+    }else{
+        failedTests++;
+        printf("Fail\n\n");
+    }
+
+    // check if unset a key is working
+    printf("Testing if key can be unset\n");
+    dictionary_unset(dict_to_test, "john");
+    if(dictionary_get(dict_to_test, "john",NULL) == NULL){
+        succesfulTests++;
+        printf("Success\n\n");
+    }else{
+        failedTests++;
+        printf("Fail\n\n");
+    }
+
+    //printing all contents of dictionary
+    printf("Printing contents of created dictionary\n");
+    dictionary_dump(dict_to_test, stdout);
+
+    //cleaning dictionary
+    dictionary_del(dict_to_test);
+	AK_EPI;
+
+	return TEST_result(succesfulTests, failedTests);
 }

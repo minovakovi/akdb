@@ -880,3 +880,151 @@ int main(int argc, char *argv[]){
 */
 
 // vim: set ts=4 et sw=4 tw=75 
+
+/**
+ * @author Marko Belusic
+ * @brief Function for testing the implementation
+ */
+TestResult AK_iniparser_test(){
+	
+    int succesfulTests = 0;
+    int failedTests = 0;
+    AK_PRO;
+
+    // test if creation of dictionary is working
+    printf("Testing if creation of dictionary is working\n");
+    dictionary * dict_to_test = NULL;
+    dict_to_test = dictionary_new(15);
+    if(dict_to_test != NULL){
+        succesfulTests++;
+        printf("Success\n\n");
+    }else{
+        failedTests++;
+        printf("Fail\n\n");
+    }
+
+    // test if adding a value is working
+    printf("Testing if adding a value is working\n");
+    iniparser_set(dict_to_test,"people",NULL);
+    iniparser_set(dict_to_test,"people:paul","34");
+    iniparser_set(dict_to_test,"people:ariana","38");
+    iniparser_set(dict_to_test,"people:joe","52");
+    iniparser_set(dict_to_test,"cities",NULL);
+    iniparser_set(dict_to_test,"cities:London","25");
+    if(iniparser_find_entry(dict_to_test, "people:paul") == 1){
+        succesfulTests++;
+        printf("Success\n\n");
+    }else{
+        failedTests++;
+        printf("Fail\n\n");
+    }
+
+    // check if it is the correct value
+    printf("Testing if getting a value is working\n");
+    if(strcmp(iniparser_getstring(dict_to_test, "people:paul",NULL),"34") == 0){
+        succesfulTests++;
+        printf("Success\n\n");
+    }else{
+        failedTests++;
+        printf("Fail\n\n");
+    }
+
+    // check if overwriting a value is working
+    printf("Testing if value can be overwritten\n");
+    iniparser_set(dict_to_test,"people:paul","23");
+    if(strcmp(iniparser_getstring(dict_to_test, "people:paul",NULL),"23") == 0){
+        succesfulTests++;
+        printf("Success\n\n");
+    }else{
+        failedTests++;
+        printf("Fail\n\n");
+    }
+
+    // check if unset a key is working
+    printf("Testing if key can be unset\n");
+    iniparser_unset(dict_to_test, "people:paul");
+    if(iniparser_find_entry(dict_to_test, "people:paul") == 0){
+        succesfulTests++;
+        printf("Success\n\n");
+    }else{
+        failedTests++;
+        printf("Fail\n\n");
+    }
+
+    // check if number of sections is correct
+    printf("Testing if number of sections is correct when using get sections\n");
+    if(iniparser_getnsec(dict_to_test) == 2){
+        succesfulTests++;
+        printf("Success\n\n");
+    }else{
+        failedTests++;
+        printf("Fail\n\n");
+    }
+
+    // check if get name of a section is working properly
+    printf("Testing if getting a section name by n is working\n");
+    if (strcmp(iniparser_getsecname(dict_to_test,1), "cities") == 0){
+        succesfulTests++;
+        printf("Success\n\n");
+    }else{
+        failedTests++;
+        printf("Fail\n\n");
+    }
+
+    // check if getting number of keys from section is correct
+    printf("Testing if number of keys in given section name is correct\n");
+    if (iniparser_getsecnkeys(dict_to_test,"people") == 2 && iniparser_getsecnkeys(dict_to_test,"cities") == 1){
+        succesfulTests++;
+        printf("Success\n\n");
+    }else{
+        failedTests++;
+        printf("Fail\n\n");
+    }
+
+    //printing all contents of dictionary
+    printf("Printing all contents of created dictionary\n");
+    iniparser_dump(dict_to_test, stdout);
+    printf("\n");
+    iniparser_dump_ini(dict_to_test, stdout);
+
+    // check if loading a file into dict is working properly
+    printf("Testing if loading a file into dict is working properly\n");
+    FILE *fptr;
+    fptr = fopen("testFileForIniParser.txt","w");
+    if(fptr == NULL)
+    {  
+        failedTests++;
+        printf("Fail\n\n");             
+    }else{
+        fprintf(fptr,"%s","[section1]\n");
+        fprintf(fptr,"%s","key1 = \"value1\"\n");
+        fprintf(fptr,"%s","key2 = \"value2\"\n");
+        fprintf(fptr,"%s","[section2]\n");
+        fprintf(fptr,"%s","key1 = \"value1\"\n");
+        fprintf(fptr,"%s","key2 = \"value2\"\n");
+        fclose(fptr);
+        dictionary * dict_to_test2 = NULL;
+        dict_to_test2 = iniparser_load("testFileForIniParser.txt");
+        remove("testFileForIniParser.txt");
+        if(dict_to_test2 != NULL){
+            succesfulTests++;
+            printf("Success\n\n");
+            //printing all contents of loaded dictionary
+            printf("Printing all contents of loaded dictionary \n");
+            iniparser_dump(dict_to_test2, stdout);
+            printf("\n");
+            iniparser_dump_ini(dict_to_test2, stdout);
+            //cleaning dictionary
+            iniparser_AK_freedict(dict_to_test2);
+        }else{
+            failedTests++;
+            printf("Fail\n\n");
+        }
+    }
+
+    //cleaning dictionary
+    iniparser_AK_freedict(dict_to_test);
+	AK_EPI;
+
+	return TEST_result(succesfulTests, failedTests);
+}

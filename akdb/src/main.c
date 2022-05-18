@@ -28,6 +28,7 @@
 // Global configuration
 #include "auxi/constants.h"
 #include "auxi/configuration.h"
+#include "auxi/dictionary.h"
 // Disk management
 #include "dm/dbman.h"
 // Memory management
@@ -100,6 +101,8 @@ function fun[] = {
 {"auxi: AK_observable", &AK_observable_test}, //auxi/observable.c
 {"auxi: AK_observable_pattern", &AK_observable_pattern},//auxi/observable.c
 {"auxi: AK_mempro", &AK_mempro_test},//auxi/mempro.c
+{"auxi: AK_dictionary", &AK_dictionary_test},//auxi/dictionary.c
+{"auxi: AK_iniparser", &AK_iniparser_test},//auxi/iniparser.c
 //dm:
 //-------
 {"dm: AK_allocationbit", &AK_allocationbit_test}, //dm/dbman.c
