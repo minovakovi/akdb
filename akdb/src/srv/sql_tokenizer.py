@@ -62,11 +62,11 @@ class sql_tokenizer:
             "restrict", caseless=True)
         objectName = delimitedList(ident, ",", combine=True)
         objectNameList = Group(delimitedList(objectName))
-        objectName2 = Upcase(delimitedList(ident, ",", combine=True))
+        objectName2 = delimitedList(ident, ",", combine=True).setParseAction(upcaseTokens)
         objectNameList2 = Group(delimitedList(objectName))
-        optionalName = Upcase(delimitedList(ident, ",", combine=True))
+        optionalName = delimitedList(ident, ",", combine=True).setParseAction(upcaseTokens)
         optionalNameList = Group(delimitedList(objectName))
-        sequenceName = Upcase(delimitedList(ident, ",", combine=True))
+        sequenceName = delimitedList(ident, ",", combine=True).setParseAction(upcaseTokens)
         sequenceNameList = Group(delimitedList(sequenceName))
 
         dropStmt = Forward()
@@ -208,6 +208,10 @@ class sql_tokenizer:
             return " "*err.loc + "^\n" + err.msg
         print()
 
+        if(tokens.cycle == "cycle"):
+            tokens.cycle = 1
+        else:
+            tokens.cycle = 0
         # definiranje min, max i start default vrijednosti na temelju tipa sequence
         if(tokens.as_value[0] == "smallint"):
             if(tokens.min_value == "no minvalue"):

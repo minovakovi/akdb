@@ -417,21 +417,18 @@ class Create_index_command:
         # get index name
         index = str(token.IndexIme)
         # get other expression tokens
-        t = list()
-        t.append(table_name)
-        t.append(token.stupci)
-        t.append(token.IndexVrsta)
-        # executing
-        '''
-            Not working
-            TypeError: in method 'AK_create_Index', argument 2 of type 'AK_list *'
-            Uncomment the next line before testing to see the problem
-        '''
-        # print AK47.AK_create_Index(index, t)
+        args = AK47.list_node()
+        args.attribute_name = token.stupci[0]
+        for stupac in token.stupci[1:]:
+            next = AK47.list_node()
+            next.attribute_name = stupac
+            args.next = next
+
         try:
-            AK47.AK_create_Index(index, t)
+            AK47.AK_create_Index_Table(table_name, args)
             result = "Index created"
-        except:
+        except Exception as e:
+            print(e)
             result = "Error. Creating index failed."
         return result
 
@@ -958,6 +955,18 @@ class Drop_command:
     matcher = None
     expr = None
 
+    _dropType = {
+        "table": 0,
+        "index": 1,
+        "view": 2,
+        "sequence": 3,
+        "trigger": 4,
+        "function": 5,
+        "user": 6,
+        "group": 7,
+        "constraint": 8
+    }
+
     def matches(self, inp):
         self.pattern = re.compile(self.drop_regex)
         self.matcher = self.pattern.match(inp)
@@ -975,88 +984,19 @@ class Drop_command:
             print(token)
             return False
         objekt = str(token.objekt)
-        if(objekt == "table"):
-            # izvlacimo ime tablice
-            table_name = str(token.ime_objekta)
-            table_name = table_name.translate(None, "'[]")
-            # postoji li tablica
-            if (AK47.AK_table_exist(table_name) == 0):
-                print("Error: table '" + table_name + "' does not exist")
-                return False
-            AK47.AK_drop_test_helper(0, table_name)
-        elif(objekt == "index"):
-            # izvlacimo ime indexa
-            table_name = str(token.ime_objekta)
-            table_name = table_name.translate(None, "'[]")
-            # postoji li index
-            if (AK47.AK_table_exist(table_name) == 0):
-                print("Error: index '" + table_name + "' does not exist")
-                return False
-            AK47.AK_drop_test_helper(1, table_name)
-        elif(objekt == "view"):
-            # izvlacimo ime view-a
-            table_name = str(token.ime_objekta)
-            table_name = table_name.translate(None, "'[]")
-            # postoji li view
-            if (AK47.AK_table_exist(table_name) == 0):
-                print("Error: table '" + table_name + "' does not exist")
-                return False
-            AK47.AK_drop_test_helper(2, table_name)
-        elif(objekt == "sequence"):
-            # izvlacimo ime sequence-a
-            table_name = str(token.ime_objekta)
-            table_name = table_name.translate(None, "'[]")
-            # postoji li sequence
-            if (AK47.AK_table_exist(table_name) == 0):
-                print("Error: sequence '" + table_name + "' does not exist")
-                return False
-            AK47.AK_drop_test_helper(3, table_name)
-        elif(objekt == "trigger"):
-            # izvlacimo ime triggera
-            table_name = str(token.ime_objekta)
-            table_name = table_name.translate(None, "'[]")
-            # postoji li trigger
-            if (AK47.AK_table_exist(table_name) == 0):
-                print("Error: trigger '" + table_name + "' does not exist")
-                return False
-            AK47.AK_drop_test_helper(4, table_name)
-        elif(objekt == "function"):
-            # izvlacimo ime funkcije
-            table_name = str(token.ime_objekta)
-            table_name = table_name.translate(None, "'[]")
-            # postoji li funkcija
-            if (AK47.AK_table_exist(table_name) == 0):
-                print("Error: funkcija '" + table_name + "' does not exist")
-                return False
-            AK47.AK_drop_test_helper(5, table_name)
-        elif(objekt == "user"):
-            # izvlacimo ime usera
-            table_name = str(token.ime_objekta)
-            table_name = table_name.translate(None, "'[]")
-            # postoji li user
-            if (AK47.AK_table_exist(table_name) == 0):
-                print("Error: user '" + table_name + "' does not exist")
-                return False
-            AK47.AK_drop_test_helper(6, table_name)
-        elif(objekt == "group"):
-            # izvlacimo ime grupe
-            table_name = str(token.ime_objekta)
-            table_name = table_name.translate(None, "'[]")
-            # postoji li grupa
-            if (AK47.AK_table_exist(table_name) == 0):
-                print("Error: group '" + table_name + "' does not exist")
-                return False
-            AK47.AK_drop_test_helper(7, table_name)
-        elif(objekt == "constraint"):
-            # izvlacimo ime constrainta
-            table_name = str(token.ime_objekta)
-            table_name = table_name.translate(None, "'[]")
-            # postoji li constraint
-            if (AK47.AK_table_exist(table_name) == 0):
-                print("Error: constraint '" + table_name + "' does not exist")
-                return False
-            AK47.AK_drop_test_helper(8, table_name)
+        # Removes all []' from string
+        translation_table = str.maketrans("", "", "[]'")
+        table_name = str(token.ime_objekta)
+        table_name = table_name.translate(translation_table)
 
+        drop_args = AK47.drop_arguments()
+        drop_args.value = table_name
+
+        if (AK47.AK_table_exist(table_name) == 0):
+            print("Error: table '" + table_name + "' does not exist")
+            return False
+        
+        AK47.AK_drop(self._dropType[objekt], drop_args)
 
 # sql_executor
 # contaions methods for sql operations
