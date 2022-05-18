@@ -34,6 +34,7 @@ class Server:
         signal.signal(signal.SIGINT, self.signal_handler)
         print(self.host)
         print(self.port)
+        sqle.initialize()
     #Destructor of Server class
     def __del__(self):
         self.working = False
