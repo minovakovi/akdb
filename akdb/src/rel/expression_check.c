@@ -273,7 +273,7 @@ int AK_check_regex_expression(const char * value, const char * expression, int s
 	AK_PRO;
 	char *matcherData = value;
 	char * regexExpreesion;
-	char * result;
+	char * result;  
 	regex_t regexCompiled;
 	int isMatched;
 	int caseSens;
@@ -1192,7 +1192,7 @@ TestResult AK_expression_check_test()
 
 	AK_Init_L3(&condition4);
 	AK_InsertAtEnd_L3(TYPE_ATTRIBS, "firstname", sizeof("firstname"), condition4);
-    char conditionAtributes4[] = "%o";
+    char conditionAtributes4[] = "%a";
 
 	AK_InsertAtEnd_L3(TYPE_VARCHAR, conditionAtributes4, sizeof(conditionAtributes4), condition4);
 	AK_InsertAtEnd_L3(TYPE_OPERATOR, "LIKE", sizeof("LIKE"), condition4);
@@ -1212,7 +1212,7 @@ TestResult AK_expression_check_test()
 	AK_DeleteAll_L3(&condition4);
 	
     AK_print_table(srcTable);
-	printf("\n SELECT firstname,year,weight FROM student WHERE firstname LIKE '%o';\n\n");
+	printf("\n SELECT firstname,year,weight FROM student WHERE firstname LIKE '%a';\n\n");
     AK_print_table(destTable4);
 	
 	AK_free(attributes4);
@@ -1232,7 +1232,7 @@ TestResult AK_expression_check_test()
 
 	AK_Init_L3(&condition5);
 	AK_InsertAtEnd_L3(TYPE_ATTRIBS, "firstname", sizeof("firstname"), condition5);
-    char conditionAtributes5[] = "abc";
+    char conditionAtributes5[] = "m%";
 
 	AK_InsertAtEnd_L3(TYPE_VARCHAR, conditionAtributes5, sizeof(conditionAtributes5), condition5);
 	AK_InsertAtEnd_L3(TYPE_OPERATOR, "NOT ILIKE", sizeof("NOT ILIKE"), condition5);
@@ -1264,7 +1264,7 @@ TestResult AK_expression_check_test()
 
 	struct list_node *condition6 = (struct list_node *) AK_malloc(sizeof (struct list_node));
 
-	char *destTable6="select_result5";
+	char *destTable6="select_result6";
 	AK_Init_L3(&attributes6);
 	AK_InsertAtEnd_L3(TYPE_ATTRIBS, "firstname", sizeof("firstname"), attributes6);
 	AK_InsertAtEnd_L3(TYPE_ATTRIBS, "year", sizeof("year"), attributes6);
