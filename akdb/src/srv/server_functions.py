@@ -26,6 +26,7 @@ class ParamikoServer(paramiko.ServerInterface):
     def check_auth_password(self, username, password):
         usr = "testingUser" #TODO get users and passwords from database
         #Testing the data format of AK_user_get_id(usr)
+        AK47.AK_user_get_id(usr)
         #SIGSEGV ISSUE again
         #return AK47.AK_user_get_id(usr)
         pas = "testingPass"

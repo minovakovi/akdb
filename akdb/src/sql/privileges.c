@@ -17,6 +17,7 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor Boston, MA 02110-1301,  USA
  */
 #include "privileges.h"
+#include <unistd.h>
 
 /**
  * @author Kristina Takač, edited by Borna Romić
@@ -59,30 +60,26 @@ int AK_user_add(char *username, int *password, int set_id) {
 }
 
 /**
- * @author Kristina Takač.
+ * @author Kristina Takač, updated by Barbara Tatai (fix leaks)
  * @brief  Function that returns an ID of the given user
  * @param *username username of user whose id we are looking for
  * @return user_id, otherwise EXIT_ERROR
  */
 int AK_user_get_id(char *username) {
-    int i = 0;
+    int i = 0, id = EXIT_ERROR;
     struct list_node *row;
     AK_PRO;
-
-    while ((row = (struct list_node *) AK_get_row(i, "AK_user")) != NULL) {
+    while ((row = (struct list_node *) AK_get_row(i, "AK_user")) != NULL && id == EXIT_ERROR) {
         struct list_node *elem_in_strcmp = AK_GetNth_L2(2, row);
         if (strcmp(elem_in_strcmp->data, username) == 0) {
-            i = (int) * row->next->data;
-            AK_free(row);
-            AK_EPI;
-            return i;
+            id = (int) *(AK_GetNth_L2(1, row)->data);            
         }
         i++;
+        AK_DeleteAll_L3(&row);
+        AK_free(row);  
     }
-    AK_free(row);
-
     AK_EPI;
-    return EXIT_ERROR;
+    return id;
 }
 
 /**
@@ -155,7 +152,7 @@ int AK_user_remove_by_name(char *name) {
 int AK_user_rename(char *old_name, char *new_name, int *password) {
     AK_PRO;
     int result = 0;
-    int *user_id = AK_user_get_id(old_name);
+    int user_id = AK_user_get_id(old_name);
 
     result = AK_user_remove_by_name(old_name);
     result = AK_user_add(new_name, password, user_id);
