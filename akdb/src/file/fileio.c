@@ -168,7 +168,7 @@ int AK_insert_row_to_block(struct list_node *row_root, AK_block *temp_block)
     return EXIT_SUCCESS;
 }
 
-/** @author Matija Novak, updated by Matija Šestak (function now uses caching), updated by Dejan Frankovic (added reference check), updated by Dino         Laktašić (removed variable AK_free, variable table initialized using memset)
+/** @author Matija Novak, updated by Matija Šestak (function now uses caching), updated by Dejan Frankovic (added reference check), updated by Dino         Laktašić (removed variable AK_free, variable table initialized using memset), updated by Josip Šušnjara (chained blocks support)
         @brief Function inserts a one row into table. Firstly it is checked whether inserted row would violite reference integrity.
         Then it is checked in which table should row be inserted. If there is no AK_free space for new table, new extent is allocated. New block is            allocated on given address. Row is inserted in this block and dirty flag is set to BLOCK_DIRTY.
         @param row_root list of elements which contain data of one row
@@ -219,15 +219,29 @@ int AK_insert_row(struct list_node *row_root)
     }
 
     table_addresses *addresses = (table_addresses *)AK_get_table_addresses(table);
+    
+    /*for(int i = 0; i < blocks_per_row; i++){
+    	AK_dbg_messg(HIGH, FILE_MAN, "insert_row: Insert into block on adress: %d\n", adr_to_write);
+    	AK_mem_block *mem_block = (AK_mem_block *)AK_get_block(adr_to_write);
+    	int end = (int)AK_insert_row_to_block(row_root, mem_block->block);
+    }*/
     AK_dbg_messg(HIGH, FILE_MAN, "insert_row: Insert into block on adress: %d\n", adr_to_write);
-    AK_mem_block *mem_block = (AK_mem_block *)AK_get_block(adr_to_write);
-
-    int end = (int)AK_insert_row_to_block(row_root, mem_block->block);
+    
+    int end;
+    AK_mem_block *mem_block;
+    int l = 0;
+    do{
+    	mem_block = (AK_mem_block *)AK_get_block(adr_to_write);
+    	end = (int)AK_insert_row_to_block(row_root, mem_block->block);
+    	AK_mem_block_modify(mem_block, BLOCK_DIRTY);
+    	adr_to_write = mem_block->block->chained_with;
+    }
+    while(mem_block->block->chained_with != NOT_CHAINED);
 
     if (end == EXIT_SUCCESS)
         AK_redolog_commit();
+        
 
-    AK_mem_block_modify(mem_block, BLOCK_DIRTY);
     AK_EPI;
     return end;
 }

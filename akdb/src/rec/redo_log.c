@@ -52,8 +52,10 @@ int AK_add_to_redolog(int command, struct list_node *row_root){
 
     int max = AK_num_attr(table);
     int numAttr = 1;
-
-    char** attrs = AK_calloc(MAX_ATTRIBUTES, sizeof(char*));
+	int attrs_length = MAX_ATTRIBUTES;
+	if(AK_Size_L2(row_root) > MAX_ATTRIBUTES)
+		attrs_length = AK_Size_L2(row_root);
+    char** attrs = AK_calloc(attrs_length, sizeof(char*));
     int i = 0;
     while (el != NULL) {
         switch (el->type) {
