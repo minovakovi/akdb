@@ -1199,7 +1199,7 @@ TestResult AK_expression_check_test()
 
 
 
-    if (AK_select(srcTable, destTable4, attributes4, condition4) == EXIT_SUCCESS)
+    if (AK_select(srcTable, destTable4, attributes4, condition4, NULL) == EXIT_SUCCESS)
     {
         successful++;
     }   
@@ -1239,7 +1239,7 @@ TestResult AK_expression_check_test()
 
 
 
-    if (AK_select(srcTable, destTable5, attributes5, condition5) == EXIT_SUCCESS)
+    if (AK_select(srcTable, destTable5, attributes5, condition5, NULL) == EXIT_SUCCESS)
     {
         successful++;
     }   
@@ -1279,7 +1279,7 @@ TestResult AK_expression_check_test()
 
 
 
-    if (AK_select(srcTable, destTable6, attributes6, condition6) == EXIT_SUCCESS)
+    if (AK_select(srcTable, destTable6, attributes6, condition6, NULL) == EXIT_SUCCESS)
     {
         successful++;
     }   
