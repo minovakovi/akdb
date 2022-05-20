@@ -231,26 +231,61 @@ char *AK_replace_wild_card(const char *s,char ch,const char *repl){
 }
 
 /**
-	* @Author Leon Palaić
+	* @Author Fran Turković
+	* @brief Function that puts start and end charachters (^,$) on input string
+	* @param s input string
+	* @result new sequence of charachters
+
+*/
+char *AK_add_start_end_regex_chars(const char *s){
+	AK_PRO;
+
+    size_t len = strlen(s);
+   
+    /* one for start char (^), one for end char($), one for trailing zero */
+    char *str = malloc(len + 1 + 1 + 1);
+
+	str[0] = '\0';
+    strcat(str,"^");
+	strcat(str,s);
+	strcat(str,"$");
+
+	strcpy(s,str);
+
+    free(str);
+    AK_EPI;
+    return s;
+}
+
+/**
+	* @Author Leon Palaić, updated by Fran Turković
 	* @brief Function that evaluates regex expression on a given string input.
 	* @param value string value that must match regex expression
 	* @param expression POSIX regex expression
 	* @param checkWildCard replaces SQL wildcard to correesponding POSIX regex charachter
 	* @param sensitive case insensitive indicator 1-case sensitive,0- case insensitive
+	* @param checkWildCard 0 if we don't need to replace wild charachters (regex case)
+						   1 if we need to replace wild characters (LIKE case)
 	* @result 0 if regex didnt match or sytnax of regex is incorecct 
 			  1 if string matches coresponding regex expression
 */
 int AK_check_regex_expression(const char * value, const char * expression, int sensitive, int checkWildCard){
 	AK_PRO;
 	char *matcherData = value;
-	char * regexExpreesion = expression;
-	char * result;
+	char * regexExpreesion;
+	char * result;  
 	regex_t regexCompiled;
 	int isMatched;
 	int caseSens;
 
+	if(checkWildCard){
+		regexExpreesion = AK_add_start_end_regex_chars(expression);
+	}
+	else{
+		regexExpreesion = expression;
+	}
+
 	if(!sensitive){
-		
 		caseSens = REG_ICASE;
 	}
 	else{
@@ -262,8 +297,8 @@ int AK_check_regex_expression(const char * value, const char * expression, int s
 		AK_free(result);
 	}
 	if (regcomp(&regexCompiled, regexExpreesion, caseSens)){
-      printf("Could not compile regular expression, check your sintax.\n");
-      isMatched = 0;
+        printf("Could not compile regular expression, check your sintax.\n");
+        isMatched = 0;
     }
     if(checkWildCard)
 		AK_free(regexExpreesion);
@@ -271,7 +306,6 @@ int AK_check_regex_expression(const char * value, const char * expression, int s
     	isMatched = 1;
     }
     else{
-    	
     	isMatched = 0;
     }
     regfree(&regexCompiled);
@@ -835,12 +869,36 @@ int AK_check_if_row_satisfies_expression(struct list_node *row_root, struct list
 
             }else if(strcmp(el->data,"LIKE")==0 || strcmp(el->data,"~~")==0){
 
-           		char like_regex[] = "([]:alpha:[!%_^]*)";	
+           		char like_regex[] = "([]:alpha:[!%_^]*)";
+				int rs;
 
            		if(AK_check_regex_operator_expression(b->data,&like_regex)){
-            	int rs;
-            	rs = AK_check_regex_expression(a->data,b->data,1,1);
-            	AK_InsertAtEnd_L3(TYPE_INT, &rs, sizeof (int), temp_result);
+
+            		rs = AK_check_regex_expression(a->data,b->data,1,1);
+
+					if(rs){
+            			AK_InsertAtEnd_L3(TYPE_INT, &true, sizeof (int), temp_result);
+					} else{
+						AK_InsertAtEnd_L3(TYPE_INT, &false, sizeof (int), temp_result);
+					}
+            	}else{
+            		printf("Could not compile LIKE expression, check your sintax.\n");
+            	}
+
+            }else if(strcmp(el->data,"NOT LIKE")==0){
+
+           		char like_regex[] = "([]:alpha:[!%_^]*)";
+				int rs;
+
+           		if(AK_check_regex_operator_expression(b->data,&like_regex)){
+
+            		rs = AK_check_regex_expression(a->data,b->data,1,1);
+
+					if(!rs){
+            			AK_InsertAtEnd_L3(TYPE_INT, &true, sizeof (int), temp_result);
+					} else{
+						AK_InsertAtEnd_L3(TYPE_INT, &false, sizeof (int), temp_result);
+					}
             	}else{
             		AK_InsertAtEnd_L3(TYPE_INT, &false, sizeof (int), temp_result);
             	}
@@ -849,23 +907,43 @@ int AK_check_if_row_satisfies_expression(struct list_node *row_root, struct list
 
             	char like_regex[] = "([]:alpha:[!%_^]*)";
             	int rs;
+
             	if(AK_check_regex_operator_expression(b->data,&like_regex)){
 
             		rs = AK_check_regex_expression(a->data,b->data,0,1);
-            		AK_InsertAtEnd_L3(TYPE_INT, &rs, sizeof (int), temp_result);
 
+					if(rs){
+            			AK_InsertAtEnd_L3(TYPE_INT, &true, sizeof (int), temp_result);
+					} else {
+						AK_InsertAtEnd_L3(TYPE_INT, &false, sizeof (int), temp_result);
+					}
             	}else{
             		AK_InsertAtEnd_L3(TYPE_INT, &false, sizeof (int), temp_result);
             	}
-            	
+            }else if(strcmp(el->data,"NOT ILIKE")==0){
 
+            	char like_regex[] = "([]:alpha:[!%_^]*)";
+            	int rs;
+
+            	if(AK_check_regex_operator_expression(b->data,&like_regex)){
+
+            		rs = AK_check_regex_expression(a->data,b->data,0,1);
+
+					if(!rs){
+            			AK_InsertAtEnd_L3(TYPE_INT, &true, sizeof (int), temp_result);
+					} else {
+						AK_InsertAtEnd_L3(TYPE_INT, &false, sizeof (int), temp_result);
+					}
+            	}else{
+            		AK_InsertAtEnd_L3(TYPE_INT, &false, sizeof (int), temp_result);
+            	}
             }else if(strcmp(el->data,"SIMILAR TO")==0){
             	char similar_regex[] = "([]:alpha:[!%_^|*+()!]*)";
             	int rs;
 
             	if(AK_check_regex_operator_expression(b->data,similar_regex)){
             		rs = AK_check_regex_expression(a->data,b->data,1,1);
-            		AK_InsertAtEnd_L3(TYPE_INT, &rs, sizeof (int), temp_result);
+            		AK_InsertAtEnd_L3(TYPE_INT, &true, sizeof (int), temp_result);
             	}else{
             		AK_InsertAtEnd_L3(TYPE_INT, &false, sizeof (int), temp_result);
             	}
@@ -874,14 +952,29 @@ int AK_check_if_row_satisfies_expression(struct list_node *row_root, struct list
             	//regex match implementation case sensitive
             	int rs;
             	rs = AK_check_regex_expression(a->data,b->data,1,0);
-            	AK_InsertAtEnd_L3(TYPE_INT, &rs, sizeof (int), temp_result);
-
-
+				if(rs){
+            		AK_InsertAtEnd_L3(TYPE_INT, &true, sizeof (int), temp_result);
+				} else {
+					AK_InsertAtEnd_L3(TYPE_INT, &false, sizeof (int), temp_result);
+				}
+            }else if(strcmp(el->data,"!~")==0){
+            	//regex match implementation case sensitive
+            	int rs;
+            	rs = AK_check_regex_expression(a->data,b->data,1,0);
+				if(!rs){
+            		AK_InsertAtEnd_L3(TYPE_INT, &true, sizeof (int), temp_result);
+				} else {
+					AK_InsertAtEnd_L3(TYPE_INT, &false, sizeof (int), temp_result);
+				}
             }else if(strcmp(el->data,"~*")==0){
             	//regex match implementation case sensitive insensitive
             	int rs;
             	rs = AK_check_regex_expression(a->data,b->data,0,0);
-            	AK_InsertAtEnd_L3(TYPE_INT, &rs, sizeof (int), temp_result);
+				if(rs){
+            		AK_InsertAtEnd_L3(TYPE_INT, &true, sizeof (int), temp_result);
+				} else {
+					AK_InsertAtEnd_L3(TYPE_INT, &false, sizeof (int), temp_result);
+				}
             }else{
 
             		char rs;
@@ -921,25 +1014,36 @@ TestResult AK_expression_check_test()
     int outcome3;
     int successful = 0;
 	int failed = 0;
-	
+	char *srcTable="student";
+	char *destTable="select_result";
 
     int likeOutcome1,likeOutcome2,likeOutcome3,likeOutcome4,likeOutcome5;
 
 
 
- 	const char * value="abc";
- 	const char * value2 ="thomas";
- 	const char * expression = "abc";
- 	const char * expression2 = "a%";
- 	const char * expression3 = "_b_";
- 	const char * expression4 = "%Thomas%";
- 	const char * expression5 = "%thomas%";
+ 	char value [200] = "abc";
+ 	char value2 [200] = "thomas";
+ 	char expression [200] = "abc";
+    char expression2 [200] = "a%";
+ 	char expression3 [200] = "_b_";
+ 	char expression4 [200] = "%Thomas%";
+ 	char expression5 [200] = "%thomas%";
 
- 	successful += AK_check_regex_expression(value,expression,1,1);
- 	successful += AK_check_regex_expression(value,expression2,1,1);
- 	successful += AK_check_regex_expression(value,expression3,1,1);
- 	successful += AK_check_regex_expression(value2, expression4,0,1);
- 	successful += AK_check_regex_expression(value2, expression5,1,1);
+ 	if(AK_check_regex_expression(value,expression,1,1)){
+		successful++;
+	}else failed++;
+	if(AK_check_regex_expression(value,expression2,1,1)){
+		successful++;
+	} else failed++;
+ 	if(AK_check_regex_expression(value,expression3,1,1)){
+		successful++;
+	} else failed++;
+ 	if(AK_check_regex_expression(value2, expression4,0,1)){
+		successful++;
+	} else failed++;
+ 	if(AK_check_regex_expression(value2, expression5,1,1)){
+		successful++;
+	} else failed++;
 
  	printf("Test for like,Ilike with wildcards \n");
     printf("abc - expression 'abc' outcome is: %d\n", likeOutcome1);
@@ -958,9 +1062,6 @@ TestResult AK_expression_check_test()
 	// list of elements which represent the condition for selection
 	struct list_node *condition = (struct list_node *) AK_malloc(sizeof (struct list_node));
 
-
-	char *srcTable="student";
-	char *destTable="select_result";
 
 	printf("TEST ZA OPERATOR IN ZAPOČINJE!\n");
 
@@ -1076,6 +1177,126 @@ TestResult AK_expression_check_test()
 	
 	AK_free(attributes3);
 	AK_free(condition3);
+
+	printf("TEST ZA OPERATOR LIKE\n");
+
+	struct list_node *attributes4 = (struct list_node *) AK_malloc(sizeof (struct list_node));
+
+	struct list_node *condition4 = (struct list_node *) AK_malloc(sizeof (struct list_node));
+
+	char *destTable4="select_result4";
+	AK_Init_L3(&attributes4);
+	AK_InsertAtEnd_L3(TYPE_ATTRIBS, "firstname", sizeof("firstname"), attributes4);
+	AK_InsertAtEnd_L3(TYPE_ATTRIBS, "year", sizeof("year"), attributes4);
+	AK_InsertAtEnd_L3(TYPE_ATTRIBS, "weight", sizeof("weight"), attributes4);
+
+	AK_Init_L3(&condition4);
+	AK_InsertAtEnd_L3(TYPE_ATTRIBS, "firstname", sizeof("firstname"), condition4);
+    char conditionAtributes4[] = "%a";
+
+	AK_InsertAtEnd_L3(TYPE_VARCHAR, conditionAtributes4, sizeof(conditionAtributes4), condition4);
+	AK_InsertAtEnd_L3(TYPE_OPERATOR, "LIKE", sizeof("LIKE"), condition4);
+
+
+
+    if (AK_select(srcTable, destTable4, attributes4, condition4) == EXIT_SUCCESS)
+    {
+        successful++;
+    }   
+    else
+    {
+        failed++;
+    }
+	
+	AK_DeleteAll_L3(&attributes4);
+	AK_DeleteAll_L3(&condition4);
+	
+    AK_print_table(srcTable);
+	printf("\n SELECT firstname,year,weight FROM student WHERE firstname LIKE '%a';\n\n");
+    AK_print_table(destTable4);
+	
+	AK_free(attributes4);
+	AK_free(condition4);
+
+	printf("TEST ZA OPERATOR NOT ILIKE\n");
+
+	struct list_node *attributes5 = (struct list_node *) AK_malloc(sizeof (struct list_node));
+
+	struct list_node *condition5 = (struct list_node *) AK_malloc(sizeof (struct list_node));
+
+	char *destTable5="select_result5";
+	AK_Init_L3(&attributes5);
+	AK_InsertAtEnd_L3(TYPE_ATTRIBS, "firstname", sizeof("firstname"), attributes5);
+	AK_InsertAtEnd_L3(TYPE_ATTRIBS, "year", sizeof("year"), attributes5);
+	AK_InsertAtEnd_L3(TYPE_ATTRIBS, "weight", sizeof("weight"), attributes5);
+
+	AK_Init_L3(&condition5);
+	AK_InsertAtEnd_L3(TYPE_ATTRIBS, "firstname", sizeof("firstname"), condition5);
+    char conditionAtributes5[] = "m%";
+
+	AK_InsertAtEnd_L3(TYPE_VARCHAR, conditionAtributes5, sizeof(conditionAtributes5), condition5);
+	AK_InsertAtEnd_L3(TYPE_OPERATOR, "NOT ILIKE", sizeof("NOT ILIKE"), condition5);
+
+
+
+    if (AK_select(srcTable, destTable5, attributes5, condition5) == EXIT_SUCCESS)
+    {
+        successful++;
+    }   
+    else
+    {
+        failed++;
+    }
+	
+	AK_DeleteAll_L3(&attributes5);
+	AK_DeleteAll_L3(&condition5);
+	
+    AK_print_table(srcTable);
+	printf("\n SELECT firstname,year,weight FROM student WHERE firstname NOT ILIKE 'm%';\n\n");
+    AK_print_table(destTable5);
+	
+	AK_free(attributes5);
+	AK_free(condition5);
+
+	printf("TEST ZA OPERATOR ~\n");
+
+	struct list_node *attributes6 = (struct list_node *) AK_malloc(sizeof (struct list_node));
+
+	struct list_node *condition6 = (struct list_node *) AK_malloc(sizeof (struct list_node));
+
+	char *destTable6="select_result6";
+	AK_Init_L3(&attributes6);
+	AK_InsertAtEnd_L3(TYPE_ATTRIBS, "firstname", sizeof("firstname"), attributes6);
+	AK_InsertAtEnd_L3(TYPE_ATTRIBS, "year", sizeof("year"), attributes6);
+	AK_InsertAtEnd_L3(TYPE_ATTRIBS, "weight", sizeof("weight"), attributes6);
+
+	AK_Init_L3(&condition6);
+	AK_InsertAtEnd_L3(TYPE_ATTRIBS, "firstname", sizeof("firstname"), condition6);
+    char conditionAtributes6[] = "^Ma";
+
+	AK_InsertAtEnd_L3(TYPE_VARCHAR, conditionAtributes6, sizeof(conditionAtributes6), condition6);
+	AK_InsertAtEnd_L3(TYPE_OPERATOR, "~", sizeof("~"), condition6);
+
+
+
+    if (AK_select(srcTable, destTable6, attributes6, condition6) == EXIT_SUCCESS)
+    {
+        successful++;
+    }   
+    else
+    {
+        failed++;
+    }
+	
+	AK_DeleteAll_L3(&attributes6);
+	AK_DeleteAll_L3(&condition6);
+	
+    AK_print_table(srcTable);
+	printf("\n SELECT firstname,year,weight FROM student WHERE firstname ~ '^Ma';\n\n");
+    AK_print_table(destTable6);
+	
+	AK_free(attributes6);
+	AK_free(condition6);
 
 
     AK_EPI;
