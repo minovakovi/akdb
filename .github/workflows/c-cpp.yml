@@ -1,0 +1,118 @@
+name: AKDB CI/CD pipeline
+
+on:
+  push:
+    branches: [master]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: akdb
+
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          persist-credentials: false # otherwise, the token used is the GITHUB_TOKEN, instead of your personal access token.
+          fetch-depth: 0 # otherwise, there would be errors pushing refs to the destination repository.
+
+      # Install all necessary dependancies
+      # All of these are needed because of some deprecated
+      #   libraries used, and Github won't run the commands otherwise
+      - name: Install dependencies
+        run: |
+          sudo apt-get install git swig make doxygen dos2unix python3 python-dev python3-dev build-essential libssl-dev libffi-dev libxml2-dev libxslt1-dev zlib1g-dev
+          sudo apt update && sudo apt upgrade -y
+          sudo apt-get install software-properties-common
+          sudo apt-add-repository universe
+          sudo apt-get update
+          sudo apt-get install python3-pip
+          sudo apt-get install texlive -y
+          sudo apt-get install texlive-latex-extra -y
+          sudo pip install virtualenv
+          sudo pip install paramiko
+          sudo pip install pyparsing
+          sudo pip install configparser
+
+      # Runs the make command to compile the code
+      - name: Compile code
+        working-directory: ./akdb/src
+        run: |
+          make
+
+      # Run make doc command to generate the documentation
+      - name: Generate documentation
+        working-directory: ./akdb/src
+        run: |
+          make doc
+
+      # Run make swig to compile SWIG files
+      - name: Compile SWIG
+        working-directory: ./akdb/src
+        run: make swig
+
+      # Runs all test with ./akdb alltest command
+      # the test results are printed in the action console
+      - name: Run and print tests
+        working-directory: ./akdb/bin
+        run: ./akdb alltest
+        continue-on-error: true
+
+      # Publish files to Wiki
+      - name: Upload documentation to Wiki
+        uses: SwiftDocOrg/github-wiki-publish-action@v1
+        with:
+          path: "./"
+        env:
+          GH_PERSONAL_ACCESS_TOKEN: ${{ secrets.ZZ_SECRET_KEY }}
+
+      # Generate docker image
+      - name: Create docker image
+        run: |
+          make docker-install
+
+      # Login to Github Container Registry which hosts all containers (e.g. Docker images)
+      - name: Login to Github Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{github.actor}}
+          password: ${{secrets.GITHUB_TOKEN}}
+
+      # Push create docker image to the Container registry
+      #   Generate a new Private Access Token with the name AKDB_ACTION_KEY
+      - name: Push docker image to Container registry
+        uses: docker/build-push-action@v2
+        with:
+          file: ./akdb/Dockerfile
+          push: true
+          tags: ghcr.io/${{ github.repository_owner }}/akdb:latest
+          secrets: |
+            GIT_AUTH_TOKEN=${{ secrets.AKDB_ACTION_KEY }}
+
+      # Run commands to copy files to the needed directories
+      #   --> add the documentation PDF file to root folder
+      #   --> add generated documentation files for website to /root/docs
+      #   --> stage all files
+      #   --> commit all changes
+      - name: Stage files to commit to repository
+        working-directory: ./akdb
+        run: |
+          git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          cp doc/refman.pdf ../
+          rm -f doc/html/index.html
+          cp -ir doc/html/* ../docs
+          cd ..
+          cd docs/
+          cd ..
+          git add --all
+          git commit -m "GITHUB ACTION: Add generated pdf and html files"
+
+      # Push all commited changes to repository
+      - name: Push changes to repository
+        uses: ad-m/github-push-action@master
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          branch: ${{ github.ref }}
