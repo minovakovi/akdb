@@ -89,19 +89,7 @@ jobs:
           push: true
           tags: ghcr.io/${{ github.repository_owner }}/akdb:latest
           secrets: |
-            GIT_AUTH_TOKEN=${{ secrets.ZZ_SECRET_KEY_2 }}
-
-      #      - name: Upload documentation site to /akdb/docs folder
-      #        uses: actions/upload-artifact@v3
-      #        with:
-      #          name: AKDB
-      #          path: akdb/doc/html
-
-      #      - name: Get generated documentation PDF file to upload
-      #        uses: actions/upload-artifact@v3
-      #        with:
-      #          name: AKDB.pdf
-      #          path: akdb/doc/refman.pdf
+            GIT_AUTH_TOKEN=${{ secrets.AKDB_ACTION_KEY }}
 
       # Run commands to copy files to the needed directories
       #   --> add the documentation PDF file to root folder
@@ -128,42 +116,3 @@ jobs:
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           branch: ${{ github.ref }}
-#  update-wiki:
-#    needs: build
-#    runs-on: ubuntu-latest
-#    name: Update wiki
-#    defaults:
-#      run:
-#        working-directory: akdb
-#
-#    steps:
-#      - name: cd
-#        working-directory: ./akdb
-#        run: |
-#          pwd
-#          ls -la
-#          cd akdb/
-#
-#      - name: cd test
-#        run: |
-#          git config --global --add safe.directory "$GITHUB_WORKSPACE"
-#          git config --unset core.bare
-#
-#      - uses: OrlovM/Wiki-Action@v1
-#        with:
-#          path: "html"
-#          token: ${{ secrets.GITHUB_TOKEN }}
-
-#  upload-pdf-file:
-#    name: Upload pdf file to repository
-#    runs-on: ubuntu-latest
-#
-#    steps:
-#      - name: Upload file
-#        uses: svenstaro/upload-release-action@v2
-#        with:
-#          repo_token: ${{ secrets.GITHUB_TOKEN }}
-#          file: target/release/mything
-#          asset_name: AKDB.pdf
-#          tag: ${{ github.ref }}
-#          overwrite: true
