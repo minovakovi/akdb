@@ -201,7 +201,7 @@ void choose_test()
         printf("Test: ");
         scanf("%d", &pickedTest);
         if(!pickedTest) exit( EXIT_SUCCESS );
-        while(pickedTest<0 || pickedTest>52)
+        while(pickedTest<0 || pickedTest>55)
         {
             printf("\nTest: ");
             scanf("%d", &pickedTest);
