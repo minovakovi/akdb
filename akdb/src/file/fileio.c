@@ -305,7 +305,6 @@ int AK_update_row_from_block(AK_block *temp_block, struct list_node *row_root)
             }
             head++; //next header
         }
-
         if (exists_equal_attrib == 1 && del == 1)
         {
             int j;
@@ -320,12 +319,10 @@ int AK_update_row_from_block(AK_block *temp_block, struct list_node *row_root)
                     memcpy(entry_data, temp_block->data + a, s);
                 }
                 some_element = row_root;
-
                 while (some_element)
                 {
                     // save data from roow_root in a list new_data where whole row is being inserted
                     AK_Insert_New_Element(temp_block->tuple_dict[j].type, some_element->data, some_element->table, some_element->attribute_name, new_data);
-
                     if (strcmp(some_element->attribute_name, temp_block->header[j % head].att_name) == 0 && some_element->constraint == NEW_VALUE)
                     {
                         // we need to delete and insert row, because size of new data is larger than size of old data
@@ -349,8 +346,16 @@ int AK_update_row_from_block(AK_block *temp_block, struct list_node *row_root)
                             AK_insert_row(new_data);
                         }
                         // we need to update row
-                        else
-                            memcpy(temp_block->data + a, some_element->data, s);
+                        else { 
+                            if (s > 0) {
+                                memcpy(temp_block->data + a, some_element->data, s);
+                            }
+                            else {
+                                memcpy(temp_block->data + a, some_element->data, strlen(some_element->data) + 1);
+                            }
+                            
+                        }
+                            // memcpy(temp_block->data + a, some_element->data, s);
                     }
                     //some_element = (struct list_node *) AK_Next_L2(some_element);
                     some_element = some_element->next;
