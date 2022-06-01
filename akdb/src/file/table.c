@@ -515,7 +515,7 @@ struct list_node *AK_get_tuple(int row, int column, char *tblName) {
  */
 char * AK_tuple_to_string(struct list_node *tuple) {
     int temp_int;
-    float temp_float;
+    double temp_float;
     char temp_char[ MAX_VARCHAR_LENGTH ];
     AK_PRO;
     char *buff = (char*) AK_malloc(MAX_VARCHAR_LENGTH);

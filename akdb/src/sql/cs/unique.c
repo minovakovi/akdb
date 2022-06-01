@@ -821,7 +821,6 @@ TestResult AK_unique_test() {
 	}
 	
 	AK_print_table("AK_constraints_unique");
-
 	AK_EPI;
 
 	return TEST_result(success,failed);
