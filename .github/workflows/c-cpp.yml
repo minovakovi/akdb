@@ -65,7 +65,7 @@ jobs:
         with:
           path: "./"
         env:
-          GH_PERSONAL_ACCESS_TOKEN: ${{ secrets.ZZ_SECRET_KEY }}
+          GH_PERSONAL_ACCESS_TOKEN: ${{ secrets.AKDB_ACTION_KEY }}
 
       # Generate docker image
       - name: Create docker image
