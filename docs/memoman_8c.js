@@ -1,0 +1,27 @@
+var memoman_8c =
+[
+    [ "AK_cache_AK_malloc", "memoman_8c.html#a8995ab22740ed96890c67a7a35f4abc0", null ],
+    [ "AK_cache_block", "memoman_8c.html#a2317b44ce55736ad837edf3ad71a1c7c", null ],
+    [ "AK_cache_result", "memoman_8c.html#aa91cae56c46d590937bec5ebe52b5fb6", null ],
+    [ "AK_find_AK_free_space", "memoman_8c.html#a1220ee67178ea5e067767ff485c60838", null ],
+    [ "AK_find_available_result_block", "memoman_8c.html#ade99412b4e4a4bf221ed9a530aaf632b", null ],
+    [ "AK_flush_cache", "memoman_8c.html#ae8513b8ebd5d256202d0c4a475f59768", null ],
+    [ "AK_generate_result_id", "memoman_8c.html#abb21199f31ed38d983992dd22d96e5e9", null ],
+    [ "AK_get_block", "memoman_8c.html#a6b391872c1c7b90dcefca2e7c1159110", null ],
+    [ "AK_get_index_addresses", "memoman_8c.html#af27cfa075e52693d78bf1b1a1e4f8269", null ],
+    [ "AK_get_index_segment_addresses", "memoman_8c.html#afeb8d902fa14040c84e49ddd78ad1594", null ],
+    [ "AK_get_segment_addresses", "memoman_8c.html#a43e0e529fdca2514e5f0f0bb6f711805", null ],
+    [ "AK_get_segment_addresses_internal", "memoman_8c.html#aeb033d1f307414329e2b5e327204115f", null ],
+    [ "AK_get_system_table_address", "memoman_8c.html#a4134a4bf1ef16d83969d274c009fb416", null ],
+    [ "AK_get_table_addresses", "memoman_8c.html#a76376b866e541ab3783f36d3afa49488", null ],
+    [ "AK_init_new_extent", "memoman_8c.html#a6979c35f6af3093da999d7d2f82a110d", null ],
+    [ "AK_mem_block_modify", "memoman_8c.html#a0ffc70a286c879e1feae8c37229a5e14", null ],
+    [ "AK_memoman_init", "memoman_8c.html#aaacdc6d364a3c59c428e5fa330d7be7a", null ],
+    [ "AK_memoman_test", "memoman_8c.html#a3cce5560a3d91368dfc194e6372334dd", null ],
+    [ "AK_memoman_test2", "memoman_8c.html#a8a9bcf0f1e79755d11164309800da41f", null ],
+    [ "AK_query_mem_AK_free", "memoman_8c.html#ac27900c488a29b15b407d6582d9f0d23", null ],
+    [ "AK_query_mem_AK_malloc", "memoman_8c.html#a12abfe4f312e3bf23162a6e46ed11cd3", null ],
+    [ "AK_redo_log_AK_malloc", "memoman_8c.html#a86a8b7ffd296d01d9a3ed5de5379250d", null ],
+    [ "AK_refresh_cache", "memoman_8c.html#a2859df8812fd67dba864b998fb845557", null ],
+    [ "AK_release_oldest_cache_block", "memoman_8c.html#ad333156acd3d5f5713d8c5524fb724a8", null ]
+];
