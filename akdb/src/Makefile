@@ -11,7 +11,7 @@ OPTITARGETS = opti/rel_eq_projection.o opti/rel_eq_selection.o opti/rel_eq_assoc
 CONSTRAINTTARGETS = sql/cs/constraint_names.o sql/cs/reference.o sql/cs/between.o sql/cs/nnull.o file/id.o rel/expression_check.o sql/cs/check_constraint.o sql/cs/unique.o
 OTHERTARGETS = auxi/test.o auxi/mempro.o sql/trigger.o file/test.o auxi/debug.o rec/archive_log.o sql/command.o auxi/dictionary.o auxi/auxiliary.o auxi/iniparser.o sql/privileges.o sql/function.o file/sequence.o rec/redo_log.o sql/insert.o sql/drop.o sql/view.o auxi/observable.o sql/select.o rec/recovery.o
 
-OBJS = $(OTHERTARGETS) $(CONSTRAINTTARGETS) $(OPTITARGETS) $(RELOPTARGETS) $(DISKTARGETS) $(MEMORYTARGETS) $(FILETARGETS) main.o
+OBJS = $(OTHERTARGETS) $(CONSTRAINTTARGETS) $(OPTITARGETS) $(RELOPTARGETS) $(DISKTARGETS) $(MEMORYTARGETS) $(FILETARGETS) tests.o main.o
 OUTDIR = ../bin
 
 .PHONY: swig
