@@ -49,8 +49,8 @@ int main(int argc, char * argv[])
     dbmanFileLock = AK_init_critical_section();
     printf("Init: %d, ready: %d", dbmanFileLock->init, dbmanFileLock->ready);
     AK_check_folder_blobs();
-    if((argc == 2) && !strcmp(argv[1], "help"))
-		//if we write ./akdb test help, the help will pop up
+    if((argc == 2) && (!strcmp(argv[1], "help")) || (argc <2 || argc >3)  || !(!strcmp(argv[1], "test") || !strcmp(argv[1], "alltest")))
+		//if we write ./akdb test help, or write any mistake or ask for any kind of help the help will pop up
        help();
     else if((argc == 3) && !strcmp(argv[1], "test") && !strcmp(argv[2], "show"))
 		//if we write ./akdb test test or show, the inputed will start and show
