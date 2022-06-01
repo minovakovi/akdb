@@ -294,12 +294,13 @@ int AK_function_arguments_add(int function_id, int arg_number, int arg_type, cha
 }
 
 /**
- * @author Boris Kišić
+ * @author Boris Kišić, updated by Fran Turković
  * @brief Function that removes a function by its obj_id.
  * @param obj_id obj_id of the function
+ * @param num_args number of agruments
  * @return EXIT_SUCCESS or EXIT_ERROR
  */
-int AK_function_remove_by_obj_id(int obj_id)
+int AK_function_remove_by_obj_id(int obj_id, int num_args)
 {
     AK_PRO;
 
@@ -316,9 +317,13 @@ int AK_function_remove_by_obj_id(int obj_id)
         return EXIT_ERROR;
     }
 
+    
     //delete function arguments
     AK_DeleteAll_L3(&row_root);
-    AK_function_arguments_remove_by_obj_id(&obj_id);
+    if(num_args>0){
+        AK_function_arguments_remove_by_obj_id(&obj_id);
+    }
+    AK_free(row_root);
     AK_EPI;
     return EXIT_SUCCESS;
 }
@@ -364,7 +369,8 @@ int AK_function_remove_by_name(char *name, struct list_node *arguments_list)
 {
     AK_PRO;
     int func_id = AK_get_function_obj_id(name, arguments_list);
-    int result = AK_function_remove_by_obj_id(func_id);
+    int num_args = AK_Size_L2(arguments_list) / 2;
+    int result = AK_function_remove_by_obj_id(func_id, num_args);
 
     if (result == EXIT_ERROR || func_id == EXIT_ERROR)
     {
