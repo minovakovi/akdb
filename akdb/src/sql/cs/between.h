@@ -63,7 +63,7 @@ int AK_read_constraint_between(char* tableName, char* newValue, char* attNamePar
  * @param constraintName name of constraint 
  * @return EXIT_SUCCESS when constraint is deleted, else EXIT_ERROR
  */
-int AK_delete_constraint_between(char* tableName, char constraintName[]);
+int AK_delete_constraint_between(char* tableName, char* constraintName);
 TestResult AK_constraint_between_test();
 
 #endif

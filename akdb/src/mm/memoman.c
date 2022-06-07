@@ -68,19 +68,19 @@ int AK_cache_AK_malloc()
 {
 	int i;
 	AK_PRO;
-	if ((db_cache = (AK_db_cache *) AK_malloc(sizeof(AK_db_cache))) == NULL)
+	if ((db_cache.ptr = (AK_db_cache *) AK_malloc(sizeof(AK_db_cache))) == NULL)
 	{
 		AK_EPI;
 		return EXIT_ERROR;
 	}
-
-	db_cache->next_replace = -1;
+	AK_db_cache* const dbCache = db_cache.ptr;
+	dbCache->next_replace = -1;
 	for (i = 0; i < MAX_CACHE_MEMORY; i++)
 	{
-		db_cache->cache[ i ] = (AK_mem_block *) AK_malloc(sizeof(AK_mem_block));
-		db_cache->cache[ i ]->block = (AK_block *) AK_malloc(sizeof(AK_block));
+		dbCache->cache[ i ] = (AK_mem_block *) AK_malloc(sizeof(AK_mem_block));
+		dbCache->cache[ i ]->block = (AK_block *) AK_malloc(sizeof(AK_block));
 
-		if ((AK_cache_block(i, db_cache->cache[ i ])) == EXIT_ERROR)
+		if ((AK_cache_block(i, dbCache->cache[ i ])) == EXIT_ERROR)
 		{
 			AK_EPI;
 			return EXIT_ERROR;
@@ -99,13 +99,14 @@ int AK_cache_AK_malloc()
 int AK_redo_log_AK_malloc()
 {
 	AK_PRO;
-	if ((redo_log = (AK_redo_log *) AK_malloc(sizeof ( AK_redo_log))) == NULL)
+	
+	if ((redo_log.ptr = (AK_redo_log *) AK_malloc(sizeof ( AK_redo_log))) == NULL)
 	{
 		AK_EPI;
 		return EXIT_ERROR;
 	}
-
-	redo_log->number = 0;
+	AK_redo_log* const redoLog = redo_log.ptr;
+	redoLog->number = 0;
 	AK_EPI;
 	return EXIT_SUCCESS;
 }
@@ -119,7 +120,8 @@ int AK_find_available_result_block(){
 	int available_index=0;
 	int i=0;
 	for(i; i<MAX_QUERY_RESULT_MEMORY;i++){
-		if(query_mem->result->results[i].free==1){
+		AK_query_mem* const queryMem = query_mem.ptr;
+		if(queryMem->result->results[i].free==1){
 			available_index=i;
 			break;
 		}
@@ -159,36 +161,36 @@ void AK_cache_result(char *srcTable,AK_block *temp_block,AK_header header[]){
 	struct tm * timeinfo;
 	time (&rawtime);
 	timeinfo = localtime (&rawtime);
-
-	strftime (query_mem->result->results[available_index].date_created,80,"%F %T",timeinfo);
-	query_mem->result->results[available_index].result_id=AK_generate_result_id(query_mem->result->results[available_index].date_created);
-	memcpy(&query_mem->result->results[available_index].source_table,&srcTable,sizeof(srcTable));
-	memcpy(&query_mem->result->results[available_index].result_block,&temp_block,sizeof(temp_block));
-	memset(query_mem->result->results[available_index].header, 0, sizeof( AK_header ) * MAX_ATTRIBUTES);
+	AK_query_mem* const queryMem = query_mem.ptr;
+	strftime (queryMem->result->results[available_index].date_created,80,"%F %T",timeinfo);
+	queryMem->result->results[available_index].result_id=AK_generate_result_id(queryMem->result->results[available_index].date_created);
+	memcpy(&queryMem->result->results[available_index].source_table,&srcTable,sizeof(srcTable));
+	memcpy(&queryMem->result->results[available_index].result_block,&temp_block,sizeof(temp_block));
+	memset(queryMem->result->results[available_index].header, 0, sizeof( AK_header ) * MAX_ATTRIBUTES);
 
 	int head=0;
 	while(strcmp(header[head].att_name, "") != 0) {
 
-		memcpy(&query_mem->result->results[available_index].header[head],&header[head], sizeof (header[head]));
+		memcpy(&queryMem->result->results[available_index].header[head],&header[head], sizeof (header[head]));
 		head++;
 	}
-	query_mem->result->results[available_index].result_size=sizeof(temp_block);
+	queryMem->result->results[available_index].result_size=sizeof(temp_block);
 
 	printf("\n ****LAST CACHED QUERY***** \n \n");
 	printf("---Table attributes--- \n");
-	printf("%s \t",query_mem->result->results[available_index].header[0].constr_name);
+	printf("%s \t",queryMem->result->results[available_index].header[0].constr_name);
 	int i=0;
 	for(i=0; i<MAX_ATTRIBUTES; i++){
-		printf("%s \t",query_mem->result->results[available_index].header[i].att_name);
+		printf("%s \t",queryMem->result->results[available_index].header[i].att_name);
 	};
 	printf("\n ---Unique result id--- \n");
-	printf("%d \n",query_mem->result->results[available_index].result_id);
+	printf("%d \n",queryMem->result->results[available_index].result_id);
 	printf("---Date created--- \n");
-	printf("%s \n",query_mem->result->results[available_index].date_created);
+	printf("%s \n",queryMem->result->results[available_index].date_created);
 	printf("---Source table--- \n");
-	printf("%s \n",query_mem->result->results[available_index].source_table);
+	printf("%s \n",queryMem->result->results[available_index].source_table);
 	printf("---Result size--- \n");
-	printf("%d \n",query_mem->result->results[available_index].result_size);
+	printf("%d \n",queryMem->result->results[available_index].result_size);
 }
 /**
   *  @author Matija Novak
@@ -202,7 +204,7 @@ int AK_query_mem_AK_malloc()
 	AK_dbg_messg(HIGH, MEMO_MAN, "AK_query_mem_AK_malloc: Start query_mem_AK_malloc\n");
 
 	/// allocate memory for global variable query_mem
-	if ((query_mem = (AK_query_mem *) AK_malloc(sizeof ( AK_query_mem))) == NULL)
+	if ((query_mem.ptr = (AK_query_mem *) AK_malloc(sizeof ( AK_query_mem))) == NULL)
 	{
 		printf("AK_query_mem_AK_malloc: ERROR. Cannot allocate query memory \n");
 		AK_EPI;
@@ -269,20 +271,21 @@ int AK_query_mem_AK_malloc()
 		memcpy(query_mem_dict->dictionary, tuple_dict, sizeof (* tuple_dict)); //why?
 	*/
 
-	query_mem->parsed = query_mem_lib;
-	query_mem->dictionary = query_mem_dict;
-	query_mem->result = query_mem_result;
+	AK_query_mem* const queryMem = query_mem.ptr;
+	queryMem->parsed = query_mem_lib;
+	queryMem->dictionary = query_mem_dict;
+	queryMem->result = query_mem_result;
 	//initializing values for result block status
 	//by default all blocks are free
 	
 	for(i=0; i<MAX_QUERY_RESULT_MEMORY; i++)
 	{
-		query_mem->result->results[i].free=1;
+		queryMem->result->results[i].free=1;
 	}
 	/*	wrong way because we don't have data only adress which must be written in query_mem variables
-			memcpy(query_mem->parsed, query_mem_lib, sizeof(* query_mem_lib));
-			memcpy(query_mem->dictionary,query_mem_dict,sizeof(* query_mem_dict));
-			memcpy(query_mem->result,query_mem_result,sizeof(* query_mem_result));*/
+			memcpy(queryMem->parsed, query_mem_lib, sizeof(* query_mem_lib));
+			memcpy(queryMem->dictionary,query_mem_dict,sizeof(* query_mem_dict));
+			memcpy(queryMem->result,query_mem_result,sizeof(* query_mem_result));*/
 
 	AK_dbg_messg(HIGH, MEMO_MAN, "AK_query_mem_AK_malloc: Success!\n");
 	AK_EPI;
@@ -296,15 +299,16 @@ void AK_query_mem_AK_free()
 {
 	int i;
 	AK_PRO;
-	AK_free(query_mem->parsed);
+	AK_query_mem* const queryMem = query_mem.ptr;
+	AK_free(queryMem->parsed);
 	for(i=0; i<MAX_QUERY_DICT_MEMORY; i++)
-		if(query_mem->dictionary->dictionary[i] != NULL)
-			AK_free(query_mem->dictionary->dictionary[i]);
-	AK_free(query_mem->dictionary);
-	if(query_mem->result != NULL)
-		AK_free(query_mem->result->results);
-	AK_free(query_mem->result);
-	AK_free(query_mem);
+		if(queryMem->dictionary->dictionary[i] != NULL)
+			AK_free(queryMem->dictionary->dictionary[i]);
+	AK_free(queryMem->dictionary);
+	if(queryMem->result != NULL)
+		AK_free(queryMem->result->results);
+	AK_free(queryMem->result);
+	AK_free(query_mem.ptr);
 	AK_EPI;
 }
 
@@ -360,16 +364,16 @@ AK_mem_block *AK_get_block(int num)
 	int free_pos = 0;
 	int first_AK_free_mem_block = -1;
 	AK_PRO;
-
+	AK_db_cache* const dbCache = db_cache.ptr;
 	/* search cache for already-cached block */
 	for (i = 0; i < MAX_CACHE_MEMORY; i++)
 	{
-		if (db_cache->cache[i]->block->address == num)
+		if (dbCache->cache[i]->block->address == num)
 		{
 			/// found cached! we're done here
 			AK_EPI;
 
-			return db_cache->cache[i];
+			return dbCache->cache[i];
 		}
 
 	}
@@ -379,7 +383,7 @@ AK_mem_block *AK_get_block(int num)
 		/// while looking for block we also want to find an empty block
 		/// in case that the actual block is not found
 		/// then there is no need to run through the blocks twice
-		if (first_AK_free_mem_block == -1 && db_cache->cache[i]->timestamp_read == -1)
+		if (first_AK_free_mem_block == -1 && dbCache->cache[i]->timestamp_read == -1)
 		{
 			first_AK_free_mem_block = i;
 		}
@@ -388,12 +392,12 @@ AK_mem_block *AK_get_block(int num)
 
 	if (first_AK_free_mem_block != -1)
 	{
-		if (AK_cache_block(num, db_cache->cache[ first_AK_free_mem_block ]) == EXIT_SUCCESS)
+		if (AK_cache_block(num, dbCache->cache[ first_AK_free_mem_block ]) == EXIT_SUCCESS)
 		{
 			/// created new cache block for specified address
 			AK_EPI;
 
-			return db_cache->cache[first_AK_free_mem_block];
+			return dbCache->cache[first_AK_free_mem_block];
 		}
 	}
 
@@ -407,10 +411,10 @@ AK_mem_block *AK_get_block(int num)
 		exit(EXIT_ERROR);
 	}
 
-	if (AK_cache_block(num, db_cache->cache[ free_pos ]) == EXIT_SUCCESS)
+	if (AK_cache_block(num, dbCache->cache[ free_pos ]) == EXIT_SUCCESS)
 	{
 		AK_EPI;
-		return db_cache->cache[ free_pos ];
+		return dbCache->cache[ free_pos ];
 	}
 
 
@@ -427,7 +431,8 @@ int AK_release_oldest_cache_block() {
 	int i;
 	int min = 0;
 	int block_written;
-	int oldest_block = db_cache->next_replace;
+	AK_db_cache* const dbCache = db_cache.ptr;
+	int oldest_block = dbCache->next_replace;
 	AK_block *data_block;
 
 	AK_PRO;
@@ -436,8 +441,8 @@ int AK_release_oldest_cache_block() {
 		for (i = 0; i < MAX_CACHE_MEMORY; i++)
 		{
 
-			if (db_cache->cache[i]->timestamp_read != -1 &&
-				db_cache->cache[i]->timestamp_read < db_cache->cache[ min ]->timestamp_read)
+			if (dbCache->cache[i]->timestamp_read != -1 &&
+				dbCache->cache[i]->timestamp_read < dbCache->cache[ min ]->timestamp_read)
 			{
 				min = i;
 			}
@@ -446,9 +451,9 @@ int AK_release_oldest_cache_block() {
 	}
 
 
-	if (db_cache->cache[oldest_block]->dirty == BLOCK_DIRTY)
+	if (dbCache->cache[oldest_block]->dirty == BLOCK_DIRTY)
 	{
-		data_block = db_cache->cache[oldest_block]->block;
+		data_block = dbCache->cache[oldest_block]->block;
 		block_written = AK_write_block(data_block);
 		/// if block form cache can not be writed to DB file -> EXIT_ERROR
 		if (block_written != EXIT_SUCCESS)
@@ -457,21 +462,21 @@ int AK_release_oldest_cache_block() {
 			return EXIT_ERROR;
 		}
 		/// block is clean after successfuly writing it to disk
-		db_cache->cache[oldest_block]->dirty = BLOCK_CLEAN;
+		dbCache->cache[oldest_block]->dirty = BLOCK_CLEAN;
 	}
 
-	db_cache->cache[oldest_block]->timestamp_read = clock();
+	dbCache->cache[oldest_block]->timestamp_read = clock();
 
 	min = 0;
 	for (i = 0; i < MAX_CACHE_MEMORY; i++)
 	{
-		if (db_cache->cache[i]->timestamp_read != -1 &&
-			db_cache->cache[i]->timestamp_read < db_cache->cache[ min ]->timestamp_read)
+		if (dbCache->cache[i]->timestamp_read != -1 &&
+			dbCache->cache[i]->timestamp_read < dbCache->cache[ min ]->timestamp_read)
 		{
 			min = i;
 		}
 	}
-	db_cache->next_replace = min;
+	dbCache->next_replace = min;
 
 	AK_EPI;
 
@@ -508,9 +513,10 @@ int AK_refresh_cache()
 	AK_PRO;
 	for (i = 0; i < MAX_CACHE_MEMORY; i++)
 	{
-		new_block = AK_read_block(db_cache->cache[i]->block->address);
-		old_block = db_cache->cache[i]->block;
-		db_cache->cache[i]->block = new_block;
+		AK_db_cache* const dbCache = db_cache.ptr;
+		new_block = AK_read_block(dbCache->cache[i]->block->address);
+		old_block = dbCache->cache[i]->block;
+		dbCache->cache[i]->block = new_block;
 		AK_free(old_block);
 	}
 	AK_EPI;
@@ -864,9 +870,10 @@ int AK_flush_cache()
 	AK_PRO;
 	while (i < MAX_CACHE_MEMORY)
 	{
-		if (db_cache->cache[i]->dirty == BLOCK_DIRTY)
+		AK_db_cache* const dbCache = db_cache.ptr;
+		if (dbCache->cache[i]->dirty == BLOCK_DIRTY)
 		{
-			data_block = db_cache->cache[i]->block;
+			data_block = dbCache->cache[i]->block;
 			block_written = AK_write_block(data_block);
 			/// if block form cache can not be writed to DB file -> EXIT_ERROR
 			if (block_written != EXIT_SUCCESS)
@@ -875,7 +882,7 @@ int AK_flush_cache()
 				exit(EXIT_ERROR);
 			}
 			/// block is clean after successfuly writing it to disk
-			db_cache->cache[i]->dirty = BLOCK_CLEAN;
+			dbCache->cache[i]->dirty = BLOCK_CLEAN;
 		}
 		i++;
 	}
@@ -892,13 +899,13 @@ TestResult AK_memoman_test()
 	int min = 0;
 	int ok = 0;
 	AK_PRO;
-
+	AK_db_cache* const dbCache = db_cache.ptr;
 	for (i = 0; i < MAX_CACHE_MEMORY; i++) {
 		printf("Block: %d \t l_address: %d \t c_address: %x\t last_read: %i\t last_change %i\t\n", i,
-			   db_cache->cache[i]->block->address, &db_cache->cache[i]->block, &db_cache->cache[i]->timestamp_read,
-			   db_cache->cache[i]->timestamp_last_change);
+			   dbCache->cache[i]->block->address, &dbCache->cache[i]->block, &dbCache->cache[i]->timestamp_read,
+			   dbCache->cache[i]->timestamp_last_change);
 
-		if(db_cache->cache[i]->block == NULL) {
+		if(dbCache->cache[i]->block == NULL) {
 			printf("\nTEST FAILED! Cache should be full, block %i, points to NULL\n", i);
 			failed++;
 		}else
@@ -909,21 +916,21 @@ TestResult AK_memoman_test()
 	}
 
 	for (i = 0; i < MAX_CACHE_MEMORY; i++) {
-//        printf("\nINDEX: %i oldest is %i, current is %i, comparison %s\n",i, db_cache->cache[ min ]->timestamp_read,
-//               db_cache->cache[ i ]->timestamp_read,
-//               db_cache->cache[i]->timestamp_read < db_cache->cache[ min ]->timestamp_read ? "true" : "false");
+//        printf("\nINDEX: %i oldest is %i, current is %i, comparison %s\n",i, dbCache->cache[ min ]->timestamp_read,
+//               dbCache->cache[ i ]->timestamp_read,
+//               dbCache->cache[i]->timestamp_read < dbCache->cache[ min ]->timestamp_read ? "true" : "false");
 
-		if (db_cache->cache[i]->timestamp_read != -1 &&
-			db_cache->cache[i]->timestamp_read < db_cache->cache[ min ]->timestamp_read)
+		if (dbCache->cache[i]->timestamp_read != -1 &&
+			dbCache->cache[i]->timestamp_read < dbCache->cache[ min ]->timestamp_read)
 		{
 			min = i;
 		}
 	}
-
-	if(AK_allocationbit->last_allocated == db_cache->next_replace)
+	AK_blocktable* const allocationBit = ((AK_blocktable*)AK_allocationbit.ptr);
+	if(allocationBit->last_allocated == dbCache->next_replace)
 	{
 		printf("\nTEST FAILED! Next block to replace can not be last allocated block, is %i, should be %i\n",
-			   AK_allocationbit->last_allocated, min);
+			   allocationBit->last_allocated, min);
 		failed++;
 	}else
 	{
@@ -931,10 +938,10 @@ TestResult AK_memoman_test()
 	}
 	
 
-	if(min != db_cache->next_replace)
+	if(min != dbCache->next_replace)
 	{
 		printf("\nTEST FAILED! next_replace is not set to oldest block, is %i, should be %i\n",
-			   db_cache->next_replace, min);
+			   dbCache->next_replace, min);
 		failed++;
 	}else
 	{
@@ -957,13 +964,13 @@ TestResult AK_memoman_test()
 	// randomly setting 5 blocks to dirty state to ensure AK_flush_cache() has something to do
 	for(i = 0; i < 5; i++)
 	{
-		AK_mem_block_modify(db_cache->cache[rand()%MAX_CACHE_MEMORY], BLOCK_DIRTY);
+		AK_mem_block_modify(dbCache->cache[rand()%MAX_CACHE_MEMORY], BLOCK_DIRTY);
 	}
 
 	AK_flush_cache();
 
 	for(i = 0; i < MAX_CACHE_MEMORY; i++) {
-		if(db_cache->cache[i]->dirty != BLOCK_CLEAN)
+		if(dbCache->cache[i]->dirty != BLOCK_CLEAN)
 		{
 			printf("\nTEST FAILED! block %i has not been flushed to disk\n", i);
 			failed++;
@@ -993,11 +1000,13 @@ TestResult AK_memoman_test2()
 	table_addresses *addrs;
 	AK_mem_block *cache_block;
 	AK_PRO;
-	printf("\tPick up block from 0 to: %d \n",AK_allocationbit->last_allocated );
+	AK_blocktable* const allocationBit = ((AK_blocktable*)AK_allocationbit.ptr);
+	printf("\tPick up block from 0 to: %d \n",allocationBit->last_allocated );
+	AK_db_cache* const dbCache = db_cache.ptr;
 	srand(time(NULL));// random generator
-	aa = rand()%AK_allocationbit->last_allocated; //random number between 0 and (AK_allocationbit->last_allocated-1)
+	aa = rand()%allocationBit->last_allocated; //random number between 0 and (AK_allocationbit->last_allocated-1)
 
-	if(aa>=0 && aa<AK_allocationbit->last_allocated)
+	if(aa>=0 && aa<allocationBit->last_allocated)
 	{
 		printf("\n\tFirst goes dump of block from HDD:\n");
 		AK_print_block(NULL, aa, "Memoman_test2_HDD",stdout);
@@ -1008,10 +1017,10 @@ TestResult AK_memoman_test2()
 	//find a block that is not loaded in cache
 	while(1) {
 		//select a random block from range 0 to last block allocated on disk
-		read_block = rand() % AK_allocationbit->last_allocated;
+		read_block = rand() % allocationBit->last_allocated;
 		ok = 1;
 		for (i = 0; i < MAX_CACHE_MEMORY; i++) {
-			if(db_cache->cache[i]->block->address == read_block) {
+			if(dbCache->cache[i]->block->address == read_block) {
 				ok = 0;
 				break;
 			}
@@ -1021,7 +1030,7 @@ TestResult AK_memoman_test2()
 	}
 
 	for (i = 0; i < MAX_CACHE_MEMORY; i++) {
-		if(db_cache->cache[i]->block->address == read_block) {
+		if(dbCache->cache[i]->block->address == read_block) {
 			printf("\nTEST FAILED! block with address %i already cached at position %i\n", read_block, i);
 			failed++;
 		}else
@@ -1032,9 +1041,9 @@ TestResult AK_memoman_test2()
 	}
 
 	flushed_pos = AK_release_oldest_cache_block();
-	AK_cache_block(read_block, db_cache->cache[flushed_pos]);
+	AK_cache_block(read_block, dbCache->cache[flushed_pos]);
 
-	if(db_cache->cache[flushed_pos]->block->address != read_block) {
+	if(dbCache->cache[flushed_pos]->block->address != read_block) {
 		printf("\nTEST FAILED! block with address %i is not cached at position %i\n", read_block, flushed_pos);
 		failed++;
 	}

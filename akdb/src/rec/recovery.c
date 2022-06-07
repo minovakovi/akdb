@@ -49,19 +49,19 @@
     log_file.number = 0;
     int i = 0;
     fread(&log_file, sizeof(log_file), 1, fp);
-
+    AK_redo_log* const redoLog = redo_log.ptr;
     // read command by command
     for(i = 0; i < log_file.number; i++) {
-        memcpy(redo_log->command_recovery, log_file.command_recovery, sizeof(log_file.command_recovery));
+        memcpy(redoLog->command_recovery, log_file.command_recovery, sizeof(log_file.command_recovery));
     }
 
-    redo_log->number = log_file.number;
+    redoLog->number = log_file.number;
 
-    printf("AK_recover_archive_log: Checking for unfinished archived data commands...\nNumber of archived commands: %d\n", redo_log->number);
+    printf("AK_recover_archive_log: Checking for unfinished archived data commands...\nNumber of archived commands: %d\n", redoLog->number);
 
-    for(i = 0; i < redo_log->number; i++) {
-        if(redo_log->command_recovery[i].finished != 1) {
-            AK_recovery_insert_row(redo_log->command_recovery[i].table_name, i);
+    for(i = 0; i < redoLog->number; i++) {
+        if(redoLog->command_recovery[i].finished != 1) {
+            AK_recovery_insert_row(redoLog->command_recovery[i].table_name, i);
 	}
     }
     
@@ -114,9 +114,9 @@ void AK_recovery_insert_row(char* table, int commandNumber){
     int n = i;
     
     // insert data to table
-
+    AK_redo_log* const redoLog = redo_log.ptr;
     for(i=0;i<n;i++){
-	attributes[i]=redo_log->command_recovery[commandNumber].arguments[i];
+	attributes[i]=redoLog->command_recovery[commandNumber].arguments[i];
     }
 
     int result = recovery_insert_row(table, attr_name, attributes, n, type);
@@ -124,7 +124,7 @@ void AK_recovery_insert_row(char* table, int commandNumber){
     //mark command as finished
     if(result == EXIT_SUCCESS)
     {
-        redo_log->command_recovery[commandNumber].finished=1;
+        redoLog->command_recovery[commandNumber].finished=1;
         printf("Uspješni recovery insert");
     }
     else printf("Neupješni recovery insert");
@@ -273,9 +273,10 @@ TestResult AK_recovery_test() {
     sprintf(command->arguments[4], "180");
     command->finished = 0;
     
+    AK_redo_log* const redoLog = redo_log.ptr;
     // save first command to redo_log
-    redo_log->command_recovery[0] = *command;
-    redo_log->number++;
+    redoLog->command_recovery[0] = *command;
+    redoLog->number++;
     
     // build second command
     sprintf(command->arguments[0], "36996");
@@ -285,9 +286,9 @@ TestResult AK_recovery_test() {
     sprintf(command->arguments[4], "88");
     command->finished = 0;
     
-    // save second command to redo_log
-    redo_log->command_recovery[1] = *command;
-    redo_log->number++;
+    // save second command to redoLog
+    redoLog->command_recovery[1] = *command;
+    redoLog->number++;
 
     // write commands to file
     AK_archive_log(-10);
@@ -359,17 +360,18 @@ void AK_load_chosen_log () {
 	    fread(&log_file, sizeof(log_file), 1, fp);
 	
 	    // reading commands and storing them
+        AK_redo_log* const redoLog = redo_log.ptr;
 	    for(i = 0; i < log_file.number; i++) {
-	        memcpy(redo_log->command_recovery, log_file.command_recovery, sizeof(log_file.command_recovery));
+	        memcpy(redoLog->command_recovery, log_file.command_recovery, sizeof(log_file.command_recovery));
 	    }
 	
 		//getting the neccessary number for the next for-loop
-	    redo_log->number = log_file.number;
+	    redoLog->number = log_file.number;
 
 	    //looking for unfinished commands and passing them on for recovery
-	    for(i = 0; i < redo_log->number; i++) {
-	        if(redo_log->command_recovery[i].finished != 1) {
-	            AK_recovery_insert_row(redo_log->command_recovery[i].table_name, i);
+	    for(i = 0; i < redoLog->number; i++) {
+	        if(redoLog->command_recovery[i].finished != 1) {
+	            AK_recovery_insert_row(redoLog->command_recovery[i].table_name, i);
 			}
 	    }
 		
@@ -453,19 +455,19 @@ void AK_load_latest_log () {
 
       //read 1 element form the fp stream the size of log_file into log_file
 	    fread(&log_file, sizeof(log_file), 1, fp);
-	
+        AK_redo_log* const redoLog = redo_log.ptr;
 	    // reading commands and storing them
 	    for(i = 0; i < log_file.number; i++) {
-	        memcpy(redo_log->command_recovery, log_file.command_recovery, sizeof(log_file.command_recovery));
+	        memcpy(redoLog->command_recovery, log_file.command_recovery, sizeof(log_file.command_recovery));
 	    }
 	
 		//getting the neccessary number for the next for-loop
-	    redo_log->number = log_file.number;
+	    redoLog->number = log_file.number;
 
 	    //looking for unfinished commands and passing them on for recovery
-	    for(i = 0; i < redo_log->number; i++) {
-	        if(redo_log->command_recovery[i].finished != 1) {
-	            AK_recovery_insert_row(redo_log->command_recovery[i].table_name, i);
+	    for(i = 0; i < redoLog->number; i++) {
+	        if(redoLog->command_recovery[i].finished != 1) {
+	            AK_recovery_insert_row(redoLog->command_recovery[i].table_name, i);
 			}
 	    }
 		

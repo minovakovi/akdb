@@ -1,0 +1,13 @@
+{
+    "files.associations": {
+        "privileges.h": "c",
+        "table.h": "c",
+        "fileio.h": "c",
+        "id.h": "c",
+        "archive_log.h": "c",
+        "mempro.h": "c",
+        "test.h": "c",
+        "ptrcontainer.h": "c",
+        "constraint_names.h": "c"
+    }
+}

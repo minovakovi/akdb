@@ -1,5 +1,5 @@
 #ubuntu image
-FROM ubuntu
+FROM ubuntu:20.04
 
 #install required files
 RUN apt-get update -y

@@ -55,7 +55,7 @@ int AK_read_constraint_unique(char* tableName, char attName[], char newValue[]);
  * @return EXIT_SUCCESS when constraint is deleted, else EXIT_ERROR
  */
 //int AK_delete_constraint_unique(char* tableName, char attName[], char constraintName[]);
-int AK_delete_constraint_unique(char* tableName, char constraintName[]);
+int AK_delete_constraint_unique(char* tableName, char* constraintName);
 TestResult AK_unique_test();
 
 #endif
