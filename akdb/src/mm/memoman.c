@@ -776,7 +776,6 @@ int AK_find_AK_free_space(table_addresses * addresses)
  */
 int AK_init_new_extent(char *table_name, int extent_type)
 {
-	printf("\nTU SAM\n");
 	char *sys_table;
 
 	int old_size = 0;
