@@ -48,7 +48,7 @@ int AK_cache_block(int num, AK_mem_block *mem_block)
 	mem_block->timestamp_read = timestamp; /// set timestamp_read
 	mem_block->timestamp_last_change = timestamp; /// set timestamp_last_change
 
-	if(sizeof(block_cache) == NULL)
+	if(sizeof(block_cache) == 0)
 	{
 		AK_EPI;
 		return EXIT_ERROR;
@@ -241,33 +241,35 @@ int AK_query_mem_AK_malloc()
 	query_mem_result->results=AK_malloc(MAX_QUERY_RESULT_MEMORY*sizeof(*query_mem_result->results));
 
 	
-	AK_tuple_dict *tuple_dict;
-	for(i=0; i<MAX_QUERY_DICT_MEMORY; i++)
-	{
-		if ((tuple_dict = (AK_tuple_dict *) AK_malloc(sizeof (AK_tuple_dict))) == NULL)
-		{
-			printf("  AK_query_mem_AK_malloc: ERROR. Cannot allocate tuple dictionary memory \n");
-			AK_EPI;
-			exit(EXIT_ERROR);
-		}
-		query_mem_dict->dictionary[i]=tuple_dict;
-	}
-	query_mem_dict->next_replace=0;
+	// THIS CODE MAKES TEST 4 (AK_mempro) THROW A DOUBLE LINKED LIST CORRUPTED ERROR EVERY OTHER TIME IT IS RUN
+	// AK_tuple_dict *tuple_dict;
+	// for(i=0; i<MAX_QUERY_DICT_MEMORY; i++)
+	// {
+	// 	if ((tuple_dict = (AK_tuple_dict *) AK_malloc(sizeof (AK_tuple_dict))) == NULL)
+	// 	{
+	// 		printf("  AK_query_mem_AK_malloc: ERROR. Cannot allocate tuple dictionary memory \n");
+	// 		AK_EPI;
+	// 		exit(EXIT_ERROR);
+	// 	}
+	// 	query_mem_dict->dictionary[i]=tuple_dict;
+	// }
+	// query_mem_dict->next_replace=0;
+	/////////////////////////////////////////////////////////////
 
-	/* 
-	Edited by Elvis Popovic - please check if this is correct
-	Was:
+	
+	// Edited by Elvis Popovic - please check if this is correct
+	// Edited by Antun Tkalčec - *tuple_dict declared twice (now fixed), using this code means test 4 (AK_mempro) works
+	// Was:
 		/// allocate memory for variable tuple_dict which is used in query_mem->dictionary->dictionary[]
 		AK_tuple_dict * tuple_dict = (AK_tuple_dict *) AK_malloc(sizeof (AK_tuple_dict)); //double allocation
-		if ((tuple_dict = (AK_tuple_dict *) AK_malloc(sizeof (AK_tuple_dict))) == NULL)
+		if (tuple_dict == NULL)
 		{
 			printf("  AK_query_mem_AK_malloc: ERROR. Cannot allocate tuple dictionary memory \n");
 			AK_EPI;
 			exit(EXIT_ERROR);
 		}
-
 		memcpy(query_mem_dict->dictionary, tuple_dict, sizeof (* tuple_dict)); //why?
-	*/
+	
 
 	query_mem->parsed = query_mem_lib;
 	query_mem->dictionary = query_mem_dict;
@@ -698,7 +700,6 @@ int AK_find_AK_free_space(table_addresses * addresses)
 	int from = 0, to = 0, j = 0, i = 0;
 	AK_PRO;
 	AK_dbg_messg(HIGH, MEMO_MAN, "find_AK_free_space: Searching for block that has AK_free space < 500 \n");
-
 	for (j = 0; j < MAX_EXTENTS_IN_SEGMENT; j++)
 	{
 		if (addresses->address_from != 0)
@@ -775,6 +776,7 @@ int AK_find_AK_free_space(table_addresses * addresses)
  */
 int AK_init_new_extent(char *table_name, int extent_type)
 {
+	printf("\nTU SAM\n");
 	char *sys_table;
 
 	int old_size = 0;
@@ -794,6 +796,9 @@ int AK_init_new_extent(char *table_name, int extent_type)
 	//!!! to correct header BUG iterate through header from 0 to N-th block while there is
 	//header attributes. Than create header and pass it to function for extent creation below.
 	//Current implementation works only with tables with max MAX_ATTRIBUTES.
+
+	// What header bug? This function is never invoked. 
+
 	int i = 0;
 	AK_PRO;
 
