@@ -4,7 +4,7 @@ from pyparsing import *
 import re
 
 
-class sql_tokenizer:
+class Sql_tokenizer:
 
     def AK_parse_grant(self, string):
         '''
