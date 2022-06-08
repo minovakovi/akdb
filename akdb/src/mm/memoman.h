@@ -23,6 +23,7 @@
 #include "../auxi/test.h"
 #include "../dm/dbman.h"
 #include "../auxi/mempro.h"
+#include "../auxi/ptrcontainer.h"
 
 /**
   * @author Unknown
@@ -156,17 +157,17 @@ typedef struct {
  * @var db_cache
  * @brief Variable that defines the db cache
  */
-AK_db_cache * db_cache;
+PtrContainer db_cache;
 /**
  * @var redo_log
  * @brief Variable that defines the global redo log
  */
-AK_redo_log * redo_log;
+PtrContainer redo_log;
 /**
  * @var query_mem
  * @brief Variable that defines the global query memory
  */
-AK_query_mem * query_mem;
+PtrContainer query_mem;
 
 /**
   * @author Mario Novoselec

@@ -23,6 +23,7 @@ of Kalashnikov DB
 
 #include "../auxi/test.h"
 #include "../auxi/auxiliary.h"
+#include "../auxi/ptrcontainer.h"
 #include <errno.h>
 #include <pthread.h>
 
@@ -107,12 +108,16 @@ typedef struct {
     unsigned char data[DATA_BLOCK_SIZE * DATA_ENTRY_SIZE];
 } AK_block;
 
+
+
 /**
  * @author Markus Schatten
  * @var db
  * @brief Variable that defines the DB file file handle
  */
-    FILE * db;
+
+
+PtrContainer db;
 
 /**
  * @author Markus Schatten
@@ -155,7 +160,7 @@ typedef struct {
  * @var AK_allocationbit
  * @brief Global variable that holds allocation bit-vector
  */
-AK_blocktable *AK_allocationbit;
+PtrContainer AK_allocationbit;
 
 
 
@@ -227,14 +232,16 @@ typedef struct {
  * @var AK_accessed_blocks
  * @brief Blocks which are currently being written to disk or read from it.
  */
-AK_block_activity *AK_block_activity_info;
+
+PtrContainer AK_block_activity_info;
+
 
 /**
  * @author Marko Sinko
  * @var fileLock
  * @brief Synchronization object for files used by dbman.c
  */
-AK_synchronization_info* dbmanFileLock;
+PtrContainer dbmanFileLock;
 
 int AK_print_block(AK_block * block, int num, char* gg, FILE *fpp);
 TestResult AK_allocationbit_test();

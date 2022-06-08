@@ -18,6 +18,7 @@
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 #include "transaction.h"
+#include "../auxi/ptrcontainer.h"
 
 AK_transaction_list LockTable[NUMBER_OF_KEYS];
 
@@ -27,7 +28,7 @@ pthread_mutex_t newTransactionLockMutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t endTransationTestLockMutex = PTHREAD_MUTEX_INITIALIZER;
 
 pthread_cond_t cond_lock  = PTHREAD_COND_INITIALIZER;
-AK_observable_transaction *observable_transaction;
+PtrContainer observable_transaction;
 pthread_t activeThreads[MAX_ACTIVE_TRANSACTIONS_COUNT];
 
 int activeTransactionsCount = 0;
@@ -134,7 +135,7 @@ AK_transaction_elem_P AK_add_hash_entry_list(int blockAddress, int type) {
     bucket->address = blockAddress;
     bucket->lock_type = type;
     bucket->observer_lock = AK_init_observer_lock();
-    AK_transaction_register_observer(observable_transaction, bucket->observer_lock->observer);
+    AK_transaction_register_observer(observable_transaction.ptr, bucket->observer_lock->observer);
     AK_EPI;
     return bucket;
 }
@@ -396,14 +397,15 @@ void AK_release_locks(AK_memoryAddresses_link addressesTmp, pthread_t transactio
         // Unregister observer and deallocate used memory (dealocating memory is in observable.c unregister_observer)
         AK_observer *observer = AK_search_existing_link_for_hook(addressesTmp->adresa)->observer_lock->observer;
         if(observer != NULL) {
-            AK_transaction_unregister_observer(observable_transaction, observer);
+            AK_transaction_unregister_observer(observable_transaction.ptr, observer);
             observer = NULL;
         }
          
         AK_delete_lock_entry_list(addressesTmp->adresa, transactionId);
 
         // notify observable transaction about lock release
-        observable_transaction->AK_lock_released();
+        AK_observable_transaction* const observableTransaction = observable_transaction.ptr;
+        observableTransaction->AK_lock_released();
         addressesTmp = addressesTmp->nextElement;
     }
     pthread_mutex_unlock(&accessLockMutex);
@@ -524,7 +526,8 @@ void * AK_execute_transaction(void *params) {
         printf("Transaction COMMITED!\n");
     }
     // notify observable_transaction about transaction finish
-    observable_transaction->AK_transaction_finished();
+    AK_observable_transaction* const observableTransaction = observable_transaction.ptr;
+    observableTransaction->AK_transaction_finished();
     AK_EPI;
     return NULL;
 }
@@ -679,8 +682,9 @@ void AK_on_transaction_end(pthread_t transaction_thread) {
     pthread_mutex_unlock(&newTransactionLockMutex);
     transactionsCount--;
     printf ("TRANSACTIN END!!!!\n");
+    AK_observable_transaction* const observableTransaction = observable_transaction.ptr;
     if(transactionsCount == 0)
-        observable_transaction->AK_all_transactions_finished();
+        observableTransaction->AK_all_transactions_finished();
     AK_EPI;
 }
 
@@ -735,7 +739,8 @@ void AK_handle_observable_transaction_action(NoticeType *noticeType) {
  * @brief Function which is called when the lock is released
  */
 void AK_lock_released() {
-    observable_transaction->observable->AK_run_custom_action((NoticeType*)AK_LOCK_RELEASED);
+    AK_observable_transaction* const observableTransaction = observable_transaction.ptr;
+    observableTransaction->observable->AK_run_custom_action((NoticeType*)AK_LOCK_RELEASED);
 }
 
 /** 
@@ -744,7 +749,8 @@ void AK_lock_released() {
  */
 void AK_transaction_finished() {
     AK_PRO;
-    observable_transaction->observable->AK_run_custom_action((NoticeType*)AK_TRANSACTION_FINISHED);
+    AK_observable_transaction* const observableTransaction = observable_transaction.ptr;
+    observableTransaction->observable->AK_run_custom_action((NoticeType*)AK_TRANSACTION_FINISHED);
     AK_EPI;
 }
 
@@ -754,7 +760,8 @@ void AK_transaction_finished() {
  */
 void AK_all_transactions_finished() {
     AK_PRO;
-    observable_transaction->observable->AK_run_custom_action((NoticeType*)AK_ALL_TRANSACTION_FINISHED);
+    AK_observable_transaction* const observableTransaction = observable_transaction.ptr;
+    observableTransaction->observable->AK_run_custom_action((NoticeType*)AK_ALL_TRANSACTION_FINISHED);
     AK_EPI;
 }
 
@@ -766,15 +773,16 @@ void AK_all_transactions_finished() {
  */
 AK_observable_transaction * AK_init_observable_transaction() {
     AK_PRO;
-    observable_transaction = AK_calloc(1, sizeof(AK_observable_transaction));
-    observable_transaction->AK_transaction_register_observer = &AK_transaction_register_observer;
-    observable_transaction->AK_transaction_unregister_observer = &AK_transaction_unregister_observer;
-    observable_transaction->AK_lock_released = &AK_lock_released;
-    observable_transaction->AK_transaction_finished = &AK_transaction_finished;
-    observable_transaction->AK_all_transactions_finished = &AK_all_transactions_finished;
-    observable_transaction->observable = AK_init_observable(observable_transaction, AK_TRANSACTION, &AK_handle_observable_transaction_action);
+    observable_transaction.ptr = AK_calloc(1, sizeof(AK_observable_transaction));
+    AK_observable_transaction* const observableTransaction = observable_transaction.ptr;
+    observableTransaction->AK_transaction_register_observer = &AK_transaction_register_observer;
+    observableTransaction->AK_transaction_unregister_observer = &AK_transaction_unregister_observer;
+    observableTransaction->AK_lock_released = &AK_lock_released;
+    observableTransaction->AK_transaction_finished = &AK_transaction_finished;
+    observableTransaction->AK_all_transactions_finished = &AK_all_transactions_finished;
+    observableTransaction->observable = AK_init_observable(observable_transaction.ptr, AK_TRANSACTION, &AK_handle_observable_transaction_action);
     AK_EPI;
-    return observable_transaction;
+    return observable_transaction.ptr;
 }
 
 /** 
@@ -913,7 +921,7 @@ TestResult AK_test_Transaction() {
     AK_free(row_root_insert);
     AK_free(row_root_update);
     AK_free(row_root_p_update);
-    AK_free(observable_transaction);
+    AK_free(observable_transaction.ptr);
 
     pthread_mutex_unlock(&endTransationTestLockMutex);
     

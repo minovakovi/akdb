@@ -49,10 +49,10 @@ void AK_archive_log(int sig) {
     AK_free(timestamp);//dealociramo memoriju koju smo maloprije alocirali
 	 
     AK_redo_log log;
+    AK_redo_log* const redoLog = redo_log.ptr;
+    memcpy(log.command_recovery, redoLog->command_recovery, sizeof(log.command_recovery));
 
-    memcpy(log.command_recovery, redo_log->command_recovery, sizeof(log.command_recovery));
-
-    log.number = redo_log->number;
+    log.number = redoLog->number;
 
     fwrite(&log, sizeof(log), 1, fp);
  

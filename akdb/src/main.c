@@ -46,8 +46,9 @@ int main(int argc, char * argv[])
     char archiveLogFilename[30];*/ //--uncomment when AK_recover_archive_log is fixed
     AK_PRO;
     // initialize critical sections
-    dbmanFileLock = AK_init_critical_section();
-    printf("Init: %d, ready: %d", dbmanFileLock->init, dbmanFileLock->ready);
+    dbmanFileLock.ptr = AK_init_critical_section();
+    AK_synchronization_info* const fileLock = dbmanFileLock.ptr;
+    printf("Init: %d, ready: %d", fileLock->init, fileLock->ready);
     AK_check_folder_blobs();
     if((argc == 2) && (!strcmp(argv[1], "help") )|| (argc > 3)  || !(!strcmp(argv[1], "test") || !strcmp(argv[1], "alltest")))
 		//if we write ./akdb test help, or write any mistake or ask for any kind of help the help will pop up
@@ -127,7 +128,7 @@ int main(int argc, char * argv[])
         return ( EXIT_ERROR );
     }
     // delete critical sections
-    AK_destroy_critical_section(dbmanFileLock);
+    AK_destroy_critical_section(dbmanFileLock.ptr);
     AK_EPI;
     return(EXIT_SUCCESS);
 }

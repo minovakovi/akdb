@@ -49,22 +49,24 @@ AK_init_db_file(int size)
 
     db_file_size = size;
 
-    if ((db = fopen(DB_FILE, "rb+")) == NULL)
+    AK_blocktable* const allocationBit = AK_allocationbit.ptr;
+
+    if ((db.ptr = fopen(DB_FILE, "rb+")) == NULL)
       {
         printf("AK_init_db_file: ERROR. Cannot open db file %s.\n", DB_FILE);
         AK_EPI;
         exit(EXIT_ERROR);
       }
 
-    sizeOfFile = fsize(db);
-    printf("AK_init_db_file: size db file %d. --- %d ---- %d\n", sizeOfFile, AK_ALLOCATION_TABLE_SIZE, AK_allocationbit->last_initialized);
+    sizeOfFile = fsize(db.ptr);
+    printf("AK_init_db_file: size db file %d. --- %d ---- %d\n", sizeOfFile, AK_ALLOCATION_TABLE_SIZE, allocationBit->last_initialized);
     
     
     if (sizeOfFile > AK_ALLOCATION_TABLE_SIZE)
       {
         printf("AK_init_db_file: Already initialized.\n");
-        fclose(db);
-	db = NULL;
+        fclose(db.ptr);
+	      db.ptr = NULL;
         AK_EPI;
         return (EXIT_SUCCESS);
       }
@@ -73,15 +75,15 @@ AK_init_db_file(int size)
 	   "\nPlease be patient, this can take several minutes depending "
 	   "on disk performance.\n");
 
-    if(AK_allocate_blocks(db, AK_init_block(), 0, MAX_BLOCK_INIT_NUM) != EXIT_SUCCESS)
+    if(AK_allocate_blocks(db.ptr, AK_init_block(), 0, MAX_BLOCK_INIT_NUM) != EXIT_SUCCESS)
       {
         printf("AK_init_db_file: ERROR. Problem with blocks allocation %s.\n", DB_FILE);
         AK_EPI;
         exit(EXIT_ERROR);
       }
 
-    AK_allocationbit->allocationtable[0] = 0;
-    AK_allocationbit->last_allocated = 1;
+    allocationBit->allocationtable[0] = 0;
+    allocationBit->last_allocated = 1;
 
     AK_blocktable_flush();  
 
@@ -109,7 +111,8 @@ AK_get_allocation_set(int* allocationSet, int fromWhere, int gaplength, int numR
   register int i = 0, j = 0, k = 0;
   int num_free_blocks_bitmap = 0,
       tmp = 0, tmpb = 0;
-  int lastInitilizedBlock = AK_allocationbit->last_initialized;
+  AK_blocktable* const allocationBit = AK_allocationbit.ptr;
+  int lastInitilizedBlock = allocationBit->last_initialized;
   int freeBlocksMap[lastInitilizedBlock];
   AK_PRO;
 
@@ -121,7 +124,7 @@ AK_get_allocation_set(int* allocationSet, int fromWhere, int gaplength, int numR
   for (i = 0; i < lastInitilizedBlock; i++)
     freeBlocksMap[i] = FREE_INT;
   for (i = 0; i < lastInitilizedBlock; i++)
-    if (!BITTEST(AK_allocationbit->bittable, i))
+    if (!BITTEST(allocationBit->bittable, i))
       freeBlocksMap[num_free_blocks_bitmap++] = i;
 
   if (num_free_blocks_bitmap < numRequestedBlocks)
@@ -135,14 +138,14 @@ AK_get_allocation_set(int* allocationSet, int fromWhere, int gaplength, int numR
     case allocationSEQUENCE:
       if (fromWhere)
 	{
-	  if (numRequestedBlocks > (lastInitilizedBlock - AK_allocationbit->last_allocated))
+	  if (numRequestedBlocks > (lastInitilizedBlock - allocationBit->last_allocated))
 	    {
 	      AK_EPI;
 	      return allocationSet[0];
 	    }
 	  for (i = 0; i < num_free_blocks_bitmap; ++i)
 	    {
-	      if (freeBlocksMap[i] == AK_allocationbit->last_allocated)
+	      if (freeBlocksMap[i] == allocationBit->last_allocated)
 		break;
 	    }
 	}
@@ -339,8 +342,9 @@ int AK_allocationtable_dump(int verbosity)
   {
       for(i = 0; i < DB_FILE_BLOCKS_NUM; i++)
 	{
-	  if(AK_allocationbit->allocationtable[i] != -1)
-	    printf("(%5u) ", AK_allocationbit->allocationtable[i]);
+    AK_blocktable* const allocationBit = AK_allocationbit.ptr;
+	  if(allocationBit->allocationtable[i] != -1)
+	    printf("(%5u) ", allocationBit->allocationtable[i]);
 	  else
 	    printf("(%5d) ", 0);
 
@@ -370,13 +374,14 @@ AK_blocktable_dump(int verbosity)
   int i;
   AK_PRO;
   printf("Dump of allocation table\n");
+  AK_blocktable* const allocationBit = AK_allocationbit.ptr;
   if(verbosity)
     {
       for(i = 0; i < DB_FILE_BLOCKS_NUM; i++)
 	{
-	  if(AK_allocationbit->last_initialized < i)
+	  if(allocationBit->last_initialized < i)
 	    printf("(%3d-U) ", i);
-	  else if(BITTEST(AK_allocationbit->bittable, i))
+	  else if(BITTEST(allocationBit->bittable, i))
 	    printf("(%3d-X) ", i);
 	  else
 	    printf("(%3d-O) ", i);
@@ -389,9 +394,9 @@ AK_blocktable_dump(int verbosity)
     {
       for(i = 0; i < DB_FILE_BLOCKS_NUM; i++)
 	{
-	  if(AK_allocationbit->last_initialized < i)
+	  if(allocationBit->last_initialized < i)
 	    printf("U ");
-	  else if (BITTEST(AK_allocationbit->bittable, i))
+	  else if (BITTEST(allocationBit->bittable, i))
 	    printf("X ");
 	  else
 	    printf("O ");
@@ -414,7 +419,7 @@ int
 AK_blocktable_flush()
 {
   AK_PRO;
-  if ((db = fopen(DB_FILE, "rb+")) == NULL)
+  if ((db.ptr = fopen(DB_FILE, "rb+")) == NULL)
     {
       printf("AK_allocationbit: ERROR. Cannot open db file %s.\n", DB_FILE);
       AK_EPI;
@@ -422,7 +427,8 @@ AK_blocktable_flush()
     }
 
   pthread_mutex_lock(&fileLockMutex);
-  if (AK_fwrite(AK_allocationbit, AK_ALLOCATION_TABLE_SIZE, 1, db) != 1)
+  
+  if (AK_fwrite(AK_allocationbit.ptr, AK_ALLOCATION_TABLE_SIZE, 1, db.ptr) != 1)
     {
       printf("AK_allocationbit: ERROR. Cannot write bit vector \n");
       AK_EPI;
@@ -430,8 +436,8 @@ AK_blocktable_flush()
     }
   pthread_mutex_unlock(&fileLockMutex);
 
-  fclose(db);
-  db = NULL;
+  fclose(db.ptr);
+  db.ptr = NULL;
   AK_EPI;
   
   return(EXIT_SUCCESS);
@@ -448,24 +454,27 @@ AK_blocktable_flush()
 void
 AK_allocate_block_activity_modes()
 {
-  int lastInitializedBlock = AK_allocationbit->last_initialized;
+  AK_blocktable* const allocationBit = AK_allocationbit.ptr;
+  int lastInitializedBlock = allocationBit->last_initialized;
   AK_PRO;
     
-  AK_free(AK_block_activity_info);
+  
+  AK_free(AK_block_activity_info.ptr);
   if (lastInitializedBlock == 0)
     lastInitializedBlock = 1000;
     
-  AK_block_activity_info = (AK_block_activity *) 
+  AK_block_activity_info.ptr = (AK_block_activity *) 
     AK_malloc((lastInitializedBlock + 1) * sizeof(AK_block_activity));
 
   int i;
   for (i = 0; i <= lastInitializedBlock; i++)
     {
-      AK_block_activity_info[i].locked_for_reading = 0; // false
-      AK_block_activity_info[i].locked_for_writing = 0; // false
-      pthread_mutex_init(&AK_block_activity_info[i].block_lock,   NULL);
-      pthread_cond_init (&AK_block_activity_info[i].reading_done, NULL);
-      pthread_cond_init (&AK_block_activity_info[i].writing_done, NULL);
+      AK_block_activity* const activityInfo = AK_block_activity_info.ptr;
+      activityInfo[i].locked_for_reading = 0; // false
+      activityInfo[i].locked_for_writing = 0; // false
+      pthread_mutex_init(&activityInfo[i].block_lock,   NULL);
+      pthread_cond_init (&activityInfo[i].reading_done, NULL);
+      pthread_cond_init (&activityInfo[i].writing_done, NULL);
     }
   
   AK_EPI;
@@ -480,7 +489,7 @@ int
 AK_blocktable_get()
 {
   AK_PRO;
-  if ((db = fopen(DB_FILE, "rb+")) == NULL)
+  if ((db.ptr = fopen(DB_FILE, "rb+")) == NULL)
     {
       printf("AK_allocationbit: ERROR. Cannot open db file %s.\n", DB_FILE);
       AK_EPI;
@@ -488,7 +497,8 @@ AK_blocktable_get()
     }
 
   pthread_mutex_lock(&fileLockMutex);
-  if (AK_fread(AK_allocationbit, AK_ALLOCATION_TABLE_SIZE, 1, db) == 0)
+  
+  if (AK_fread(AK_allocationbit.ptr, AK_ALLOCATION_TABLE_SIZE, 1, db.ptr) == 0)
     {
       printf("AK_allocationbit:  Cannot read bit-vector %d.\n", AK_ALLOCATION_TABLE_SIZE);
       AK_EPI;
@@ -496,8 +506,8 @@ AK_blocktable_get()
     }
   pthread_mutex_unlock(&fileLockMutex);
   
-  fclose(db);
-  db = NULL;
+  fclose(db.ptr);
+  db.ptr = NULL;
 
   AK_EPI;
   return (EXIT_SUCCESS);
@@ -543,59 +553,51 @@ fsize(FILE *fp)
  * @return EXIT_SUCCESS if the file has been written to disk, EXIT_ERROR otherwise
  */
 int
-AK_init_allocation_table()
-{
+AK_init_allocation_table() {
   int i, fileSizeBytes;
   AK_PRO;
-  if ((AK_allocationbit = (AK_blocktable *)AK_malloc(sizeof(AK_blocktable))) == NULL)
-    {
-      printf("AK_allocationbit: ERROR. Cannot allocate  bit vector \n");
-      AK_EPI;
-      exit(EXIT_ERROR);
-    }
+  if ((AK_allocationbit.ptr = (AK_blocktable *)AK_malloc(sizeof(AK_blocktable))) == NULL) {
+    printf("AK_allocationbit: ERROR. Cannot allocate  bit vector \n");
+    AK_EPI;
+    exit(EXIT_ERROR);
+  }
 
-  if ((db = fopen(DB_FILE, "rb+")) == NULL)
-    {
-      if ((db = fopen(DB_FILE, "wb+")) == NULL)
-	{
-	  printf("AK_allocationbit: ERROR. Cannot open db file %s.\n", DB_FILE);
-	  AK_EPI;
-	  exit(EXIT_ERROR);
-	}
-    }
+  if ((db.ptr = fopen(DB_FILE, "rb+")) == NULL) {
+    if ((db.ptr = fopen(DB_FILE, "wb+")) == NULL) {
+	    printf("AK_allocationbit: ERROR. Cannot open db file %s.\n", DB_FILE);
+	    AK_EPI;
+	    exit(EXIT_ERROR);
+	  }
+  }
 
-  fileSizeBytes = fsize(db);
+  fileSizeBytes = fsize(db.ptr);
 
   pthread_mutex_lock(&fileLockMutex);
-  if (fileSizeBytes == 0)
-    {
-      for (i = 0; i < DB_FILE_BLOCKS_NUM; i++)
-	{
-	  BITCLEAR(AK_allocationbit->bittable, i);
-	  AK_allocationbit->allocationtable[i] = 0xFFFFFFFF;	    
-	}
-      AK_allocationbit->last_allocated   = 0;
-      AK_allocationbit->last_initialized = 0;
-      AK_allocationbit->prepared         = 0;
-      AK_allocationbit->ltime            = time(NULL);
-
-      if (AK_fwrite(AK_allocationbit, AK_ALLOCATION_TABLE_SIZE, 1, db) != 1)
-	{
-	  printf("AK_allocationbit: ERROR. Cannot write bit vector \n");
-	  AK_EPI;
-	  exit(EXIT_ERROR);
-	}
-      pthread_mutex_unlock(&fileLockMutex);
+  if (fileSizeBytes == 0) {
+    AK_blocktable* const allocationBit = AK_allocationbit.ptr;
+    for (i = 0; i < DB_FILE_BLOCKS_NUM; i++) {
+      BITCLEAR(allocationBit->bittable, i);
+      allocationBit->allocationtable[i] = 0xFFFFFFFF;	    
     }
-  else if (AK_fread(AK_allocationbit, AK_ALLOCATION_TABLE_SIZE, 1, db) == 0)
-    {
-      printf("AK_allocationbit:  Cannot read bit-vector %d.\n", AK_ALLOCATION_TABLE_SIZE);
+    allocationBit->last_allocated   = 0;
+    allocationBit->last_initialized = 0;
+    allocationBit->prepared         = 0;
+    allocationBit->ltime            = time(NULL);
+
+    if (AK_fwrite(AK_allocationbit.ptr, AK_ALLOCATION_TABLE_SIZE, 1, db.ptr) != 1) {
+      printf("AK_allocationbit: ERROR. Cannot write bit vector \n");
       AK_EPI;
       exit(EXIT_ERROR);
     }
+    pthread_mutex_unlock(&fileLockMutex);
+  } else if (AK_fread(AK_allocationbit.ptr, AK_ALLOCATION_TABLE_SIZE, 1, db.ptr) == 0) {
+    printf("AK_allocationbit:  Cannot read bit-vector %d.\n", AK_ALLOCATION_TABLE_SIZE);
+    AK_EPI;
+    exit(EXIT_ERROR);
+  }
 
-  fclose(db);
-  db = NULL;
+  fclose(db.ptr);
+  db.ptr = NULL;
   pthread_mutex_unlock(&fileLockMutex);
 
   AK_EPI;
@@ -904,7 +906,7 @@ AK_print_block(AK_block * block, int num, char* gg, FILE *fpp)
   if (fpp == NULL)
     {
       fclose(fp);
-      db = NULL;
+      db.ptr = NULL;
     }
 
   AK_EPI;
@@ -954,11 +956,11 @@ AK_allocate_blocks(FILE* db, AK_block * block, int FromWhere, int HowMany)
 
     fclose(db);
     db = NULL;
-    
-    AK_allocationbit->last_initialized = i;
+    AK_blocktable* const allocationBit = AK_allocationbit.ptr;
+    allocationBit->last_initialized = i;
     AK_allocate_block_activity_modes();
     AK_blocktable_flush();
-    printf("AK_allocationbit->last_initialized %d\n", AK_allocationbit->last_initialized);
+    printf("AK_allocationbit->last_initialized %d\n", allocationBit->last_initialized);
     AK_EPI;
     return (EXIT_SUCCESS);
 }
@@ -1020,14 +1022,16 @@ AK_read_block(int address)
       exit(EXIT_ERROR);
     } 
 
-  pthread_mutex_lock(&AK_block_activity_info[address].block_lock);
+  AK_block_activity* const activityInfo = AK_block_activity_info.ptr;
+
+  pthread_mutex_lock(&activityInfo[address].block_lock);
   // first we check if the block is already locked for writing by another thread
-  locked_for_reading = AK_block_activity_info[address].locked_for_reading;
-  locked_for_writing = AK_block_activity_info[address].locked_for_writing;
+  locked_for_reading = activityInfo[address].locked_for_reading;
+  locked_for_writing = activityInfo[address].locked_for_writing;
     
   if (!locked_for_reading && !locked_for_writing)
     {
-      AK_block_activity_info[address].thread_holding_lock = &thread_id;
+      activityInfo[address].thread_holding_lock = &thread_id;
     }
     
   // if block is locked for writing, then we have to wait for another thread to unlock it
@@ -1037,11 +1041,11 @@ AK_read_block(int address)
   // else, we lock the block for reading and proceed    
   if (locked_for_writing == true)
     {
-      pthread_cond_wait(&AK_block_activity_info[address].writing_done, &AK_block_activity_info[address].block_lock);
+      pthread_cond_wait(&activityInfo[address].writing_done, &activityInfo[address].block_lock);
     }
   else
     {
-      AK_block_activity_info[address].locked_for_reading = true;
+      activityInfo[address].locked_for_reading = true;
     }
     
   // now we can safely write block to the disk
@@ -1082,14 +1086,14 @@ AK_read_block(int address)
   }
     
   // after reading is done, we unlock this block
-  AK_block_activity_info[address].locked_for_reading = false;
+  activityInfo[address].locked_for_reading = false;
   // and signalize other threads that reading is done!
-  pthread_cond_signal(&AK_block_activity_info[address].reading_done);
+  pthread_cond_signal(&activityInfo[address].reading_done);
     
   // and after everything is done, we just have to unlock block's mutex
   // thus making it accessible to other blocks which want to write data to it
-  if (AK_block_activity_info[address].thread_holding_lock == &thread_id) {
-    pthread_mutex_unlock(&AK_block_activity_info[address].block_lock);
+  if (activityInfo[address].thread_holding_lock == &thread_id) {
+    pthread_mutex_unlock(&activityInfo[address].block_lock);
   }
   fclose(database);
     
@@ -1123,15 +1127,16 @@ AK_write_block(AK_block * block)
     
   // first we have to find out block's address
   address = block->address;
-    
-  pthread_mutex_lock(&AK_block_activity_info[address].block_lock);
+  
+  AK_block_activity* const activityInfo = AK_block_activity_info.ptr;
+  pthread_mutex_lock(&activityInfo[address].block_lock);
   // first we check if block is already locked for reading and for writing by another threads
-  locked_for_writing = AK_block_activity_info[address].locked_for_writing;
-  locked_for_reading = AK_block_activity_info[address].locked_for_reading;    
+  locked_for_writing = activityInfo[address].locked_for_writing;
+  locked_for_reading = activityInfo[address].locked_for_reading;    
     
   if (!locked_for_reading && !locked_for_writing)
     {
-      AK_block_activity_info[address].thread_holding_lock = &thread_id;
+      activityInfo[address].thread_holding_lock = &thread_id;
     }
     
   // if the block is locked for writing and/or is currently writing, then we have to wait for another thread to unlock it
@@ -1141,15 +1146,15 @@ AK_write_block(AK_block * block)
   // else, we lock the block for reading and proceed    
   if (locked_for_reading == true)
     {
-      pthread_cond_wait(&AK_block_activity_info[address].reading_done, &AK_block_activity_info[address].block_lock);
+      pthread_cond_wait(&activityInfo[address].reading_done, &activityInfo[address].block_lock);
     }
   if (locked_for_writing == true)
     {
-      pthread_cond_wait(&AK_block_activity_info[address].writing_done, &AK_block_activity_info[address].block_lock);
+      pthread_cond_wait(&activityInfo[address].writing_done, &activityInfo[address].block_lock);
     }
     
   // and when there is no other thread reading from it or writing to it, we can proceed
-  AK_block_activity_info[address].locked_for_writing = true;
+  activityInfo[address].locked_for_writing = true;
     
   // block of code below is used only for testing purposes!
   // it is executed only when testMode is ON 
@@ -1183,15 +1188,15 @@ AK_write_block(AK_block * block)
     }
         
   // after writing is done, we unlock this block for reading and/or writing
-  AK_block_activity_info[address].locked_for_writing = false;
+  activityInfo[address].locked_for_writing = false;
   // and signalize other threads that writing is done!
-  pthread_cond_signal(&AK_block_activity_info[address].writing_done);
+  pthread_cond_signal(&activityInfo[address].writing_done);
     
   // and after everything is done, we just have to unlock block's mutex
   // thus making it accessible to other blocks which want to write data to it or read from it
-  if (AK_block_activity_info[address].thread_holding_lock == &thread_id)
+  if (activityInfo[address].thread_holding_lock == &thread_id)
     {
-      pthread_mutex_unlock(&AK_block_activity_info[address].block_lock);
+      pthread_mutex_unlock(&activityInfo[address].block_lock);
     }
     
   fclose(database);
@@ -1327,7 +1332,8 @@ AK_get_extent(int start_address, int desired_size, AK_allocation_set_mode* mode,
       if (first_element_of_set == FREE_INT && mode[i] == allocationSEQUENCE)
 	{
 	  //there is no space at current boundaries - try to get more
-	  if (AK_allocate_blocks(NULL, AK_init_block(), AK_allocationbit->last_initialized, desired_size) != EXIT_SUCCESS)
+    AK_blocktable* const allocationBit = AK_allocationbit.ptr;
+	  if (AK_allocate_blocks(NULL, AK_init_block(), allocationBit->last_initialized, desired_size) != EXIT_SUCCESS)
 	    {
 	      printf("AK_new_extent E1: ERROR. Problem with blocks allocation %s.\n", DB_FILE);
 	      AK_EPI;
@@ -1368,14 +1374,15 @@ AK_get_extent(int start_address, int desired_size, AK_allocation_set_mode* mode,
       return blocknum;
     }
 
+  AK_blocktable* const allocationBit = AK_allocationbit.ptr;
   //still haven't saved what happened to the allocation table
   for (i = 0; i < desired_size; i++)
     {
-      BITSET(AK_allocationbit->bittable, blocknum[i]);
-      if (i < (desired_size - 1))AK_allocationbit->allocationtable[blocknum[i]] = blocknum[i + 1];
+      BITSET(allocationBit->bittable, blocknum[i]);
+      if (i < (desired_size - 1))allocationBit->allocationtable[blocknum[i]] = blocknum[i + 1];
     }
-  AK_allocationbit->allocationtable[blocknum[i - 1]] = blocknum[0];
-  AK_allocationbit->last_allocated += i;
+  allocationBit->allocationtable[blocknum[i - 1]] = blocknum[0];
+  allocationBit->last_allocated += i;
   
   AK_blocktable_flush();
   //now we have
@@ -1411,12 +1418,12 @@ AK_increase_extent(int start_address, int add_size, AK_allocation_set_mode* mode
   
   blocknum = (int*)AK_malloc(sizeof(int)*(add_size + 1));
   blocknum[0] = FREE_INT;
-
+  AK_blocktable* const allocationBit = AK_allocationbit.ptr;
   for (i = 0; i < DB_FILE_BLOCKS_NUM; i++)
     {
-      if (AK_allocationbit->allocationtable[i] == start_address)
+      if (allocationBit->allocationtable[i] == start_address)
 	{
-	  last_address = AK_allocationbit->allocationtable[i];
+	  last_address = allocationBit->allocationtable[i];
 	  break;
 	}
 
@@ -1440,12 +1447,12 @@ AK_increase_extent(int start_address, int add_size, AK_allocation_set_mode* mode
       return blocknum;
     }
 
-  AK_allocationbit->allocationtable[last_address] = blocknum[0];
+  allocationBit->allocationtable[last_address] = blocknum[0];
   for (i = 1; i < add_size; i++)
     {
-      AK_allocationbit->allocationtable[blocknum[i - 1]] = blocknum[i];
+      allocationBit->allocationtable[blocknum[i - 1]] = blocknum[i];
     }
-  AK_allocationbit->allocationtable[blocknum[add_size - 1]] = start_address;
+  allocationBit->allocationtable[blocknum[add_size - 1]] = start_address;
 
   AK_EPI;
   return blocknum;
@@ -1505,9 +1512,10 @@ AK_new_extent(int start_address, int old_size, int extent_type, AK_header *heade
 
   first_element_of_set = AK_get_allocation_set(allocation_set, 1, 0, requested_space_in_blocks, allocationSEQUENCE, 6);
     
+  AK_blocktable* const allocationBit = AK_allocationbit.ptr;
   if (first_element_of_set == FREE_INT)
   {
-      	if (AK_allocate_blocks(NULL, block = AK_init_block(), AK_allocationbit->last_initialized, requested_space_in_blocks) != EXIT_SUCCESS)
+      	if (AK_allocate_blocks(NULL, block = AK_init_block(), allocationBit->last_initialized, requested_space_in_blocks) != EXIT_SUCCESS)
 		{
 	  		AK_free(block);
 	  		printf("AK_new_extent: ERROR. Problem with blocks allocation %s.\n", DB_FILE);
@@ -1540,13 +1548,13 @@ AK_new_extent(int start_address, int old_size, int extent_type, AK_header *heade
 
   for (i = 0; i < requested_space_in_blocks; i++)
     {
-      BITSET(AK_allocationbit->bittable, allocation_set[i]);
+      BITSET(allocationBit->bittable, allocation_set[i]);
       if (i < (requested_space_in_blocks - 1))
-	AK_allocationbit->allocationtable[allocation_set[i]] = allocation_set[i + 1];
+	allocationBit->allocationtable[allocation_set[i]] = allocation_set[i + 1];
     }
   
-  AK_allocationbit->allocationtable[allocation_set[i - 1]] = allocation_set[0];
-  AK_allocationbit->last_allocated += i;
+  allocationBit->allocationtable[allocation_set[i - 1]] = allocation_set[0];
+  allocationBit->last_allocated += i;
 
   AK_blocktable_flush();
   AK_free(allocation_set);
@@ -2490,10 +2498,10 @@ AK_delete_block(int address)
     memcpy(block->header, head, sizeof (*head));
     memcpy(block->tuple_dict, tuple_dict, sizeof (*tuple_dict));
     memcpy(block->data, data, sizeof (*data));
-
-    BITCLEAR(AK_allocationbit->bittable, address);
-    if (address == AK_allocationbit->last_allocated)
-      AK_allocationbit->last_allocated = address - 1;
+    AK_blocktable* const allocationBit = AK_allocationbit.ptr;
+    BITCLEAR(allocationBit->bittable, address);
+    if (address == allocationBit->last_allocated)
+      allocationBit->last_allocated = address - 1;
     AK_blocktable_flush();
     AK_blocktable_get();
 
@@ -2529,7 +2537,8 @@ AK_delete_extent(int begin, int end)
 	  AK_EPI;
 	  return EXIT_ERROR;
         }
-      AK_allocationbit->allocationtable[address] = 0xFFFFFFFF;
+      AK_blocktable* const allocationBit = AK_allocationbit.ptr;
+      allocationBit->allocationtable[address] = 0xFFFFFFFF;
     }
   AK_EPI;
   return (EXIT_SUCCESS);
@@ -2614,10 +2623,10 @@ AK_init_disk_manager()
     }
     
   AK_allocate_block_activity_modes();
-
-  if (AK_allocationbit->prepared == 31)
+  AK_blocktable* const allocationBit = AK_allocationbit.ptr;
+  if (allocationBit->prepared == 31)
     {
-      printf("\n\tDisk manager has been initialized at %s\n\n", asctime(localtime(&AK_allocationbit->ltime)));
+      printf("\n\tDisk manager has been initialized at %s\n\n", asctime(localtime(&allocationBit->ltime)));
       AK_dbg_messg(LOW, DB_MAN, "Block size is: %d\n", sizeof (AK_block));
       AK_dbg_messg(LOW, DB_MAN, "%d blocks for %d MiB\n", size, DB_FILE_SIZE);
 	
@@ -2634,8 +2643,8 @@ AK_init_disk_manager()
       if (AK_init_system_catalog() == EXIT_SUCCESS)
 	{
 	  printf("AK_init_disk_manager: Disk manager initialized!\n\n");
-	  AK_allocationbit->prepared = 31;
-	  AK_allocationbit->ltime = time(NULL);
+	  allocationBit->prepared = 31;
+	  allocationBit->ltime = time(NULL);
 	  AK_blocktable_flush();
 	  AK_EPI;
 	  return EXIT_SUCCESS;
@@ -2662,13 +2671,13 @@ TestResult AK_allocationbit_test()
 	
 	//for test of test itself
 	//BITCLEAR(AK_allocationbit->bittable,AK_allocationbit->last_allocated-1);
-	
-	printf("Last allocated bit: %d\n",AK_allocationbit->last_allocated);
-	printf("Last initialized bit: %d\n",AK_allocationbit->last_initialized);
-	printf("Prepared: %d\n",AK_allocationbit->prepared);
+	AK_blocktable* const allocationBit = AK_allocationbit.ptr;
+	printf("Last allocated bit: %d\n",allocationBit->last_allocated);
+	printf("Last initialized bit: %d\n",allocationBit->last_initialized);
+	printf("Prepared: %d\n",allocationBit->prepared);
 	
 	i=success=failed=0;
-	if(BITTEST(AK_allocationbit->bittable, i))
+	if(BITTEST(allocationBit->bittable, i))
 	{
 		failed++;
 		printf("First bit has wrong avalue.\n",i);
@@ -2677,8 +2686,8 @@ TestResult AK_allocationbit_test()
 		success++;
 	success++;
 	bitNo=1;
-	for(i=1; i < AK_allocationbit->last_allocated; i++,bitNo++)
-		if(!BITTEST(AK_allocationbit->bittable, i))
+	for(i=1; i < allocationBit->last_allocated; i++,bitNo++)
+		if(!BITTEST(allocationBit->bittable, i))
 		{
 			failed++;
 			success--;
@@ -2687,9 +2696,9 @@ TestResult AK_allocationbit_test()
 		}
 	success++;
 	bitNo=0;
-	for(i=AK_allocationbit->last_allocated; i<DB_FILE_BLOCKS_NUM; i++,bitNo++)
+	for(i=allocationBit->last_allocated; i<DB_FILE_BLOCKS_NUM; i++,bitNo++)
 	{
-		if(BITTEST(AK_allocationbit->bittable, i))
+		if(BITTEST(allocationBit->bittable, i))
 		{
 			failed++;
 			success--;

@@ -65,7 +65,7 @@ int AK_check_constraint_not_null(char* tableName, char* attName, char* newValue)
  * @param constraintName name of constraint 
  * @return EXIT_SUCCESS when constraint is deleted, else EXIT_ERROR
  */
-int AK_delete_constraint_not_null(char* tableName, char constraintName[]);
+int AK_delete_constraint_not_null(char* tableName, char* constraintName);
 TestResult AK_nnull_constraint_test();
 
 #endif

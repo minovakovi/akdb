@@ -28,9 +28,10 @@
 int AK_add_to_redolog(int command, struct list_node *row_root){
     AK_PRO;
 
-    if (redo_log == NULL)
+    AK_redo_log* const redoLog = redo_log.ptr;
+    if (redoLog == NULL)
       return EXIT_FAILURE;
-    int n = redo_log->number;
+    int n = redoLog->number;
     printf("AK_add_to_redolog: Recovery checkpoint %d\n", n);
 
     if(n == MAX_REDO_LOG_ENTRIES){
@@ -89,12 +90,12 @@ int AK_add_to_redolog(int command, struct list_node *row_root){
     }
     
     printf("AK_add_to_redolog: redolog new entry -- %s, %s\n", table, record);
-    memcpy(redo_log->command_recovery[n].table_name, table, strlen(table));
+    memcpy(redoLog->command_recovery[n].table_name, table, strlen(table));
 	for(i=0; i<numAttr-1; i++)
-		strcpy(redo_log->command_recovery[n].arguments[i], attrs[i]);
-    redo_log->command_recovery[n].operation = command;
-    redo_log->command_recovery[n].finished = 0;
-    redo_log->number = n+1;
+		strcpy(redoLog->command_recovery[n].arguments[i], attrs[i]);
+    redoLog->command_recovery[n].operation = command;
+    redoLog->command_recovery[n].finished = 0;
+    redoLog->number = n+1;
     AK_free(record);
 	for(i=0; i < numAttr-1; i++)
 		AK_free(attrs[i]);
@@ -106,8 +107,9 @@ int AK_add_to_redolog(int command, struct list_node *row_root){
 
 void AK_redolog_commit() {
     int i;
-    for(i = 0; i < redo_log->number; i++) {
-        redo_log->command_recovery[i].finished = 1;
+    AK_redo_log* const redoLog = redo_log.ptr;
+    for(i = 0; i < redoLog->number; i++) {
+        redoLog->command_recovery[i].finished = 1;
     }
 }
 
@@ -119,10 +121,10 @@ void AK_redolog_commit() {
  */
 int AK_add_to_redolog_select(int command, struct list_node *condition, char *srcTable){
     AK_PRO;
-
-    if (redo_log == NULL)
+    AK_redo_log* const redoLog = redo_log.ptr;
+    if (redoLog == NULL)
         return EXIT_FAILURE;
-    int n = redo_log->number;
+    int n = redoLog->number;
     printf("AK_add_to_redolog_select: Select checkpoint %d\n", n);
 
     if(n == MAX_REDO_LOG_ENTRIES){
@@ -184,15 +186,15 @@ int AK_add_to_redolog_select(int command, struct list_node *condition, char *src
     }
 
     printf("AK_add_to_redolog_select: redolog_select new entry -- %s, %s\n", srcTable, record_cond);
-    memcpy(redo_log->command_recovery[n].table_name, srcTable, strlen(srcTable));
+    memcpy(redoLog->command_recovery[n].table_name, srcTable, strlen(srcTable));
 
     /*for(i=0; i<numAttr-1; i++)
-        strcpy(redo_log->command_recovery[n].arguments[i], attrs[i]);*/
+        strcpy(redoLog->command_recovery[n].arguments[i], attrs[i]);*/
 
     for(i=0; i<numConds-1; i++)
-        strcpy(redo_log->command_recovery[n].condition[i], conds[i]);
-    redo_log->command_recovery[n].operation = command;
-    redo_log->number = n+1;
+        strcpy(redoLog->command_recovery[n].condition[i], conds[i]);
+    redoLog->command_recovery[n].operation = command;
+    redoLog->number = n+1;
 
     /*AK_free(record);
     for(i=0; i < numAttr-1; i++)
@@ -250,14 +252,14 @@ int AK_check_redo_log_select(int command, struct list_node *condition, char *src
 
     int check_var;
     int j;
-
-    for(i = redo_log->number; i >= 0; i--) {
-        if(redo_log->command_recovery[i].operation == command){
-            if(strcmp(redo_log->command_recovery[i].table_name, srcTable) == 0)
+    AK_redo_log* const redoLog = redo_log.ptr;
+    for(i = redoLog->number; i >= 0; i--) {
+        if(redoLog->command_recovery[i].operation == command){
+            if(strcmp(redoLog->command_recovery[i].table_name, srcTable) == 0)
             {
                 for(j=0; j < numConds-1; j++){
-                    printf("AK_check_redolog: attrs -- %s, %s\n", redo_log->command_recovery[i].condition[j], conds[j]);
-                    check_var = strcmp(redo_log->command_recovery[i].condition[j], conds[j]);
+                    printf("AK_check_redolog: attrs -- %s, %s\n", redoLog->command_recovery[i].condition[j], conds[j]);
+                    check_var = strcmp(redoLog->command_recovery[i].condition[j], conds[j]);
                     printf("AK_check_redolog: check_var -- %d\n", check_var);
                     if(check_var != 0)
                     {
@@ -283,11 +285,12 @@ int AK_check_redo_log_select(int command, struct list_node *condition, char *src
  */
 void AK_printout_redolog(){
     AK_PRO;
-    int x = redo_log->number;
+    AK_redo_log* const redoLog = redo_log.ptr;
+    int x = redoLog->number;
     int i = 0;
     for (i = 0; i < x; i++){
-        printf("%d. %s %s %s\n", i, redo_log->command_recovery[i].table_name,
-                redo_log->command_recovery[i].operation, redo_log->command_recovery[i].arguments);
+        printf("%d. %s %s %s\n", i, redoLog->command_recovery[i].table_name,
+                redoLog->command_recovery[i].operation, redoLog->command_recovery[i].arguments);
     }
     AK_EPI;
 }
