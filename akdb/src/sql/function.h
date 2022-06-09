@@ -76,12 +76,13 @@ int AK_function_add(char *name, int return_type, struct list_node *arguments_lis
 int AK_function_arguments_add(int function_id, int arg_number, int arg_type, char *argname);
 
 /**
- * @author Boris Kišić
+ * @author Boris Kišić, updated by Fran Turković
  * @brief Function that removes a function by its obj_id.
  * @param obj_id obj_id of the function
+ * @param num_args number of agruments
  * @return EXIT_SUCCESS or EXIT_ERROR
  */
-int AK_function_remove_by_obj_id(int obj_id);
+int AK_function_remove_by_obj_id(int obj_id, int num_args);
 
 /**
  * @author Boris Kišić
