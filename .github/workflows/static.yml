@@ -1,0 +1,1054 @@
+#
+<!DOCTYPE html>
+<html lang="hr">
+  <head>
+    <meta charset="UTF-8" />
+    <title>AK Database</title>
+
+    <link href="style.css" rel="stylesheet" />
+    <script src="script.js" type="text/javascript"></script>
+  </head>
+  <body>
+    <nav id="nav-menu">
+      <img
+        alt="AK Database logo"
+        class="header-logo"
+        id="nav-logo"
+        src="images/logo/AKDB_color.svg"
+      />
+
+      <button id="mobile-menu-btn" class="custom-btn hide-on-desktop">
+        <svg
+          height="100%"
+          viewBox="0 0 1024 576"
+          width="100%"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M1024,64L0,64L0,0L1024,0L1024,64ZM1024,576L0,576L0,512L1024,512L1024,576ZM1024,320L0,320L0,256L1024,256L1024,320Z"
+          ></path>
+        </svg>
+      </button>
+      <ul>
+        <li><a class="active" href="#about">About AKDB</a></li>
+        <li><a href="#install">Installation</a></li>
+        <li><a href="#build">Building</a></li>
+        <li><a href="#directories">Directories</a></li>
+        <li><a href="#testing">Testing</a></li>
+        <li>
+          <a href="https://github.com/AILab-FOI/akdb"
+            >GitHub
+            <div class="rot-45">-></div>
+          </a>
+        </li>
+      </ul>
+    </nav>
+
+    <section class="page-section" id="about">
+      <h1>What is AKDB?</h1>
+      <h2>So, what is it?</h2>
+      <p>
+        AK (Russian: Автомат Калашникова, English: Avtomat Kalasnikova) DB is a
+        simple relational database management system developed by professor
+        Markus Schatten of Faculty of Organization and Informatics in Varaždin,
+        Croatia. It is also regularly developed, maintained and fixed by
+        graduate students attending 'Physical Database Modeling' course every
+        spring.
+      </p>
+      <p>
+        The development started in 2009 and is still ongoing, as building a
+        custom DBMS is not an easy task. Most of it is written in C, with some
+        Python for Server stuff and documentation which is generated
+        automatically and can be viewed in HTML or LaTeX form. More on that in
+        Installation and Build pages.
+      </p>
+      <h2>Where can I find it?</h2>
+      <p>
+        The AKDB System can be found at GitHub, it is maintained there for the
+        last couple of years. Before Github, AKDB System was maintained on
+        Sourceforge.
+      </p>
+      <p>
+        It is also important to mention that the system is currently in ALPHA
+        development and is <strong>NOT fully functional</strong>!
+      </p>
+      <div class="paragraph-buttons">
+        <a class="a-btn" href="https://github.com/AILab-FOI/akdb"
+          >Download from GitHub
+          <div class="rot-45">-></div></a
+        >
+      </div>
+      <h2>Extended documentation</h2>
+      <p>
+        The detailed documentation regerading the implementation can be found on
+        the following link
+      </p>
+      <div class="paragraph-buttons">
+        <a class="a-btn" href="https://minovakovi.github.io/akdb/index_8c.html"
+          >Open detailed documentation
+          <div class="rot-45">-></div></a
+        >
+      </div>
+    </section>
+
+    <section class="page-section" id="install">
+      <h1>Installation</h1>
+      <h2>Linux</h2>
+      <p>
+        Originally built for Unix based operating systems, AKDB has a pretty
+        straightforward installation on these systems. To get your AKDB going
+        you need to simply clone the repository and install dependencies, but
+        first you need to install prerequisites:
+      </p>
+
+      <code>sudo apt-get install git build-essential swig make doxygen</code>
+
+      <p>
+        To get Kalasnikov DB you can download .zip file from GitHub on your
+        machine or you can clone it into a directory you've positioned yourself
+        in by using Git command:
+      </p>
+
+      <code>git clone https://github.com/mschatten/akdb </code>
+
+      <p>You can then change the directory to get into the structure:</p>
+
+      <code>cd akdb/akdb/ </code>
+
+      <p>
+        Nevermind the multiple akdb directories, it was probably just a bug
+        during migration to GitHub. In the end you should end up in the root
+        directory of the system.
+      </p>
+
+      <p>
+        Next thing you do is install dependencies (Python 2.7), if you don't
+        have them already:
+      </p>
+
+      <code>sudo apt-get install python2.7 </code>
+
+      <p>
+        You can also set up a virtual environment for the system. To do that,
+        install <code>virtualenv</code> via pip and run
+      </p>
+
+      <code>virtualenv -p /usr/bin/python2.7 venv</code>
+
+      <p>
+        into your project folder. You can do this with any Python interpreter of
+        your choice.
+      </p>
+
+      <p>
+        To use it, this environment needs to be activated with
+        <code>source venv/bin/activate</code> and deactivated with command
+        <code>deactivate</code>.
+      </p>
+
+      <h2>Mac</h2>
+
+      <p>
+        <strong style="color: var(--body-text-light)">[UNTESTED]</strong>
+        Everything from the <i><b>Linux</b></i> instructions <i>should</i> work.
+        Please let us know on GitHub if it doesn't.
+      </p>
+
+      <h2>Windows</h2>
+
+      <p>
+        Windows 10 introduced <b>Windows Subsystem for Linux</b> (WSL) in 2016,
+        which enables running instances of Linux distributions on Windows.
+        Running instances can use their file system (hosted on the Windows
+        partition) or they can access existing Windows files, that can make some
+        things easier.
+      </p>
+
+      <h3>Enabling and configuring WSL</h3>
+
+      <b>Prerequisites:</b>
+
+      <ul>
+        <li>
+          Windows 10 version 1703 (April 2018 update) or later <br />
+          (May 2019 update (1903) recommended, it has a lot of console
+          improvements, especially for WSL).
+        </li>
+        <li>about 500MB of disk space</li>
+        <li>administrator rights (for installation)</li>
+      </ul>
+
+      <p class="hide-on-mobile">
+        <i style="color: var(--body-text-light)"
+          >Hover over images to to zoom in.</i
+        >
+      </p>
+
+      <div class="h-split">
+        <div class="h-split-left">
+          <h4>Step 1</h4>
+
+          <p>
+            Click on the
+            <svg
+              class="inline-icon"
+              height="100%"
+              viewBox="0 0 1024 1024"
+              width="100%"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M1024,341.5C1024,372.833 1019.92,403.083 1011.75,432.25C1003.58,461.417 992.083,488.583 977.25,513.75C962.417,538.917 944.667,561.917 924,582.75C903.333,603.583 880.333,621.333 855,636C829.667,650.667 802.417,662.083 773.25,670.25C744.083,678.417 713.833,682.5 682.5,682.5C644.5,682.5 607.667,676.417 572,664.25C536.333,652.083 503.5,634.333 473.5,611L73,1011.5C64.6667,1019.83 54.5,1024 42.5,1024C30.8333,1024 20.8333,1019.83 12.5,1011.5C4.16667,1003.17 0,993.167 0,981.5C0,975.833 1.08333,970.333 3.25,965C5.41667,959.667 8.5,955 12.5,951L413,550.5C389.667,520.5 371.917,487.667 359.75,452C347.583,416.333 341.5,379.5 341.5,341.5C341.5,310.167 345.583,279.917 353.75,250.75C361.917,221.583 373.333,194.333 388,169C402.667,143.667 420.417,120.667 441.25,100C462.083,79.3334 485.083,61.5834 510.25,46.75C535.417,31.9167 562.583,20.4167 591.75,12.25C620.917,4.08337 651.167,0 682.5,0C713.833,0 744.083,4.08337 773.25,12.25C802.417,20.4167 829.667,31.9167 855,46.75C880.333,61.5834 903.333,79.3334 924,100C944.667,120.667 962.417,143.667 977.25,169C992.083,194.333 1003.58,221.583 1011.75,250.75C1019.92,279.917 1024,310.167 1024,341.5ZM682.5,597.5C717.833,597.5 751,590.75 782,577.25C813,563.75 840.083,545.417 863.25,522.25C886.417,499.083 904.75,472 918.25,441C931.75,410 938.5,376.833 938.5,341.5C938.5,306.167 931.833,272.917 918.5,241.75C905.167,210.583 886.917,183.417 863.75,160.25C840.583,137.083 813.417,118.833 782.25,105.5C751.083,92.1667 717.833,85.5 682.5,85.5C647.167,85.5 614,92.25 583,105.75C552,119.25 524.917,137.583 501.75,160.75C478.583,183.917 460.25,211 446.75,242C433.25,273 426.5,306.167 426.5,341.5C426.5,376.833 433.25,410 446.75,441C460.25,472 478.583,499.083 501.75,522.25C524.917,545.417 552,563.75 583,577.25C614,590.75 647.167,597.5 682.5,597.5Z"
+              ></path>
+            </svg>
+            <b>search button</b> (or search box if it's enabled) or press the
+            <svg
+              class="inline-icon-shifted"
+              height="24"
+              version="1.1"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M3,12V6.75L9,5.43V11.91L3,12M20,3V11.75L10,11.9V5.21L20,3M3,13L9,13.09V19.9L3,18.75V13M20,13.25V22L10,20.09V13.1L20,13.25Z"
+              ></path>
+            </svg>
+            Windows key and start typing.
+          </p>
+
+          <p>
+            Search for <code class="highlighted-code">turn windows</code>, you
+            should see and click on <b>Turn Windows features on or off</b>.
+          </p>
+        </div>
+        <div class="h-split-right">
+          <img alt="Search box" src="images/windows/1.png" />
+        </div>
+      </div>
+
+      <div class="h-split">
+        <div class="h-split-left">
+          <h4>Step 2</h4>
+
+          <p>
+            In the list that appears scroll down until you find
+            <b>Windows Subsystem for Linux</b>.
+          </p>
+
+          <p>
+            <svg
+              class="inline-icon"
+              height="100%"
+              viewBox="0 0 1024 1024"
+              width="100%"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M1024,0L1024,1024L0,1024L0,0ZM960,64L64,64L64,960L960,960ZM384,813.5L169.5,598.5L214.5,553.5L384,722.5L809.5,297.5L854.5,342.5Z"
+              ></path>
+            </svg>
+            Check it and click <b>OK</b>. Wait for the feature to be enabled and
+            after it finishes restart your computer.
+          </p>
+        </div>
+        <div class="h-split-right">
+          <img alt="Search box" src="images/windows/2.png" />
+        </div>
+      </div>
+
+      <div class="h-split">
+        <div class="h-split-left">
+          <h4>Step 3</h4>
+
+          <p>
+            Open the <b>Microsoft Store</b> app. In the search box type
+            <code class="highlighted-code">linux</code>. Select
+            <i>Run Linux on Windows</i>.
+          </p>
+
+          <p>
+            Pick a distribution and click <b>Get</b>. Wait for everything to
+            install (download should be about 200-250MB).
+          </p>
+        </div>
+        <div class="h-split-right">
+          <img alt="Search box" src="images/windows/3.png" />
+          <img alt="Search box" src="images/windows/4.png" />
+          <img alt="Search box" src="images/windows/5.png" />
+        </div>
+      </div>
+
+      <div class="h-split">
+        <div class="h-split-left">
+          <h4>Step 4</h4>
+
+          <p>
+            Open <b>PowerShell</b> as an administrator. Easiest way is to
+            right-click on the
+            <svg
+              class="inline-icon-shifted"
+              height="24"
+              version="1.1"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M3,12V6.75L9,5.43V11.91L3,12M20,3V11.75L10,11.9V5.21L20,3M3,13L9,13.09V19.9L3,18.75V13M20,13.25V22L10,20.09V13.1L20,13.25Z"
+              ></path>
+            </svg>
+            Windows button in the bottom-left, and then clicking on
+            <b>Windows PowerShell (Admin)</b>.
+          </p>
+
+          <p>
+            Type in a command to initialize the WSL installation (depends on the
+            distribution, check the Store listing), eg.
+            <code class="highlighted-code">ubuntu</code> for Ubuntu or
+            <code class="highlighted-code">opensuse-42</code>
+            for openSUSE.
+          </p>
+
+          <p>You can now run Linux on your Windows device! <i>Hooray!</i></p>
+        </div>
+        <div class="h-split-right">
+          <img alt="Search box" src="images/windows/7.png" />
+          <img alt="Search box" src="images/windows/8.png" />
+        </div>
+      </div>
+
+      <div class="h-split">
+        <div class="h-split-left">
+          <h4>Step 5</h4>
+
+          <p>Follow the guide for <i>Linux</i>.</p>
+          <p>
+            You might need to install some dependencies like <i>LaTeX</i> for
+            everything to work without warnings or errors.
+          </p>
+        </div>
+      </div>
+
+      <div class="h-split">
+        <div class="h-split-left">
+          <h4><i>WSL tip</i></h4>
+
+          <p>
+            After you close the PowerShell window, you can bring back the Linux
+            terminal by typing <code class="highlighted-code">bash</code> in the
+            search bar, the <i>Run</i> dialog or by Shift-right clicking in
+            <svg
+              class="inline-icon"
+              height="100%"
+              viewBox="0 0 1024 896"
+              width="100%"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M1024,832L832,832L832,896L640,896L640,832L384,832L384,896L192,896L192,832L0,832L0,64C0,55 1.66667,46.6667 5,39C8.33333,31.3334 12.9167,24.5834 18.75,18.75C24.5833,12.9167 31.3333,8.33337 39,5C46.6667,1.66675 55,6.10352e-005 64,0L304,0C319,6.10352e-005 331.917,1.58337 342.75,4.75C353.583,7.91669 363.25,11.8334 371.75,16.5C380.25,21.1667 387.833,26.3334 394.5,32C401.167,37.6668 407.917,42.8334 414.75,47.5C421.583,52.1667 428.917,56.0834 436.75,59.25C444.583,62.4167 453.667,64 464,64L960,64C969,64 977.333,65.6667 985,69C992.667,72.3334 999.417,76.9167 1005.25,82.75C1011.08,88.5834 1015.67,95.3334 1019,103C1022.33,110.667 1024,119 1024,128ZM64,64L64,128L304,128C312,128 319,127.25 325,125.75C331,124.25 336.5,122.083 341.5,119.25C346.5,116.417 351.417,113.083 356.25,109.25C361.083,105.417 366.333,101 372,96C366.333,91.0001 361.083,86.5834 356.25,82.75C351.417,78.9167 346.5,75.5834 341.5,72.75C336.5,69.9167 331,67.75 325,66.25C319,64.75 312,64 304,64ZM640,768L640,640L384,640L384,768ZM768,832L768,544C768,535.333 764.833,527.833 758.5,521.5C752.167,515.167 744.667,512 736,512L288,512C279.333,512 271.833,515.167 265.5,521.5C259.167,527.833 256,535.333 256,544L256,832L320,832L320,576L704,576L704,832ZM960,128L464,128C453.667,128 444.583,129.583 436.75,132.75C428.917,135.917 421.583,139.833 414.75,144.5C407.917,149.167 401.083,154.333 394.25,160C387.417,165.667 379.833,170.833 371.5,175.5C363.167,180.167 353.583,184.083 342.75,187.25C331.917,190.417 319,192 304,192L64,192L64,768L192,768L192,544C192,530.667 194.5,518.167 199.5,506.5C204.5,494.833 211.333,484.667 220,476C228.667,467.333 238.833,460.5 250.5,455.5C262.167,450.5 274.667,448 288,448L736,448C749.333,448 761.833,450.5 773.5,455.5C785.167,460.5 795.333,467.333 804,476C812.667,484.667 819.5,494.833 824.5,506.5C829.5,518.167 832,530.667 832,544L832,768L960,768Z"
+              ></path>
+            </svg>
+            File Explorer then clicking on <b>Open Linux shell here</b>, which
+            will launch a bash shell with the location set to the current
+            folder.
+          </p>
+        </div>
+        <div class="h-split-right">
+          <img alt="Search box" src="images/windows/9.png" />
+        </div>
+      </div>
+
+      <h2>Docker (Windows, Mac, Linux)</h2>
+
+      <p>
+        You can get a Docker image that enables you to run AKDB inside Docker
+        container without the need for a Linux virtual machine or WSL.
+      </p>
+
+      <p>
+        Requirements for this are Docker and Make, which you have to install on
+        your local machine. All other prerequisites will be downloaded and
+        installed automatically.
+      </p>
+
+      <p>
+        You also need to install Docker container and this will take some time,
+        but it allows you to develop the application in your native environment
+        and then compile and test its code inside the container. For building
+        AKDB in Docker container please visit <b>Build</b> section.
+      </p>
+
+      <p>
+        It is also required of <b>Windows</b> users to turn on drive sharing in
+        Docker settings. To do that open Docker settings, go to
+        <i>shared drives</i>, check the drive on which AKDB is located and click
+        <b>Apply</b>.
+      </p>
+      <div class="paragraph-buttons">
+        <a class="a-btn" href="https://www.docker.com"
+          >Get Docker
+          <div class="rot-45">-></div></a
+        >
+        <a class="a-btn" href="https://www.gnu.org/software/make/"
+          >Get Make
+          <div class="rot-45">-></div></a
+        >
+      </div>
+    </section>
+
+    <section class="page-section" id="build">
+      <h1>Building</h1>
+
+      <h2>Native</h2>
+
+      <p>
+        After you've installed everything system needs to run you can now build
+        the application. To do this you need to position yourself into the
+        <code class="highlighted-code">src</code> directory and execute:
+      </p>
+
+      <code>make</code><br />
+      <code>make doc</code><br />
+      <code>make swig</code><br />
+
+      <p>
+        This will compile and build the application, along with creating
+        documentation in Doxygen and connecting C with Python using SWIG. To
+        view documentation go to the
+        <code class="highlighted-code">doc</code> directory and open a PDF
+        document called <code class="highlighted-code">refman.pdf</code>.
+      </p>
+
+      <p>
+        To run AKDB position yourself into the
+        <code class="highlighted-code">bin</code> directory and execute:
+      </p>
+
+      <code>./akdb</code>
+
+      <p>
+        This will initialize disk manager and prepare all tests. To see
+        additional commands type:
+      </p>
+
+      <code>./akdb help</code>
+
+      <p>
+        You can see other currently available options are testing options, and
+        will be explained in the testing section. If you want to clean the
+        project of files generated during compiling run this:
+      </p>
+
+      <code>make clean</code><br />
+      <code>make clean-d</code>
+
+      <p>To see if there are some leftover Croatian comments in the code:</p>
+
+      <code>make comments</code>
+
+      <p>
+        As it was said before, the application is <b>not yet functional</b>, so
+        this is currently used for developing and testing purposes.
+      </p>
+
+      <h2>Docker</h2>
+
+      <p>
+        After you've installed Docker and Make you can start the Docker
+        container with AKDB and its host directory will be automatically mapped
+        in the container directory. This means that all the changes you make on
+        your machine are automatically seen and saved inside the container.
+      </p>
+
+      <p>
+        For more information examine the <i>Dockerfile</i> in the
+        <code class="highlighted-code">root</code> directory. To install Docker
+        execute command:
+      </p>
+
+      <code>make docker-install</code>
+
+      <p>If you're running on Windows enter:</p>
+
+      <code>make docker-win</code>
+
+      <p>If you're running on Mac enter:</p>
+
+      <code>make docker-mac</code>
+
+      <br /><br />
+
+      <p>
+        All other commands for starting the application and performing tests are
+        the same like in a native environment.
+      </p>
+    </section>
+
+    <section class="page-section" id="directories">
+      <h1>Directories</h1>
+
+      <p>
+        AKDB system root directory consists of three folders and two files.
+        Files contained within this directory are LICENSE file (contains the GNU
+        General Public Licence) and a README file which in short describes
+        installation and building of the application. Folders in the root
+        directory and their purpose be explained next.
+      </p>
+
+      <h2>Binaries (bin)</h2>
+
+      <p>
+        Essential folder where the application compiles to and from where you
+        can run it. It contains several files and another folder called
+        <code class="highlighted-code">blobs</code> where all binary files are
+        stored after running. The
+        <code class="highlighted-code">blob</code> folder is created empty, and
+        is created after the application is installed and started for the first
+        time. Files in the <code class="highlighted-code">bin</code>
+        folder are:
+      </p>
+
+      <ul>
+        <li><code>akdb</code><br />the main executable for AKDB</li>
+        <li>
+          <code>config</code><br />configuration file with the default settings
+        </li>
+        <li>
+          <code>kalasnikov</code><br />database file created when running for
+          the first time
+        </li>
+        <li><code>tests</code><br />shell script for listing tests</li>
+      </ul>
+
+      <h2>Documentation (doc)</h2>
+
+      <p>
+        Documentation for AKDB is created using <b>Doxygen</b>. It's a tool that
+        generates documentation from comments in the source code. The end result
+        is a reference manual in PDF format. Doxygen can create this in HTML or
+        LaTeX format.
+      </p>
+
+      <p>
+        In this folder there are two additional folders. The
+        <code class="highlighted-code">HTML</code> folder contains the HTML and
+        JS elements used for creation of the web version of the manual while the
+        <code class="highlighted-code">LaTeX</code> folder contains
+        <i>TeX</i> elements for creating PDF and RTF manuals.
+      </p>
+
+      <p>
+        A lengthy AKDB reference manual in the PDF format called
+        <code class="highlighted-code"><b>refman</b></code> is located in the
+        <code class="highlighted-code">doc</code> folder. It's highly
+        recommended that you study it if you want to get a better insight into
+        the system.
+      </p>
+
+      <h2>Source (src)</h2>
+
+      <p>
+        This folder containts the main source code for compiling and building
+        the application. It has files required to start building process and
+        subfolders where the source code files are located.
+      </p>
+
+      <p>
+        Most of the source code files are written in C, expect Server and SWIG
+        files which are written in Python and shell scripts.
+      </p>
+
+      <p>Files in source directory are:</p>
+
+      <ul>
+        <li>
+          <code>build</code><br />cleans installation directory and compiles the
+          application
+        </li>
+        <li>
+          <code>doxygen</code><br />configuration file with settings for Doxygen
+        </li>
+        <li>
+          <code>main</code><br />source code that starts the application and its
+          components
+        </li>
+        <li>
+          <code>main.d</code> <i>and</i> <code>main.o</code><br />dictionary and
+          object help files
+        </li>
+        <li>
+          <code>Makefile</code><br />configuration paramaters for application
+          building
+        </li>
+        <li>
+          <code>projectDetails</code><br />header that contains application
+          version number
+        </li>
+      </ul>
+
+      <br /><br />
+
+      <table class="custom-table custom-table-fullwidth">
+        <tr>
+          <th>Folder</th>
+          <th>Description</th>
+        </tr>
+        <tr>
+          <td>Auxiliary (<code>auxi</code>)</td>
+          <td>
+            Debugger, Type converter, Constants, Dictionary, Parser, Memory
+            Programmer, Observer, Test reporting
+          </td>
+        </tr>
+        <tr>
+          <td>Disk manager (<code>dm</code>)</td>
+          <td>
+            Source code for managing database and its objects on hard disk
+          </td>
+        </tr>
+        <tr>
+          <td>File manager (<code>file</code>)</td>
+          <td>
+            Database indexes (<code>bitmap</code>, <code>btree</code>,
+            <code>hash</code>, <code>regular</code>),
+            <code>blob</code> management, File input and output, File search,
+            File sorting, File identification, Table managment, Sequences, File
+            manager testing
+          </td>
+        </tr>
+        <tr>
+          <td>HTML (<code>html_files</code>)</td>
+          <td>
+            Header and footer for Doxygen in HTML (includes CSS and JS scripts)
+          </td>
+        </tr>
+        <tr>
+          <td>Memory Manager (<code>mm</code>)</td>
+          <td>
+            Utility that manages memory allocation and deallocation in database
+            operation
+          </td>
+        </tr>
+        <tr>
+          <td>Optimization (<code>opti</code>)</td>
+          <td>
+            Query optimization, Relational operations optimization (association,
+            comutation, projection, selection)
+          </td>
+        </tr>
+        <tr>
+          <td>Recovery (<code>rec</code>)</td>
+          <td>
+            Archive and redo log manager, Recovery tools for system crash,
+            Database log in textual and binary form
+          </td>
+        </tr>
+        <tr>
+          <td>Relational algebra (<code>rel</code>)</td>
+          <td>
+            Operations that are used in queries and are essential for database
+            functionality (aggregation, difference, expression check, intersect,
+            natural Join, product, projection, selection, theta join, union)
+          </td>
+        </tr>
+        <tr>
+          <td>SQL commands (<code>sql</code>)</td>
+          <td>
+            Responsible for executing SQL commands (<code>COMMAND</code>,
+            <code>DROP</code>, <code>FUNCTION</code>, <code>PRIVILEGES</code>,
+            <code>SELECT</code>, <code>TRIGGER</code>, <code>VIEW</code>,
+            <code>BETWEEN</code>, <code>CHECK</code>, <code>CONSTRAINTS</code>,
+            <code>NOT NULL</code>, <code>REFERENCE</code>, <code>UNIQUE</code>)
+          </td>
+        </tr>
+        <tr>
+          <td>Server (<code>sql</code>)</td>
+          <td>
+            Client and Server source code (running and configuration), SQL
+            executor
+          </td>
+        </tr>
+        <tr>
+          <td>SWIG (<code>sql</code>)</td>
+          <td>
+            Wrapper files for integration of C with Python in SWIG tool
+            (includes configuration and test)
+          </td>
+        </tr>
+        <tr>
+          <td>Shell tools (<code>tools</code>)</td>
+          <td>
+            Generation comments, file fetching, C and Pythin parsing,
+            application updating
+          </td>
+        </tr>
+        <tr>
+          <td>Transactions (<code>trans</code>)</td>
+          <td>Source code for performing transactions in the database</td>
+        </tr>
+      </table>
+    </section>
+
+    <section class="page-section" id="testing">
+      <h1>Testing</h1>
+
+      <p>
+        Since the project is still in development, tests are required to ensure
+        its stability and functionality. There are couple of dozen tests that
+        check whether certain parts of the application work correctly.
+      </p>
+
+      <p>
+        After you've built the application, to run all tests simultaneously
+        enter the command:
+      </p>
+
+      <code> ./akdb alltest </code>
+
+      <p>
+        On first use DB file will be initialized. In case it hangs press 1 and
+        Enter (don't ask why). It also is not unusual for program to crash while
+        running certain tests, because there are still some unfixed bugs that
+        can cause system failure, but most tests work.
+      </p>
+
+      <p>To view what current tests are available, run the following:</p>
+
+      <code>./akdb test show</code>
+
+      <p>
+        This will write out the list of current tests that can be performed. As
+        of 21<sup>st</sup> of March 2018 they are numbered and divided into few
+        categories:
+      </p>
+
+      <div class="test-container">
+        <h3>Auxiliary</h3>
+        <div class="test-set">
+          <p><span>1</span>Trajan</p>
+          <p><span>2</span>Observable</p>
+          <p><span>3</span>Observable pattern</p>
+        </div>
+      </div>
+
+      <div class="test-container">
+        <h3>Disk manager</h3>
+        <div class="test-set">
+          <p><span>4</span>Allocation bit</p>
+          <p><span>5</span>Allocation table</p>
+          <p><span>6</span>Thread safe block</p>
+        </div>
+      </div>
+
+      <div class="test-container">
+        <h3>File system</h3>
+        <div class="test-set">
+          <p><span>7</span>ID</p>
+          <p><span>8</span>LO</p>
+          <p>
+            <span>9</span>Files
+            <span
+              class="test-badge has-tooltip"
+              tooltipText="Crashes the application"
+              >⎋</span
+            >
+          </p>
+          <p>
+            <span>10</span>File IO
+            <span
+              class="test-badge has-tooltip"
+              tooltipText="Crashes the application"
+              >⎋</span
+            >
+          </p>
+          <p>
+            <span>11</span>OP rename
+            <span
+              class="test-badge has-tooltip"
+              tooltipText="Crashes the application"
+              >⎋</span
+            >
+            <span
+              class="test-badge has-tooltip"
+              tooltipText="Performing this test twice in a row ruins the application"
+              >⁑</span
+            >
+          </p>
+          <p><span>12</span>File sorting</p>
+          <p><span>13</span>File search</p>
+          <p><span>14</span>Sequence</p>
+          <p><span>15</span>OP table</p>
+        </div>
+      </div>
+
+      <div class="test-container">
+        <h3>Index</h3>
+        <div class="test-set">
+          <p>
+            <span>16</span>Bitmap
+            <span
+              class="test-badge has-tooltip"
+              tooltipText="Crashes the application"
+              >⎋</span
+            >
+          </p>
+          <p>
+            <span>17</span>Binary tree
+            <span
+              class="test-badge has-tooltip"
+              tooltipText="Crashes the application"
+              >⎋</span
+            >
+          </p>
+          <p>
+            <span>18</span>Hash
+            <span
+              class="test-badge has-tooltip"
+              tooltipText="Crashes the application"
+              >⎋</span
+            >
+          </p>
+        </div>
+      </div>
+
+      <div class="test-container">
+        <h3>Memory manager</h3>
+        <div class="test-set">
+          <p><span>19</span>Memory manager</p>
+          <p><span>20</span>Block memory</p>
+        </div>
+      </div>
+
+      <div class="test-container">
+        <h3>Optimization</h3>
+        <div class="test-set">
+          <p><span>21</span>RE association</p>
+          <p><span>22</span>RE commutation</p>
+          <p><span>23</span>RE selection</p>
+          <p><span>24</span>RE projection</p>
+          <p><span>25</span>Query optimization</p>
+        </div>
+      </div>
+
+      <div class="test-container">
+        <h3>Relational operators</h3>
+        <div class="test-set">
+          <p><span>26</span>Union</p>
+          <p>
+            <span>27</span>Join
+            <span
+              class="test-badge has-tooltip"
+              tooltipText="Crashes the application"
+              >⎋</span
+            >
+          </p>
+          <p><span>28</span>Product</p>
+          <p><span>29</span>Aggregation</p>
+          <p><span>30</span>Intersection</p>
+          <p><span>31</span>Selection</p>
+          <p><span>32</span>Selection pattern</p>
+          <p><span>33</span>Selection (redo)</p>
+          <p><span>34</span>Check expression</p>
+          <p><span>35</span>Difference</p>
+          <p><span>36</span>Projection</p>
+          <p>
+            <span>37</span>Theta join
+            <span
+              class="test-badge has-tooltip"
+              tooltipText="Crashes the application"
+              >⎋</span
+            >
+          </p>
+        </div>
+      </div>
+
+      <div class="test-container">
+        <h3>SQL tests</h3>
+        <div class="test-set">
+          <p><span>38</span><code>COMMAND</code></p>
+          <p><span>39</span><code>JOIN</code></p>
+          <p><span>40</span><code>VIEW</code></p>
+          <p><span>41</span><code>NULL</code></p>
+          <p>
+            <span>42</span><code>SELECT</code>
+            <span
+              class="test-badge has-tooltip"
+              tooltipText="Crashes the application"
+              >⎋</span
+            >
+          </p>
+          <p>
+            <span>43</span>Trigger
+            <span
+              class="test-badge has-tooltip"
+              tooltipText="Crashes the application"
+              >⎋</span
+            >
+          </p>
+          <p>
+            <span>44</span><code>UNIQUE</code>
+            <span
+              class="test-badge has-tooltip"
+              tooltipText="Crashes the application"
+              >⎋</span
+            >
+          </p>
+          <p><span>45</span><code>FUNCTION</code></p>
+          <p><span>46</span>Privileges</p>
+          <p><span>47</span><code>REFERENCE</code></p>
+          <p>
+            <span>48</span><code>BETWEEN</code
+            ><span
+              class="test-badge has-tooltip"
+              tooltipText="Crashes the application"
+              >⎋</span
+            >
+          </p>
+          <p><span>49</span><code>CHECK</code></p>
+          <p><span>50</span>Constraint names</p>
+        </div>
+      </div>
+
+      <div class="test-container">
+        <h3>Transactions</h3>
+        <div class="test-set">
+          <p>
+            <span>51</span>Transaction
+            <span
+              class="test-badge has-tooltip"
+              tooltipText="Crashes the application"
+              >⎋</span
+            >
+          </p>
+        </div>
+      </div>
+
+      <div class="test-container">
+        <h3>Recovery</h3>
+        <div class="test-set">
+          <p>
+            <span>52</span>Recovery
+            <span
+              class="test-badge has-tooltip"
+              tooltipText="Takes forever to perform and you have to kill the app"
+              >∞</span
+            >
+          </p>
+        </div>
+      </div>
+
+      <h3 style="margin-bottom: 0">Note</h3>
+      <p style="margin: 0">
+        <span class="test-badge">⎋</span> Crashes the application
+      </p>
+      <p style="margin: 0">
+        <span class="test-badge">⁑</span> Performing this test twice in a row
+        ruins the application
+      </p>
+      <p style="margin: 0">
+        <span class="test-badge">∞</span> Takes forever to perform and you have
+        to kill the app
+      </p>
+
+      <br /><br />
+
+      <p>
+        Show tests command won't enable you to perform those tests inside the
+        application. For that, you need to use:
+      </p>
+
+      <code>./akdb test</code>
+
+      <p>
+        This will create the necessary test tables on which tests are run. To
+        run a test enter a number of test you wish to run. If you want to run a
+        particular test you can enter the following command in shell:
+      </p>
+
+      <code>./akdb test <i>[number]</i></code>
+
+      <p>
+        This will automatically execute the entered test and exit the
+        application.
+      </p>
+
+      <h2>Client and server tests</h2>
+
+      <p>
+        In order to start these test you must position yourself in the
+        <code>src/srv</code> directory and execute test commands by shell.
+      </p>
+
+      <p>Server test:</p>
+
+      <code>python server.py</code>
+
+      <p>Client test:</p>
+
+      <code>python akdb_cli.py</code>
+
+      <p>
+        It is also recommended to read the <code><b>README</b></code> file in
+        the <code>src/srv</code> directory to get a more detailed overview of
+        these tests.
+      </p>
+
+      <h2>Known issues</h2>
+
+      <p>
+        Issues that are being worked on are listed on GitHub and are generally
+        updated every year. They are mostly in Croatian.
+      </p>
+
+      <p>
+        You can contact prof. Markus Schatten if you have any questions or want
+        to volunteer for work on AKDB.
+      </p>
+
+      <div class="paragraph-buttons">
+        <a class="a-btn" href="https://github.com/AILab-FOI/akdb/issues"
+          >GitHub issue page
+          <div class="rot-45">-></div></a
+        >
+        <a class="a-btn" href="mailto:mschatte@foi.hr"
+          >Contact prof. Schatten
+          <div class="rot-45">-></div></a
+        >
+      </div>
+    </section>
+
+    <footer>
+      <p>
+        <svg viewBox="420 140 300 100" xmlns="http://www.w3.org/2000/svg">
+          <path
+            class="fe98193f-e474-41f3-9a23-91e8c227ffe0"
+            d="M428.84,231.37a1.19,1.19,0,0,1-.06-.84l24.48-67.44q.36-.72.84-.72a.59.59,0,0,1,.42.18,1.37,1.37,0,0,1,.3.54l.84,2.28a1.59,1.59,0,0,1,0,1.68L442,204.85h26.76a1.4,1.4,0,0,1,1.44,1l.36,1.2.12.48a.77.77,0,0,1-.3.6,1.23,1.23,0,0,1-.78.24h-28.8l-8,22.2a1.87,1.87,0,0,1-.6,1,1.71,1.71,0,0,1-1,.24h-1.56C429.21,231.73,429,231.61,428.84,231.37Zm58.14.12a.7.7,0,0,1-.48-.48c-.08-.24-.17-.48-.24-.72l-28.32-78.72-.12-.48a.87.87,0,0,1,.3-.72,1.19,1.19,0,0,1,.78-.24h1.56q1,0,1.32,1.2l28.56,79.2.12.36a.81.81,0,0,1-.24.6,1,1,0,0,1-.72.24h-1.68A1.17,1.17,0,0,1,487,231.49Z"
+          ></path>
+          <path
+            class="fe98193f-e474-41f3-9a23-91e8c227ffe0"
+            d="M507.37,231.37a1.15,1.15,0,0,1-.36-.84v-79.2a1.1,1.1,0,0,1,.36-.9,1.27,1.27,0,0,1,.84-.3h1.32a1.06,1.06,0,0,1,1.2,1.2v79.2a1.27,1.27,0,0,1-.3.84,1.1,1.1,0,0,1-.9.36h-1.32A1.15,1.15,0,0,1,507.37,231.37Zm11.16-34q-.6,0-.6-1v-2.4a2.64,2.64,0,0,1,.6-1.44l34.56-41.28a4.25,4.25,0,0,1,1-1,2,2,0,0,1,1-.24h2.16a.69.69,0,0,1,.6,1.2l-38.52,45.6A1,1,0,0,1,518.53,197.41Zm36.72,33.12-21.84-37.92a1.84,1.84,0,0,1-.24-.72,1.3,1.3,0,0,1,.36-1l1-1.2a1.32,1.32,0,0,1,.84-.48,1,1,0,0,1,.84.6l23.4,40.68.12.48a.64.64,0,0,1-.72.72h-2A2,2,0,0,1,555.25,230.53Z"
+          ></path>
+          <path
+            class="fe98193f-e474-41f3-9a23-91e8c227ffe0"
+            d="M577.21,231.37a1.15,1.15,0,0,1-.36-.84v-79.2a1.1,1.1,0,0,1,.36-.9,1.27,1.27,0,0,1,.84-.3h1.32a1.06,1.06,0,0,1,1.2,1.2v79.2a1.27,1.27,0,0,1-.3.84,1.1,1.1,0,0,1-.9.36h-1.32A1.15,1.15,0,0,1,577.21,231.37Zm10.68,0a1.15,1.15,0,0,1-.36-.84v-1.08a1.1,1.1,0,0,1,.36-.9,1.27,1.27,0,0,1,.84-.3h13.32q17.64,0,22-13.2a41.28,41.28,0,0,0,1.68-8.58q.48-4.86.48-15.54t-.48-15.54a41.28,41.28,0,0,0-1.68-8.58q-4.32-13.2-22-13.2H588.73a1.23,1.23,0,0,1-1.2-1.2v-1.08a1.1,1.1,0,0,1,.36-.9,1.27,1.27,0,0,1,.84-.3h13.32q20.4,0,25.56,15.84a42.68,42.68,0,0,1,1.8,9q.48,4.92.48,16t-.48,16a42.68,42.68,0,0,1-1.8,9q-5.16,15.84-25.56,15.84H588.73A1.15,1.15,0,0,1,587.89,231.37Z"
+          ></path>
+          <path
+            class="fe98193f-e474-41f3-9a23-91e8c227ffe0"
+            d="M651.85,231.37a1.15,1.15,0,0,1-.36-.84v-79.2a1.1,1.1,0,0,1,.36-.9,1.27,1.27,0,0,1,.84-.3H654a1.06,1.06,0,0,1,1.2,1.2v79.2a1.27,1.27,0,0,1-.3.84,1.1,1.1,0,0,1-.9.36h-1.32A1.15,1.15,0,0,1,651.85,231.37Zm42.36-46.92q-1.2-.48-.36-1.68a26,26,0,0,0,3.12-6.12,20.41,20.41,0,0,0,1.08-6.72,15.45,15.45,0,0,0-2.34-8.4,15.74,15.74,0,0,0-6.72-5.82,23.2,23.2,0,0,0-10.14-2.1H663.61a1.23,1.23,0,0,1-1.2-1.2v-1.08a1.1,1.1,0,0,1,.36-.9,1.27,1.27,0,0,1,.84-.3h15.24a26.63,26.63,0,0,1,12.48,2.7,18.81,18.81,0,0,1,7.8,7.26,19.76,19.76,0,0,1,2.64,10.08,23.47,23.47,0,0,1-4.8,14.52q-.48.72-1.56.24Zm-31.44,46.92a1.15,1.15,0,0,1-.36-.84v-1.08a1.1,1.1,0,0,1,.36-.9,1.27,1.27,0,0,1,.84-.3h15.72q9.84,0,14.94-4.8t5.1-13.32q0-8.52-5.16-13.38t-14.88-4.86H663.61a1.23,1.23,0,0,1-1.2-1.2v-1.08a1.1,1.1,0,0,1,.36-.9,1.27,1.27,0,0,1,.84-.3h15.72a28.41,28.41,0,0,1,12.84,2.7,18.62,18.62,0,0,1,8.16,7.62,22.91,22.91,0,0,1,2.76,11.4,22.57,22.57,0,0,1-2.76,11.34,18.73,18.73,0,0,1-8.16,7.56,28.41,28.41,0,0,1-12.84,2.7H663.61A1.15,1.15,0,0,1,662.77,231.37Z"
+          ></path>
+        </svg>
+      </p>
+      <p>Copyright Faculty of Organization and Informatics, 2019</p>
+    </footer>
+
+    <button
+      class="custom-btn has-tooltip"
+      id="scroll-top-btn"
+      tooltipText="Scroll to top"
+    >
+      ↑
+    </button>
+    <button class="custom-btn has-tooltip" id="theme-switch-btn"></button>
+  </body>
+</html>
