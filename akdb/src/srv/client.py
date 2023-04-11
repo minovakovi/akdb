@@ -41,11 +41,11 @@ class Client:
                 connected = True
                 print("[*] Connection established.")
             except paramiko.ssh_exception.AuthenticationException:
-                self.username = input("Username: ")
-                self.password = input("Password: ")
+                self.username = input("\033[33mInvalid credentials. Please enter username:  \033[0m")
+                self.password = input("\033[33mPlease enter password: \033[0m")
             except Exception as e:
                 # wait 2 seconds before attempting to connect again
-                print(e)
+                print("\033[31m[ERROR] Connection failed: \033[0m".format(e))
                 time.sleep(2)
 
         self.session = self.sock.get_transport().open_session()
@@ -63,7 +63,7 @@ class Client:
                         print((colors.bcolors.HEADER+"Testing CREATE TABLE"+colors.bcolors.ENDC))
                         cmd=tests.CreateTableTest()
                     except Exception as e:
-                        print(("-No tests are currently implemented/or not working" %e))
+                        print(("\033[31mERROR occurred while executing the CREATE TABLE test: {0} \033[0m".format(e)))
                     self.send_command(cmd)
                     out = self.recv_data()
                     if "Wrong" in out:
@@ -78,7 +78,7 @@ class Client:
                         print((colors.bcolors.HEADER+"Testing printing out all commands"+colors.bcolors.ENDC))
                         cmd=tests.AllCommandsTest()
                     except Exception as e:
-                        print(("-No tests are currently implemented/or not working" %e))
+                        print(("\033ERROR occurred while executing the PRINT OUT ALL COMMANDS test: {0}\033[0m".format(e)))
                     self.send_command(cmd)
                     out = self.recv_data()
                     if "Wrong" in out:
@@ -93,7 +93,7 @@ class Client:
                         print((colors.bcolors.HEADER+"Testing if the table exists"+colors.bcolors.ENDC))
                         cmd=tests.TableExistsTest()
                     except Exception as e:
-                        print(("-No tests are currently implemented/or not working" %e))
+                        print(("\033ERROR occurred while executing the TABLE EXISTS test: {0}\033[0m".format(e)))
                     self.send_command(cmd)
                     out = self.recv_data()
                     if "Wrong" in out:
@@ -108,7 +108,7 @@ class Client:
                         print((colors.bcolors.HEADER+"Testing creating an index"+colors.bcolors.ENDC))
                         cmd=tests.CreateIndexTest()
                     except Exception as e:
-                        print(("-No tests are currently implemented/or not working" %e))
+                        print(("\033ERROR occurred while executing CREATING AN INDEX test: {0}\033[0m".format(e)))
                     self.send_command(cmd)
                     out = self.recv_data()
                     if "Wrong" in out:
@@ -123,7 +123,7 @@ class Client:
                         print((colors.bcolors.HEADER+"Testing user creation"+colors.bcolors.ENDC))
                         cmd=tests.CreateUserTest()
                     except Exception as e:
-                        print(("-No tests are currently implemented/or not working" %e))
+                        print(("\033ERROR occurred while executing USER CREATION test: {0}\033[0m".format(e)))
                     self.send_command(cmd)
                     out = self.recv_data()
                     if "Wrong" in out:
@@ -138,7 +138,7 @@ class Client:
                         print((colors.bcolors.HEADER+"Testing trigger creation"+colors.bcolors.ENDC))
                         cmd=tests.CreateTriggerTest()
                     except Exception as e:
-                        print(("-No tests are currently implemented/or not working" %e))
+                        print(("\033ERROR occurred while executing the TRIGGER CREATION test: {0}\033[0m".format(e)))
                     self.send_command(cmd)
                     out = self.recv_data()
                     if "Wrong" in out:
@@ -153,7 +153,7 @@ class Client:
                         print((colors.bcolors.HEADER+"Testing sequence creation"+colors.bcolors.ENDC))
                         cmd=tests.CreateSequenceTest()
                     except Exception as e:
-                        print(("-No tests are currently implemented/or not working" %e))
+                        print(("\033ERROR occurred while executing the SEQUENCE CREATION test: {0}\033[0m".format(e)))
                     self.send_command(cmd)
                     out = self.recv_data()
                     if "Wrong" in out:
@@ -168,7 +168,7 @@ class Client:
                         print((colors.bcolors.HEADER+"Testing view creation"+colors.bcolors.ENDC))
                         cmd=tests.CreateViewTest()
                     except Exception as e:
-                        print(("-No tests are currently implemented/or not working" %e))
+                        print(("\033ERROR occurred while executing the VIEW CREATION test: {0}\033[0m".format(e)))
                     self.send_command(cmd)
                     out = self.recv_data()
                     if "Wrong" in out:
@@ -183,7 +183,7 @@ class Client:
                         print((colors.bcolors.HEADER+"Testing function creation"+colors.bcolors.ENDC))
                         cmd=tests.CreateFunctionTest()
                     except Exception as e:
-                        print(("-No tests are currently implemented/or not working" %e))
+                        print(("\033ERROR occurred while executing the FUNCTION CREATION test: {0}\033[0m".format(e)))
                     self.send_command(cmd)
                     out = self.recv_data()
                     if "Wrong" in out:
@@ -198,7 +198,7 @@ class Client:
                         print((colors.bcolors.HEADER+"Testing for altering an existing index"+colors.bcolors.ENDC))
                         cmd=tests.AlterIndexTest()
                     except Exception as e:
-                        print(("-No tests are currently implemented/or not working" %e))
+                        print(("\033ERROR occurred while executing test for ALTERING AN EXISTING INDEX: {0}\033[0m".format(e)))
                     self.send_command(cmd)
                     out = self.recv_data()
                     if "Wrong" in out:
@@ -213,7 +213,7 @@ class Client:
                         print((colors.bcolors.HEADER+"Testing for altering an existing table"+colors.bcolors.ENDC))
                         cmd=tests.AlterTableTest()
                     except Exception as e:
-                        print(("-No tests are currently implemented/or not working" %e))
+                        print(("\033ERROR occurred while executing the ALTERING AN EXISTING TABLE test: {0}\033[0m".format(e)))
                     self.send_command(cmd)
                     out = self.recv_data()
                     if "Wrong" in out:
@@ -228,7 +228,7 @@ class Client:
                         print((colors.bcolors.HEADER+"Testing for altering an existing sequence"+colors.bcolors.ENDC))
                         cmd=tests.AlterSequenceTest()
                     except Exception as e:
-                        print(("-No tests are currently implemented/or not working" %e))
+                        print(("\033ERROR occurred while executing the ALTERING AN EXISTING SEQUENCE test: {0}\033[0m".format(e)))
                     self.send_command(cmd)
                     out = self.recv_data()
                     if "Wrong" in out:
@@ -243,7 +243,7 @@ class Client:
                         print((colors.bcolors.HEADER+"Testing for altering an existing view"+colors.bcolors.ENDC))
                         cmd=tests.AlterViewTest()
                     except Exception as e:
-                        print(("-No tests are currently implemented/or not working" %e))
+                        print(("\033ERROR occurred while executing the ALTERING AN EXISTING VIEW test: {0}\033[0m".format(e)))
                     self.send_command(cmd)
                     out = self.recv_data()
                     if "Wrong" in out:
@@ -258,7 +258,7 @@ class Client:
                         print((colors.bcolors.HEADER+"Testing 'select' operator"+colors.bcolors.ENDC))
                         cmd=tests.SelectTest()
                     except Exception as e:
-                        print(("-No tests are currently implemented/or not working" %e))
+                        print(("\033ERROR occurred while executing the SELECT OPERATOR test: {0}\033[0m".format(e)))
                     self.send_command(cmd)
                     out = self.recv_data()
                     if "Wrong" in out:
@@ -273,7 +273,7 @@ class Client:
                         print((colors.bcolors.HEADER+"Testing 'update' operator"+colors.bcolors.ENDC))
                         cmd=tests.UpdateTest()
                     except Exception as e:
-                        print(("-No tests are currently implemented/or not working" %e))
+                        print(("\033ERROR occurred while executing the UPDATE OPERATOR test: {0}\033[0m".format(e)))
                     self.send_command(cmd)
                     out = self.recv_data()
                     if "Wrong" in out:
@@ -288,7 +288,7 @@ class Client:
                         print((colors.bcolors.HEADER+"Testing 'insert' operator"+colors.bcolors.ENDC))
                         cmd=tests.InsertTest()
                     except Exception as e:
-                        print(("-No tests are currently implemented/or not working" %e))
+                        print(("\033ERROR occurred while executing the INSERT OPERATOR test: {0}\033[0m".format(e)))
                     self.send_command(cmd)
                     out = self.recv_data()
                     if "Wrong" in out:
@@ -303,7 +303,7 @@ class Client:
                         print((colors.bcolors.HEADER+"Testing dropping a table"+colors.bcolors.ENDC))
                         cmd=tests.DropTest()
                     except Exception as e:
-                        print(("-No tests are currently implemented/or not working" %e))
+                        print(("\033ERROR occurred while executing the DROPPING A TABLE test: {0}\033[0m".format(e)))
                     self.send_command(cmd)
                     out = self.recv_data()
                     if "Wrong" in out:
@@ -318,7 +318,7 @@ class Client:
                         print((colors.bcolors.HEADER+"Testing begin-end block"+colors.bcolors.ENDC))
                         cmd=tests.BeginTest()
                     except Exception as e:
-                        print(("-No tests are currently implemented/or not working" %e))
+                        print(("\033ERROR occurred while executing the BEGIN-END block test: {0}\033[0m".format(e)))
                     self.send_command(cmd)
                     out = self.recv_data()
                     if "Wrong" in out:
@@ -333,7 +333,7 @@ class Client:
                         print((colors.bcolors.HEADER+"Testing writing out history of actions"+colors.bcolors.ENDC))
                         cmd=tests.HistoryTest()
                     except Exception as e:
-                        print(("-No tests are currently implemented/or not working" %e))
+                        print(("\033ERROR occurred while testing WRITING OUT HISTORY of ACTION: {0}\033[0m".format(e)))
                     self.send_command(cmd)
                     out = self.recv_data()
                     if "Wrong" in out:
