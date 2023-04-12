@@ -1,7 +1,7 @@
 import time
 import paramiko
 import tests
-import colors
+from colors import bcolors
 import json
 
 class Client:
@@ -41,11 +41,11 @@ class Client:
                 connected = True
                 print("[*] Connection established.")
             except paramiko.ssh_exception.AuthenticationException:
-                self.username = input("\033[33mInvalid credentials. Please enter username:  \033[0m")
-                self.password = input("\033[33mPlease enter password: \033[0m")
+                self.username = input(bcolors.YELLOW + "Invalid credentials. Please enter username:  " + bcolors.ENDC)
+                self.password = input(bcolors.YELLOW + "Please enter password: " + bcolors.ENDC)
             except Exception as e:
                 # wait 2 seconds before attempting to connect again
-                print("\033[31m[ERROR] Connection failed: \033[0m".format(e))
+                print(bcolors.FAIL + "[ERROR] Connection failed: " + bcolors.ENDC.format(e))
                 time.sleep(2)
 
         self.session = self.sock.get_transport().open_session()
@@ -60,290 +60,290 @@ class Client:
                     passcounter=0
                     #Test for create table
                     try:
-                        print((colors.bcolors.HEADER+"Testing CREATE TABLE"+colors.bcolors.ENDC))
+                        print((bcolors.HEADER+"Testing CREATE TABLE"+bcolors.ENDC))
                         cmd=tests.CreateTableTest()
                     except Exception as e:
-                        print(("\033[31mERROR occurred while executing the CREATE TABLE test: {0} \033[0m".format(e)))
+                        print((bcolors.FAIL + "ERROR occurred while executing the CREATE TABLE test: {0}"+bcolors.ENDC.format(e)))
                     self.send_command(cmd)
                     out = self.recv_data()
                     if "Wrong" in out:
-                        print((colors.bcolors.FAIL+"Test failed"+colors.bcolors.ENDC))
+                        print((bcolors.FAIL+"Test failed"+bcolors.ENDC))
                         failcounter=failcounter+1
                     else:
-                        print((colors.bcolors.OKGREEN+"Test passed"+colors.bcolors.ENDC))
+                        print((bcolors.OKGREEN+"Test passed"+bcolors.ENDC))
                         passcounter=passcounter+1
 
                      #Test for listing out all commands
                     try:
-                        print((colors.bcolors.HEADER+"Testing printing out all commands"+colors.bcolors.ENDC))
+                        print((bcolors.HEADER+"Testing printing out all commands"+bcolors.ENDC))
                         cmd=tests.AllCommandsTest()
                     except Exception as e:
-                        print(("\033ERROR occurred while executing the PRINT OUT ALL COMMANDS test: {0}\033[0m".format(e)))
+                        print((bcolors.FAIL+"ERROR occurred while executing the PRINT OUT ALL COMMANDS test: {0}"+bcolors.ENDC.format(e)))
                     self.send_command(cmd)
                     out = self.recv_data()
                     if "Wrong" in out:
-                        print((colors.bcolors.FAIL+"Test failed"+colors.bcolors.ENDC))
+                        print((bcolors.FAIL+"Test failed"+bcolors.ENDC))
                         failcounter=failcounter+1
                     else:
-                        print((colors.bcolors.OKGREEN+"Test passed"+colors.bcolors.ENDC))
+                        print((bcolors.OKGREEN+"Test passed"+bcolors.ENDC))
                         passcounter=passcounter+1
 
                      #Test for checking if the table exists
                     try:
-                        print((colors.bcolors.HEADER+"Testing if the table exists"+colors.bcolors.ENDC))
+                        print((bcolors.HEADER+"Testing if the table exists"+bcolors.ENDC))
                         cmd=tests.TableExistsTest()
                     except Exception as e:
-                        print(("\033ERROR occurred while executing the TABLE EXISTS test: {0}\033[0m".format(e)))
+                        print((bcolors.FAIL+"ERROR occurred while executing the TABLE EXISTS test: {0}"+bcolors.ENDC.format(e)))
                     self.send_command(cmd)
                     out = self.recv_data()
                     if "Wrong" in out:
-                        print((colors.bcolors.FAIL+"Test failed"+colors.bcolors.ENDC))
+                        print((bcolors.FAIL+"Test failed"+bcolors.ENDC))
                         failcounter=failcounter+1
                     else:
-                        print((colors.bcolors.OKGREEN+"Test passed"+colors.bcolors.ENDC))
+                        print((bcolors.OKGREEN+"Test passed"+bcolors.ENDC))
                         passcounter=passcounter+1
 
                     #Test for for index creation
                     try:
-                        print((colors.bcolors.HEADER+"Testing creating an index"+colors.bcolors.ENDC))
+                        print((bcolors.HEADER+"Testing creating an index"+bcolors.ENDC))
                         cmd=tests.CreateIndexTest()
                     except Exception as e:
-                        print(("\033ERROR occurred while executing CREATING AN INDEX test: {0}\033[0m".format(e)))
+                        print((bcolors.FAIL+"ERROR occurred while executing CREATING AN INDEX test: {0}"+bcolors.ENDC.format(e)))
                     self.send_command(cmd)
                     out = self.recv_data()
                     if "Wrong" in out:
-                        print((colors.bcolors.FAIL+"Test failed"+colors.bcolors.ENDC))
+                        print((bcolors.FAIL+"Test failed"+bcolors.ENDC))
                         failcounter=failcounter+1
                     else:
-                        print((colors.bcolors.OKGREEN+"Test passed"+colors.bcolors.ENDC))
+                        print((bcolors.OKGREEN+"Test passed"+bcolors.ENDC))
                         passcounter=passcounter+1
 
                     #Test for user creating
                     try:
-                        print((colors.bcolors.HEADER+"Testing user creation"+colors.bcolors.ENDC))
+                        print((bcolors.HEADER+"Testing user creation"+bcolors.ENDC))
                         cmd=tests.CreateUserTest()
                     except Exception as e:
-                        print(("\033ERROR occurred while executing USER CREATION test: {0}\033[0m".format(e)))
+                        print((bcolors.FAIL+"ERROR occurred while executing USER CREATION test: {0}"+bcolors.ENDC.format(e)))
                     self.send_command(cmd)
                     out = self.recv_data()
                     if "Wrong" in out:
-                        print((colors.bcolors.FAIL+"Test failed"+colors.bcolors.ENDC))
+                        print((bcolors.FAIL+"Test failed"+bcolors.ENDC))
                         failcounter=failcounter+1
                     else:
-                        print((colors.bcolors.OKGREEN+"Test passed"+colors.bcolors.ENDC))
+                        print((bcolors.OKGREEN+"Test passed"+bcolors.ENDC))
                         passcounter=passcounter+1
 
                     #Test for trigger creation
                     try:
-                        print((colors.bcolors.HEADER+"Testing trigger creation"+colors.bcolors.ENDC))
+                        print((bcolors.HEADER+"Testing trigger creation"+bcolors.ENDC))
                         cmd=tests.CreateTriggerTest()
                     except Exception as e:
-                        print(("\033ERROR occurred while executing the TRIGGER CREATION test: {0}\033[0m".format(e)))
+                        print((bcolors.FAIL+"ERROR occurred while executing the TRIGGER CREATION test: {0}"+bcolors.ENDC.format(e)))
                     self.send_command(cmd)
                     out = self.recv_data()
                     if "Wrong" in out:
-                        print((colors.bcolors.FAIL+"Test failed"+colors.bcolors.ENDC))
+                        print((bcolors.FAIL+"Test failed"+bcolors.ENDC))
                         failcounter=failcounter+1
                     else:
-                        print((colors.bcolors.OKGREEN+"Test passed"+colors.bcolors.ENDC))
+                        print((bcolors.OKGREEN+"Test passed"+bcolors.ENDC))
                         passcounter=passcounter+1
 
                     #Test for sequence creation
                     try:
-                        print((colors.bcolors.HEADER+"Testing sequence creation"+colors.bcolors.ENDC))
+                        print((bcolors.HEADER+"Testing sequence creation"+bcolors.ENDC))
                         cmd=tests.CreateSequenceTest()
                     except Exception as e:
-                        print(("\033ERROR occurred while executing the SEQUENCE CREATION test: {0}\033[0m".format(e)))
+                        print((bcolors.FAIL+"ERROR occurred while executing the SEQUENCE CREATION test: {0}"+bcolors.ENDC.format(e)))
                     self.send_command(cmd)
                     out = self.recv_data()
                     if "Wrong" in out:
-                        print((colors.bcolors.FAIL+"Test failed"+colors.bcolors.ENDC))
+                        print((bcolors.FAIL+"Test failed"+bcolors.ENDC))
                         failcounter=failcounter+1
                     else:
-                        print((colors.bcolors.OKGREEN+"Test passed"+colors.bcolors.ENDC))
+                        print((bcolors.OKGREEN+"Test passed"+bcolors.ENDC))
                         passcounter=passcounter+1
 
                     #Test for view creation
                     try:
-                        print((colors.bcolors.HEADER+"Testing view creation"+colors.bcolors.ENDC))
+                        print((bcolors.HEADER+"Testing view creation"+bcolors.ENDC))
                         cmd=tests.CreateViewTest()
                     except Exception as e:
-                        print(("\033ERROR occurred while executing the VIEW CREATION test: {0}\033[0m".format(e)))
+                        print((bcolors.FAIL+"ERROR occurred while executing the VIEW CREATION test: {0}"+bcolors.ENDC.format(e)))
                     self.send_command(cmd)
                     out = self.recv_data()
                     if "Wrong" in out:
-                        print((colors.bcolors.FAIL+"Test failed"+colors.bcolors.ENDC))
+                        print((bcolors.FAIL+"Test failed"+bcolors.ENDC))
                         failcounter=failcounter+1
                     else:
-                        print((colors.bcolors.OKGREEN+"Test passed"+colors.bcolors.ENDC))
+                        print((bcolors.OKGREEN+"Test passed"+bcolors.ENDC))
                         passcounter=passcounter+1
 
                     #Test for function creation
                     try:
-                        print((colors.bcolors.HEADER+"Testing function creation"+colors.bcolors.ENDC))
+                        print((bcolors.HEADER+"Testing function creation"+bcolors.ENDC))
                         cmd=tests.CreateFunctionTest()
                     except Exception as e:
-                        print(("\033ERROR occurred while executing the FUNCTION CREATION test: {0}\033[0m".format(e)))
+                        print((bcolors.FAIL+"ERROR occurred while executing the FUNCTION CREATION test: {0}"+bcolors.ENDC.format(e)))
                     self.send_command(cmd)
                     out = self.recv_data()
                     if "Wrong" in out:
-                        print((colors.bcolors.FAIL+"Test failed"+colors.bcolors.ENDC))
+                        print((bcolors.FAIL+"Test failed"+bcolors.ENDC))
                         failcounter=failcounter+1
                     else:
-                        print((colors.bcolors.OKGREEN+"Test passed"+colors.bcolors.ENDC))
+                        print((bcolors.OKGREEN+"Test passed"+bcolors.ENDC))
                         passcounter=passcounter+1
 
                     #Test for altering an existing index
                     try:
-                        print((colors.bcolors.HEADER+"Testing for altering an existing index"+colors.bcolors.ENDC))
+                        print((bcolors.HEADER+"Testing for altering an existing index"+bcolors.ENDC))
                         cmd=tests.AlterIndexTest()
                     except Exception as e:
-                        print(("\033ERROR occurred while executing test for ALTERING AN EXISTING INDEX: {0}\033[0m".format(e)))
+                        print((bcolors.FAIL+"ERROR occurred while executing test for ALTERING AN EXISTING INDEX: {0}"+bcolors.ENDC.format(e)))
                     self.send_command(cmd)
                     out = self.recv_data()
                     if "Wrong" in out:
-                        print((colors.bcolors.FAIL+"Test failed"+colors.bcolors.ENDC))
+                        print((bcolors.FAIL+"Test failed"+bcolors.ENDC))
                         failcounter=failcounter+1
                     else:
-                        print((colors.bcolors.OKGREEN+"Test passed"+colors.bcolors.ENDC))
+                        print((bcolors.OKGREEN+"Test passed"+bcolors.ENDC))
                         passcounter=passcounter+1
 
                     #Test for altering an existing table
                     try:
-                        print((colors.bcolors.HEADER+"Testing for altering an existing table"+colors.bcolors.ENDC))
+                        print((bcolors.HEADER+"Testing for altering an existing table"+bcolors.ENDC))
                         cmd=tests.AlterTableTest()
                     except Exception as e:
-                        print(("\033ERROR occurred while executing the ALTERING AN EXISTING TABLE test: {0}\033[0m".format(e)))
+                        print((bcolors.FAIL+"ERROR occurred while executing the ALTERING AN EXISTING TABLE test: {0}"+bcolors.ENDC.format(e)))
                     self.send_command(cmd)
                     out = self.recv_data()
                     if "Wrong" in out:
-                        print((colors.bcolors.FAIL+"Test failed"+colors.bcolors.ENDC))
+                        print((bcolors.FAIL+"Test failed"+bcolors.ENDC))
                         failcounter=failcounter+1
                     else:
-                        print((colors.bcolors.OKGREEN+"Test passed"+colors.bcolors.ENDC))
+                        print((bcolors.OKGREEN+"Test passed"+bcolors.ENDC))
                         passcounter=passcounter+1
 
                     #Test for altering an existing sequence
                     try:
-                        print((colors.bcolors.HEADER+"Testing for altering an existing sequence"+colors.bcolors.ENDC))
+                        print((bcolors.HEADER+"Testing for altering an existing sequence"+bcolors.ENDC))
                         cmd=tests.AlterSequenceTest()
                     except Exception as e:
-                        print(("\033ERROR occurred while executing the ALTERING AN EXISTING SEQUENCE test: {0}\033[0m".format(e)))
+                        print((bcolors.FAIL+"ERROR occurred while executing the ALTERING AN EXISTING SEQUENCE test: {0}"+bcolors.ENDC.format(e)))
                     self.send_command(cmd)
                     out = self.recv_data()
                     if "Wrong" in out:
-                        print((colors.bcolors.FAIL+"Test failed"+colors.bcolors.ENDC))
+                        print((bcolors.FAIL+"Test failed"+bcolors.ENDC))
                         failcounter=failcounter+1
                     else:
-                        print((colors.bcolors.OKGREEN+"Test passed"+colors.bcolors.ENDC))
+                        print((bcolors.OKGREEN+"Test passed"+bcolors.ENDC))
                         passcounter=passcounter+1
 
                     #Test for altering an existing view
                     try:
-                        print((colors.bcolors.HEADER+"Testing for altering an existing view"+colors.bcolors.ENDC))
+                        print((bcolors.HEADER+"Testing for altering an existing view"+bcolors.ENDC))
                         cmd=tests.AlterViewTest()
                     except Exception as e:
-                        print(("\033ERROR occurred while executing the ALTERING AN EXISTING VIEW test: {0}\033[0m".format(e)))
+                        print((bcolors.FAIL+"ERROR occurred while executing the ALTERING AN EXISTING VIEW test: {0}"+bcolors.ENDC.format(e)))
                     self.send_command(cmd)
                     out = self.recv_data()
                     if "Wrong" in out:
-                        print((colors.bcolors.FAIL+"Test failed"+colors.bcolors.ENDC))
+                        print((bcolors.FAIL+"Test failed"+bcolors.ENDC))
                         failcounter=failcounter+1
                     else:
-                        print((colors.bcolors.OKGREEN+"Test passed"+colors.bcolors.ENDC))
+                        print((bcolors.OKGREEN+"Test passed"+bcolors.ENDC))
                         passcounter=passcounter+1
 
                     #Test for 'select' operator
                     try:
-                        print((colors.bcolors.HEADER+"Testing 'select' operator"+colors.bcolors.ENDC))
+                        print((bcolors.HEADER+"Testing 'select' operator"+bcolors.ENDC))
                         cmd=tests.SelectTest()
                     except Exception as e:
-                        print(("\033ERROR occurred while executing the SELECT OPERATOR test: {0}\033[0m".format(e)))
+                        print((bcolors.FAIL+"ERROR occurred while executing the SELECT OPERATOR test: {0}"+bcolors.ENDC.format(e)))
                     self.send_command(cmd)
                     out = self.recv_data()
                     if "Wrong" in out:
-                        print((colors.bcolors.FAIL+"Test failed"+colors.bcolors.ENDC))
+                        print((bcolors.FAIL+"Test failed"+bcolors.ENDC))
                         failcounter=failcounter+1
                     else:
-                        print((colors.bcolors.OKGREEN+"Test passed"+colors.bcolors.ENDC))
+                        print((bcolors.OKGREEN+"Test passed"+bcolors.ENDC))
                         passcounter=passcounter+1
 
                     #Test for 'update' operator
                     try:
-                        print((colors.bcolors.HEADER+"Testing 'update' operator"+colors.bcolors.ENDC))
+                        print((bcolors.HEADER+"Testing 'update' operator"+bcolors.ENDC))
                         cmd=tests.UpdateTest()
                     except Exception as e:
-                        print(("\033ERROR occurred while executing the UPDATE OPERATOR test: {0}\033[0m".format(e)))
+                        print((bcolors.FAIL+"ERROR occurred while executing the UPDATE OPERATOR test: {0}"+bcolors.ENDC.format(e)))
                     self.send_command(cmd)
                     out = self.recv_data()
                     if "Wrong" in out:
-                        print((colors.bcolors.FAIL+"Test failed"+colors.bcolors.ENDC))
+                        print((bcolors.FAIL+"Test failed"+bcolors.ENDC))
                         failcounter=failcounter+1
                     else:
-                        print((colors.bcolors.OKGREEN+"Test passed"+colors.bcolors.ENDC))
+                        print((bcolors.OKGREEN+"Test passed"+bcolors.ENDC))
                         passcounter=passcounter+1
 
                     #Test for 'insert' operator
                     try:
-                        print((colors.bcolors.HEADER+"Testing 'insert' operator"+colors.bcolors.ENDC))
+                        print((bcolors.HEADER+"Testing 'insert' operator"+bcolors.ENDC))
                         cmd=tests.InsertTest()
                     except Exception as e:
-                        print(("\033ERROR occurred while executing the INSERT OPERATOR test: {0}\033[0m".format(e)))
+                        print((bcolors.FAIL+"ERROR occurred while executing the INSERT OPERATOR test: {0}"+bcolors.ENDC.format(e)))
                     self.send_command(cmd)
                     out = self.recv_data()
                     if "Wrong" in out:
-                        print((colors.bcolors.FAIL+"Test failed"+colors.bcolors.ENDC))
+                        print((bcolors.FAIL+"Test failed"+bcolors.ENDC))
                         failcounter=failcounter+1
                     else:
-                        print((colors.bcolors.OKGREEN+"Test passed"+colors.bcolors.ENDC))
+                        print((bcolors.OKGREEN+"Test passed"+bcolors.ENDC))
                         passcounter=passcounter+1
 
                     #Test for dropping a table
                     try:
-                        print((colors.bcolors.HEADER+"Testing dropping a table"+colors.bcolors.ENDC))
+                        print((bcolors.HEADER+"Testing dropping a table"+bcolors.ENDC))
                         cmd=tests.DropTest()
                     except Exception as e:
-                        print(("\033ERROR occurred while executing the DROPPING A TABLE test: {0}\033[0m".format(e)))
+                        print((bcolors.FAIL+"ERROR occurred while executing the DROPPING A TABLE test: {0}"+bcolors.ENDC.format(e)))
                     self.send_command(cmd)
                     out = self.recv_data()
                     if "Wrong" in out:
-                        print((colors.bcolors.FAIL+"Test failed"+colors.bcolors.ENDC))
+                        print((bcolors.FAIL+"Test failed"+bcolors.ENDC))
                         failcounter=failcounter+1
                     else:
-                        print((colors.bcolors.OKGREEN+"Test passed"+colors.bcolors.ENDC))
+                        print((bcolors.OKGREEN+"Test passed"+bcolors.ENDC))
                         passcounter=passcounter+1
 
                     #Test for starting a begin-end block
                     try:
-                        print((colors.bcolors.HEADER+"Testing begin-end block"+colors.bcolors.ENDC))
+                        print((bcolors.HEADER+"Testing begin-end block"+bcolors.ENDC))
                         cmd=tests.BeginTest()
                     except Exception as e:
-                        print(("\033ERROR occurred while executing the BEGIN-END block test: {0}\033[0m".format(e)))
+                        print((bcolors.FAIL+"ERROR occurred while executing the BEGIN-END block test: {0}"+bcolors.ENDC.format(e)))
                     self.send_command(cmd)
                     out = self.recv_data()
                     if "Wrong" in out:
-                        print((colors.bcolors.FAIL+"Test failed"+colors.bcolors.ENDC))
+                        print((bcolors.FAIL+"Test failed"+bcolors.ENDC))
                         failcounter=failcounter+1
                     else:
-                        print((colors.bcolors.OKGREEN+"Test passed"+colors.bcolors.ENDC))
+                        print((bcolors.OKGREEN+"Test passed"+bcolors.ENDC))
                         passcounter=passcounter+1
 
                     #Test for writing out history of actions
                     try:
-                        print((colors.bcolors.HEADER+"Testing writing out history of actions"+colors.bcolors.ENDC))
+                        print((bcolors.HEADER+"Testing writing out history of actions"+bcolors.ENDC))
                         cmd=tests.HistoryTest()
                     except Exception as e:
-                        print(("\033ERROR occurred while testing WRITING OUT HISTORY of ACTION: {0}\033[0m".format(e)))
+                        print((bcolors.FAIL+"ERROR occurred while testing WRITING OUT HISTORY of ACTION: {0}"+bcolors.ENDC.format(e)))
                     self.send_command(cmd)
                     out = self.recv_data()
                     if "Wrong" in out:
-                        print((colors.bcolors.FAIL+"Test failed"+colors.bcolors.ENDC))
+                        print((bcolors.FAIL+"Test failed"+bcolors.ENDC))
                         failcounter=failcounter+1
                     else:
-                        print((colors.bcolors.OKGREEN+"Test passed"+colors.bcolors.ENDC))
+                        print((bcolors.OKGREEN+"Test passed"+bcolors.ENDC))
                         passcounter=passcounter+1
-                    print((colors.bcolors.OKGREEN+"Amount of passed tests: "+str(passcounter)+colors.bcolors.ENDC))
-                    print((colors.bcolors.FAIL+"Amount of failed tests: "+str(failcounter)+colors.bcolors.ENDC))
+                    print((bcolors.OKGREEN+"Amount of passed tests: "+str(passcounter)+bcolors.ENDC))
+                    print((bcolors.FAIL+"Amount of failed tests: "+str(failcounter)+bcolors.ENDC))
                 #Testing block ends here. For the sole purposes of not messing with anybody else working here, tests will stay in this file until all the work on
                 #python (client-server) components is done
                 else:
