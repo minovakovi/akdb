@@ -208,6 +208,12 @@ int AK_view_rename(char *name, char *new_name)
     struct list_node *row;
     AK_PRO;
 
+    if (AK_check_view_name(new_name) == EXIT_ERROR)
+    {
+        AK_EPI;
+        return EXIT_ERROR;
+    }
+
     while ((row = (struct list_node *)AK_get_row(i++, "AK_view")))
     {
         struct list_node *name_elem = AK_GetNth_L2(2, row);
@@ -220,11 +226,7 @@ int AK_view_rename(char *name, char *new_name)
             rel_exp = query_rel_exp_elem->data;
         }
     }
-    if (AK_check_view_name(new_name) == EXIT_ERROR)
-    {
-        AK_EPI;
-        return EXIT_ERROR;
-    }
+   
     result = AK_view_remove_by_name(name);
     result = AK_view_add(new_name, query, rel_exp, view_id);
     AK_EPI;
