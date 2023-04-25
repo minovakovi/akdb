@@ -20,71 +20,52 @@
 #include "selection.h"
 
 
-
 /**
- * @author Matija Šestak.
+ * @author Matija Šestak, updated by Elena Kržina
  * @brief  Function that which implements selection
  * @param *srcTable source table name
  * @param *dstTable destination table name
  * @param *expr list with posfix notation of the logical expression
  * @return EXIT_SUCCESS
  */
-int AK_selection(char *srcTable, char *dstTable, struct list_node *expr) {
-        AK_PRO;
+
+	int AK_selection(char *srcTable, char *dstTable, struct list_node *expr) {
+
+    AK_PRO;
 	AK_header *t_header = (AK_header *) AK_get_header(srcTable);
 	int num_attr = AK_num_attr(srcTable);
 
-
     AK_add_to_redolog_select(SELECT, expr, srcTable);
-
-    //commented out code is for testing of AK_check_redo_log_select
-    //should be moved to a test
-
-    /*struct list_node *expr1 = (struct list_node *) AK_malloc(sizeof (struct list_node));
-    AK_Init_L3(&expr1);
-
-    char *destTable = "selection_test1";
-    int num = 2005;
-    strcpy(expr1->table,destTable);
-    AK_InsertAtEnd_L3(TYPE_ATTRIBS, "year", sizeof ("year"), expr1);
-    AK_InsertAtEnd_L3(TYPE_INT, &num, sizeof (int), expr1);
-    AK_InsertAtEnd_L3(TYPE_OPERATOR, ">", sizeof (">"), expr1);
-    AK_InsertAtEnd_L3(TYPE_ATTRIBS, "firstname", sizeof ("firstname"), expr1);
-    AK_InsertAtEnd_L3(TYPE_VARCHAR, "Robert", sizeof ("Robert"), expr1);
-    AK_InsertAtEnd_L3(TYPE_OPERATOR, "=", sizeof ("="), expr1);
-    AK_InsertAtEnd_L3(TYPE_OPERATOR, "AND", sizeof("AND"), expr1);*/
-
     AK_check_redo_log_select(SELECT, expr, srcTable);
 
-    //AK_DeleteAll_L3(&expr1);
+	int startAddress = AK_initialize_new_segment(dstTable, SEGMENT_TYPE_TABLE, t_header);
 
-		int startAddress = AK_initialize_new_segment(dstTable, SEGMENT_TYPE_TABLE, t_header);
-		if (startAddress == EXIT_ERROR) {
-			AK_EPI;
-			return EXIT_ERROR;
-		}
-		AK_dbg_messg(LOW, REL_OP, "\nTABLE %s CREATED from %s!\n", dstTable, srcTable);
-		table_addresses *src_addr = (table_addresses*) AK_get_table_addresses(srcTable);
+	if (startAddress == EXIT_ERROR) {	
+		AK_free(t_header);
+		AK_EPI;
+		return EXIT_ERROR;
+	}
+
+	AK_dbg_messg(LOW, REL_OP, "\nTable %s created from %s.\n", dstTable, srcTable);
+	
+	table_addresses *src_addr = (table_addresses*) AK_get_table_addresses(srcTable);
+	struct list_node * row_root = (struct list_node *) AK_malloc(sizeof(struct list_node));
+	AK_Init_L3(&row_root);
 		
-		struct list_node * row_root = (struct list_node *) AK_malloc(sizeof(struct list_node));
-		AK_Init_L3(&row_root);
-		
-		int i, j, k, l, type, size, address;
-		char data[MAX_VARCHAR_LENGTH];
+	int type, size, address;
+	char data[MAX_VARCHAR_LENGTH];
 
-		for (i = 0; src_addr->address_from[i] != 0; i++) {
+	/* code steps through all addresses of table, gets the block of each current address, counts the number of attributes, 
+	fetches values for each attribute and inserts data into the destination table if row satisfies given expression */ 
+	for (int i = 0; src_addr->address_from[i] != 0; i++) {
 
-			for (j = src_addr->address_from[i]; j < src_addr->address_to[i]; j++) {
+		for (int j = src_addr->address_from[i]; j < src_addr->address_to[i]; j++) {
 
-				AK_mem_block *temp = (AK_mem_block *) AK_get_block(j);
-				if (temp->block->last_tuple_dict_id == 0)
-					break;
-				for (k = 0; k < DATA_BLOCK_SIZE; k += num_attr) {
+			AK_mem_block *temp = (AK_mem_block *) AK_get_block(j);
 
-					if (temp->block->tuple_dict[k].type == FREE_INT)
-						break;
-
-					for (l = 0; l < num_attr; l++) {
+			if (temp->block->last_tuple_dict_id != 0){
+				for (int k = 0; k < DATA_BLOCK_SIZE && !(temp->block->tuple_dict[k].type == FREE_INT); k += num_attr) {
+					for (int l = 0; l < num_attr; l++) {
 						type = temp->block->tuple_dict[k + l].type;
 						size = temp->block->tuple_dict[k + l].size;
 						address = temp->block->tuple_dict[k + l].address;
@@ -92,24 +73,22 @@ int AK_selection(char *srcTable, char *dstTable, struct list_node *expr) {
 						data[size] = '\0';
 						AK_Insert_New_Element(type, data, dstTable, t_header[l].att_name, row_root);
 					}
-
-					if (AK_check_if_row_satisfies_expression(row_root, expr))
+					if (AK_check_if_row_satisfies_expression(row_root, expr)){
 						AK_insert_row(row_root);
-
-					
+					}
 					AK_DeleteAll_L3(&row_root);
 				}
 			}
 		}
+	}
 
-		AK_free(src_addr);
-		AK_free(t_header);
-		AK_free(row_root);
+	AK_free(src_addr);
+	AK_free(t_header);
+	AK_free(row_root);
 
-		AK_print_table(dstTable);
+	AK_print_table(dstTable);
 	
-
-	AK_dbg_messg(LOW, REL_OP, "SELECTION_TEST_SUCCESS\n\n");
+	AK_dbg_messg(LOW, REL_OP, "\nSelection test success.\n\n");
 	AK_EPI;
 	return EXIT_SUCCESS;
 }
