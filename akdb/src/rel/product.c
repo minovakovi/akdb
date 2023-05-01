@@ -269,23 +269,9 @@ TestResult AK_op_product_test()
 	if (test == 0)
 	{
 		printf("Table %s does not exist!\n", destTable);
-
-		//Execution of main function that retrieves int value
+		
+		// Execution of main function that retrieves int value
 		test = AK_product(tblName1, tblName2, destTable);
-
-		AK_EPI;
-		if (test == EXIT_SUCCESS)
-		{
-			AK_print_table(tblName1);
-			AK_print_table(tblName2);
-			AK_print_table(destTable); //prints table size n*m rows
-			return TEST_result(1, 0);
-		}
-		else
-		{
-			AK_print_table(destTable);
-			return TEST_result(0, 1);
-		}
 	}
 	else
 	{
@@ -293,4 +279,20 @@ TestResult AK_op_product_test()
 		AK_print_table(destTable);
 		return TEST_result(1, 0);
 	}
-}
+
+	AK_EPI;
+
+	if (test == EXIT_SUCCESS)
+	{
+		AK_print_table(tblName1);
+		AK_print_table(tblName2);
+		AK_print_table(destTable); // prints table size n*m rows
+		return TEST_result(1, 0);
+	}
+	else
+	{
+		AK_print_table("product_test");
+		return TEST_result(0, 1);
+	}
+
+}  
