@@ -462,7 +462,71 @@ TestResult AK_dictionary_test(){
 
     //cleaning dictionary
     dictionary_del(dict_to_test);
-	AK_EPI;
+
+    // test mem_double
+    printf("\nTesting if doubled memory have initialized bits on zero\n");
+
+    int mem_double_test_success = 1;
+    int number_of_elements = 10;
+    int size_of_element = sizeof(int);
+
+    int* ptr = (int*)AK_calloc(number_of_elements, size_of_element);
+    int* new_ptr = (int *)mem_double(ptr,  number_of_elements * size_of_element);
+ 
+    for(int i=0; i<number_of_elements*2; i++){
+        if(new_ptr[i] != 0){
+            mem_double_test_success = 0;
+            break;
+        }
+    }
+
+    if(mem_double_test_success == 1){
+        succesfulTests++;
+        printf("Success\n\n");
+    }
+    else{
+        failedTests++;
+        printf("Failed\n\n");
+    }
+
+    // test xstrdup
+    printf("\nTesting if string is correctly duplicated\n");
+
+    int xstrdup_test_success = 1;
+    char akdb[20]="AKDB";
+    char *akdb_copy = xstrdup(akdb);
+
+    for(int i=0; i<strlen(akdb); i++){
+        if(akdb[i] != akdb_copy[i]){
+            xstrdup_test_success = 0;
+            break;
+        }
+    }
+
+    if(xstrdup_test_success == 1){
+        succesfulTests++;
+        printf("Success\n\n");
+    }
+    else{
+        failedTests++;
+        printf("Failed\n\n");
+    }
+
+    // test dictionary_hash
+    printf("\nTesting if dictionary hash is correctly calculated\n");
+    unsigned akdb_expected_hash = 4194467538;
+    unsigned akdb_actual_hash = dictionary_hash(akdb);
+
+    if(akdb_actual_hash == akdb_expected_hash){
+        succesfulTests++;
+        printf("Success\n\n");
+    }
+    else{
+        failedTests++;
+        printf("Failed\n\n");
+    }
+
+    AK_EPI;
 
 	return TEST_result(succesfulTests, failedTests);
 }
