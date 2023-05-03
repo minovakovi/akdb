@@ -56,43 +56,25 @@ char *system_catalog[NUM_SYS_TABLES] = {
  * @param type drop type
  * @param drop_arguments arguments of DROP command
  */
-int AK_drop(int type, AK_drop_arguments *drop_arguments) {
-    AK_PRO;
+typedef int (*DropFunc)(AK_drop_arguments*);
+DropFunc dropFunctions[] = {
+    AK_drop_table,
+    AK_drop_index,
+    AK_drop_view,
+    AK_drop_sequence,
+    AK_drop_trigger,
+    AK_drop_function,
+    AK_drop_user,
+    AK_drop_group,
+    AK_drop_constraint
+};
+#define NUM_DROP_FUNCTIONS 9
+int AK_drop(int type, AK_drop_arguments *arguments) {
     int result;
-    switch (type) {
-        case DROP_TABLE:
-            result = AK_drop_table(drop_arguments);
-            break;
-        case DROP_INDEX:
-            result = AK_drop_index(drop_arguments);
-            break;
-        case DROP_VIEW:
-            result = AK_drop_view(drop_arguments);
-            break;
-        case DROP_SEQUENCE:
-            result = AK_drop_sequence(drop_arguments);
-            break;
-        case DROP_TRIGGER:
-            result = AK_drop_trigger(drop_arguments);
-            break;
-        case DROP_FUNCTION:
-            result = AK_drop_function(drop_arguments);
-            break;
-        case DROP_USER:
-            result = AK_drop_user(drop_arguments);
-            break;
-        case DROP_GROUP:
-            result = AK_drop_group(drop_arguments);
-            break;
-        case DROP_CONSTRAINT:
-            result = AK_drop_constraint(drop_arguments);
-            break;
-        default:
-            break;
+    if (type >= 0 && type < NUM_DROP_FUNCTIONS) {
+        result = (*dropFunctions[type])(arguments);
     }
-    AK_EPI;
     return result;
-    
 }
 
 /**
@@ -720,3 +702,4 @@ TestResult AK_drop_test() {
     AK_EPI;
     return TEST_result(success,failed);
 }
+
