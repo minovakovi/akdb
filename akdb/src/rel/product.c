@@ -269,9 +269,9 @@ TestResult AK_op_product_test()
 	if (test == 0)
 	{
 		printf("Table %s does not exist!\n", destTable);
-		//Execution of main function that retrieves int value
+		
+		// Execution of main function that retrieves int value
 		test = AK_product(tblName1, tblName2, destTable);
-
 	}
 	else
 	{
