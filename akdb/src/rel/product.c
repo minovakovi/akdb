@@ -254,24 +254,39 @@ void AK_product_procedure(char *srcTable1, char *srcTable2, char *dstTable, AK_h
  */
 TestResult AK_op_product_test()
 {
-//Setting tables for testing
+
+	//Setting tables for testing
 	AK_PRO;
 	char *sys_table = "AK_relation";
 	char *destTable = "product_test";
 	char *tblName1 = "employee";
 	char *tblName2 = "department";
 
-	int test = AK_if_exist(destTable, sys_table);
+	int test;
 
 	printf("\n********** PRODUCT TEST **********\n\n");
 
 	//Checking if destination tables already exists
-	if (test == 0)
+	if (AK_if_exist(destTable, sys_table) == 0)
 	{
 		printf("Table %s does not exist!\n", destTable);
-		
-		// Execution of main function that retrieves int value
+		//Execution of main function that retrieves int value
 		test = AK_product(tblName1, tblName2, destTable);
+
+		AK_EPI;
+		if (test == EXIT_SUCCESS)
+		{
+			AK_print_table("employee");
+			AK_print_table("department");
+			//prints table size n*m rows
+			AK_print_table(destTable);
+			return TEST_result(1, 0);
+		}
+		else
+		{
+			AK_print_table("product_test");
+			return TEST_result(0, 1);
+		}
 	}
 	else
 	{
@@ -279,20 +294,4 @@ TestResult AK_op_product_test()
 		AK_print_table(destTable);
 		return TEST_result(1, 0);
 	}
-
-	AK_EPI;
-
-	if (test == EXIT_SUCCESS)
-	{
-		AK_print_table(tblName1);
-		AK_print_table(tblName2);
-		AK_print_table(destTable); // prints table size n*m rows
-		return TEST_result(1, 0);
-	}
-	else
-	{
-		AK_print_table("product_test");
-		return TEST_result(0, 1);
-	}
-
-}  
+}
