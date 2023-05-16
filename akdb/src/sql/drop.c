@@ -25,6 +25,7 @@
 
 #include "drop.h"
 
+//Ovo je test
 // list of system catalog tables ---- TEST BROJ 41
 char *system_catalog[NUM_SYS_TABLES] = {
     "AK_relation",
