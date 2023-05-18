@@ -26,11 +26,12 @@
  */
 int AK_get_id() {
     int obj_id = 0;
+    char name = "objectID";
     int current_value;
     AK_PRO;
     struct list_node *row_root = (struct list_node *) AK_malloc(sizeof (struct list_node));
-    AK_Init_L3(&row_root); 
-	
+    AK_Init_L3(&row_root);
+     
 	/*Assumption was that objectID is always in the first row of table AK_sequence. If in future, for some reason, that won't be the case
 	 * then check all rows of table AK_sequence (for(i=0; i<num_rec; i++)) and update a row which contains objectID (AK_GetNth_L2(2, row), value in column 
 	 * name must be objectID) or create a row which will contain objectID*/
@@ -42,15 +43,17 @@ int AK_get_id() {
 		struct list_node *attribute = AK_GetNth_L2(3, row);
 		memcpy(&current_value, &attribute->data, attribute->size);
 		AK_DeleteAll_L3(&row);
-		AK_free(row);
 		
         current_value++;
-		AK_Update_Existing_Element(TYPE_INT, &obj_id, "AK_sequence", "obj_id", row_root);
+        
+        //TODO: this is a temporary solution that should be fixed after the memory management is fixed
+		AK_Update_Existing_Element(TYPE_VARCHAR, &name, "AK_sequence", "name", row_root);
+        AK_Insert_New_Element(TYPE_VARCHAR, &name, "AK_sequence", "name", row_root);
         AK_Insert_New_Element(TYPE_INT, &current_value, "AK_sequence", "current_value", row_root);
         int result = AK_update_row(row_root);
-		AK_DeleteAll_L3(&row_root);
+        AK_DeleteAll_L3(&row_root);
         AK_free(row_root);
-		
+
         if(result != EXIT_SUCCESS){
             AK_EPI;
             return EXIT_ERROR;
@@ -61,14 +64,14 @@ int AK_get_id() {
     else
     {
 		AK_Insert_New_Element(TYPE_INT, &obj_id, "AK_sequence", "obj_id", row_root);
-		AK_Insert_New_Element(TYPE_VARCHAR, "objectID", "AK_sequence", "name", row_root);
+		AK_Insert_New_Element(TYPE_VARCHAR, &name, "AK_sequence", "name", row_root);
 		current_value = ID_START_VALUE;
 		AK_Insert_New_Element(TYPE_INT, &current_value, "AK_sequence", "current_value", row_root);
 		int increment = 1;
 		AK_Insert_New_Element(TYPE_INT, &increment, "AK_sequence", "increment", row_root);
 		AK_insert_row(row_root);
 		AK_DeleteAll_L3(&row_root);
-		AK_free(row_root);
+        AK_free(row_root);
 		AK_EPI;
 		return current_value;
     }
@@ -84,7 +87,7 @@ int AK_get_id() {
 char AK_get_table_id(char *tableName) {
     AK_PRO;
     char *table = "AK_relation";
-    int result = 0;
+    char result = 0;
 
     int num_rows = AK_get_num_records(table);
     int a;
