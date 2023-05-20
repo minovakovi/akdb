@@ -70,9 +70,12 @@ void AK_create_table(char* tblName, AK_create_table_parameter* parameters, int a
 	memcpy(t_header + attribute_count, temp, sizeof ( AK_header));
 	startAddress = AK_initialize_new_segment(tblName, SEGMENT_TYPE_TABLE, t_header);
 
-    if (startAddress != EXIT_ERROR)
+    if (startAddress != EXIT_ERROR) {
         printf("\nTABLE %s CREATED!\n", tblName);
-    
+    } else {
+        printf("\nERROR: Failed to create table %s\n", tblName);
+    }
+
     AK_EPI;
 }
 
@@ -94,16 +97,21 @@ void AK_temp_create_table(char *table, AK_header *header, int type_segment) {
     int startAddress = AK_initialize_new_segment(table, type_segment, header);
 
     int num = 8;
+    const int objectID = 8;
+    const int tableNameEntry = 9;
+    const int startAddressEntry = 10;
+    const int endAddressEntry = 11;
+
     //insert object_id
-    AK_insert_entry(sys_block, TYPE_INT, &num, 8);
+    AK_insert_entry(sys_block, TYPE_INT, &num, objectID);
     //insert table name
-    AK_insert_entry(sys_block, TYPE_VARCHAR, table, 9);
+    AK_insert_entry(sys_block, TYPE_VARCHAR, table, tableNameEntry);
     //insert start address
     num = startAddress;
-    AK_insert_entry(sys_block, TYPE_INT, &num, 10);
+    AK_insert_entry(sys_block, TYPE_INT, &num, startAddressEntry);
     //insert end address
     num = startAddress + 19;
-    AK_insert_entry(sys_block, TYPE_INT, &num, 11);
+    AK_insert_entry(sys_block, TYPE_INT, &num, endAddressEntry);
 
     AK_write_block(sys_block);
     AK_free(sys_block);
@@ -234,10 +242,14 @@ AK_header *AK_get_header(char *tblName) {
     AK_header *head = AK_malloc(sizeof(AK_header) * num_attr);
     current_attr = 0;
     while(1){
-		for(int i = 0; i < MAX_ATTRIBUTES && current_attr < num_attr && temp->block->header[i].att_name != "\0"; i++){
-			memcpy(head + current_attr++, temp->block->header + i, sizeof ( AK_header));
-		}
-		if(temp->block->chained_with != NOT_CHAINED){
+        for (int i = 0; i < MAX_ATTRIBUTES && current_attr < num_attr; i++){
+            if (strcmp(temp->block->header[i].att_name, "\0") == 0){
+                break;
+            }
+            head[current_attr] = temp->block->header[i];
+            current_attr++;
+        }
+        if(temp->block->chained_with != NOT_CHAINED){
 			temp = AK_get_block(temp->block->chained_with);
 		}
 		else{
