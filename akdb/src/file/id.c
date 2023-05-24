@@ -28,7 +28,8 @@ int AK_get_id() {
     int obj_id = 0;
     int current_value;
     AK_PRO;
-    struct list_node *row_root = AK_Init_L3(NULL);
+    struct list_node *row_root = (struct list_node *) AK_malloc(sizeof (struct list_node));
+    AK_Init_L3(&row_root); 
     
     /* Assumption was that objectID is always in the first row of table AK_sequence. If in future, for some reason, that won't be the case
      * then check all rows of table AK_sequence (for(i=0; i<num_rec; i++)) and update a row which contains objectID (AK_GetNth_L2(2, row), value in column 
