@@ -981,6 +981,29 @@ TestResult AK_iniparser_test(){
         printf("Fail\n\n");
     }
 
+    // test iniparser_getseckeys
+    printf("Test if getseckeys returns correct key in section\n");
+
+    int getseckeys_test_success = 0;
+    int number_of_keys = iniparser_getsecnkeys(dict_to_test, "people");
+    char **keys = iniparser_getseckeys(dict_to_test, "people");
+
+    for(int i=0; i<number_of_keys; i++){
+        if(strcmp(keys[i], "people:ariana") == 0){
+            getseckeys_test_success = 1;
+            break;
+        }
+    }
+
+    if(getseckeys_test_success == 1){
+        succesfulTests++;
+        printf("Success\n\n");
+    }
+    else{
+        failedTests++;
+        printf("Failed\n\n");
+    }
+
     //printing all contents of dictionary
     printf("Printing all contents of created dictionary\n");
     iniparser_dump(dict_to_test, stdout);
@@ -1020,6 +1043,82 @@ TestResult AK_iniparser_test(){
             failedTests++;
             printf("Fail\n\n");
         }
+    }
+
+    // test strlwc
+    printf("\nTesting if string is correctly lowercased\n");
+
+    int strlwc_test_success = 1;
+    char akdb[20]="AKDB";
+    char *akdb_lwc = strlwc(akdb);
+
+    if(strcmp(akdb_lwc, "akdb") == 0){
+        succesfulTests++;
+        printf("Success\n\n");
+    }
+    else{
+        failedTests++;
+        printf("Failed\n\n");
+    }
+
+    // test strstrip
+    printf("\nTesting if string is correctly striped\n");
+
+    akdb[20]="     AKDB     ";
+    char *akdb_strip = strstrip(akdb);
+
+    if(strcmp(akdb_strip, "AKDB") == 0){
+        succesfulTests++;
+        printf("Success\n\n");
+    }
+    else{
+        failedTests++;
+        printf("Failed\n\n");
+    }
+
+    // test iniparser_getint
+    printf("\nTesting if iniparset_getint returns correctly value\n");
+
+    iniparser_set(dict_to_test,"number","10");
+    int number = iniparser_getint(dict_to_test, "number", 0);
+
+    if(number == 10){
+        succesfulTests++;
+        printf("Success\n\n");
+    }
+    else{
+        failedTests++;
+        printf("Failed\n\n");
+    }
+
+    // test iniparser_getdouble
+    printf("\nTesting if iniparser_getdouble returns correctly value\n");
+
+    iniparser_set(dict_to_test,"double_number","11.239");
+    double double_number = iniparser_getdouble(dict_to_test, "double_number", 0);
+    
+    if(double_number == 11.239){
+        succesfulTests++;
+        printf("Success\n\n");
+    }
+    else{
+        failedTests++;
+        printf("Failed\n\n");
+    }
+
+    // test iniparser_getboolean
+    printf("\nTesting if iniparser_getboolean returns correctly value\n");
+
+    iniparser_set(dict_to_test,"boolean","T");
+    int boolean = iniparser_getboolean(dict_to_test, "boolean", 0);
+    
+    if(boolean == 1){
+        succesfulTests++;
+        printf("Success\n\n");
+    }
+    else{
+        failedTests++;
+        printf("Failed\n\n");
     }
 
     //cleaning dictionary

@@ -27,39 +27,40 @@
  * @return EXIT_SUCCESS or EXIT_ERROR
  */
 int AK_trigger_save_conditions(int trigger, struct list_node *condition) {
-    int i = 0;
+    int condition_index = 0;
     char tempData[MAX_VARCHAR_LENGTH];
     AK_PRO;
 
-    struct list_node *temp = AK_First_L2(condition);
+    // Prepare the row root for the AK database
+    struct list_node *current_condition = AK_First_L2(condition);
     struct list_node *row_root = (struct list_node *) AK_malloc(sizeof (struct list_node));
     AK_Init_L3(&row_root);
-
+    // Delete any existing conditions for this trigger.
     AK_Update_Existing_Element(TYPE_INT, &trigger, "AK_trigger_conditions", "trigger", row_root);
     if (AK_delete_row(row_root) == EXIT_ERROR){
 	AK_EPI;
         return EXIT_ERROR;
     }
 
-    while (temp != NULL) {
-        memcpy(tempData, temp->data, temp->size);
-        tempData[temp->size] = '\0';
+    while (current_condition != NULL) {
+        memcpy(tempData, current_condition->data, current_condition->size);
+        tempData[current_condition->size] = '\0';
         AK_Insert_New_Element(TYPE_INT, &trigger, "AK_trigger_conditions", "trigger", row_root);
-        AK_Insert_New_Element(TYPE_INT, &i, "AK_trigger_conditions", "id", row_root);
-        if(temp->type == TYPE_INT){
-            AK_Insert_New_Element(TYPE_INT, &temp->data, "AK_trigger_conditions", "data", row_root);
+        AK_Insert_New_Element(TYPE_INT, &condition_index, "AK_trigger_conditions", "id", row_root);
+        if(current_condition->type == TYPE_INT){
+            AK_Insert_New_Element(TYPE_INT, &current_condition->data, "AK_trigger_conditions", "data", row_root);
         } else{
             AK_Insert_New_Element(TYPE_VARCHAR, tempData, "AK_trigger_conditions", "data", row_root);
         }
-        AK_Insert_New_Element(TYPE_INT, &temp->type, "AK_trigger_conditions", "type", row_root);
+        AK_Insert_New_Element(TYPE_INT, &current_condition->type, "AK_trigger_conditions", "type", row_root);
         if (AK_insert_row(row_root) == EXIT_ERROR) {
             AK_free(row_root);
 	    AK_EPI;
             return EXIT_ERROR;
         }
 
-	temp = AK_Next_L2(temp);
-        i++;
+	current_condition = AK_Next_L2(current_condition);
+        condition_index++;
         AK_DeleteAll_L3(&row_root);
     }
 
@@ -145,7 +146,7 @@ int AK_trigger_add(char *name, char* event, struct list_node *condition, char* t
  * @return obj_id of the trigger or EXIT_ERROR
  */
 int AK_trigger_get_id(char *name, char *table) {
-    int i = 0, table_id = -1;
+    int trigger_index = 0, table_id = -1;
     
     struct list_node *row;
     AK_PRO;
@@ -155,16 +156,16 @@ int AK_trigger_get_id(char *name, char *table) {
         return EXIT_ERROR;
     }
 
-    while ((row = (struct list_node *)AK_get_row(i, "AK_trigger")) != NULL) {
+    while ((row = (struct list_node *)AK_get_row(trigger_index, "AK_trigger")) != NULL) {
         struct list_node *name_elem = AK_GetNth_L2(2,row);
         struct list_node *table_elem = AK_GetNth_L2(6,row);
         if (strcmp(name_elem->data, name) == 0 && table_id == (int) * table_elem->data) {
-            i = (int) * row->next->data;
+            trigger_index = (int) * row->next->data;
             AK_free(row);
 	    AK_EPI;
-            return i;
+            return trigger_index;
         }
-        i++;
+        trigger_index++;
     }
 
     AK_free(row);
@@ -504,3 +505,4 @@ TestResult AK_trigger_test() {
 
     return TEST_result(successfulTests, failedTests);
 }
+
