@@ -26,6 +26,7 @@
  */
 int AK_get_id() {
     int obj_id = 0;
+    char name = "objectID";
     int current_value;
     AK_PRO;
     struct list_node *row_root = (struct list_node *) AK_malloc(sizeof (struct list_node));
@@ -38,14 +39,17 @@ int AK_get_id() {
     int num_rec = AK_get_num_records("AK_sequence");
     
     if (num_rec > 0) {
-	// Existing row found for AK_sequence table
+	    // Existing row found for AK_sequence table
         struct list_node *row = AK_get_row(0, "AK_sequence");
         struct list_node *attribute = AK_GetNth_L2(3, row);
         memcpy(&current_value, &attribute->data, attribute->size);
         AK_DeleteAll_L3(&row);
         
         current_value++;
-        AK_Update_Existing_Element(TYPE_INT, &obj_id, "AK_sequence", "obj_id", row_root);
+        
+        //TODO: this is a temporary solution that should be fixed after the memory management is fixed
+		AK_Update_Existing_Element(TYPE_VARCHAR, &name, "AK_sequence", "name", row_root);
+        AK_Insert_New_Element(TYPE_VARCHAR, &name, "AK_sequence", "name", row_root);
         AK_Insert_New_Element(TYPE_INT, &current_value, "AK_sequence", "current_value", row_root);
         int result = AK_update_row(row_root);
         AK_DeleteAll_L3(&row_root);
@@ -57,9 +61,9 @@ int AK_get_id() {
         AK_EPI;
         return current_value;
     } else {
-	// No existing rows found for AK_sequence table, creating new row
+	    // No existing rows found for AK_sequence table, creating new row
         AK_Insert_New_Element(TYPE_INT, &obj_id, "AK_sequence", "obj_id", row_root);
-        AK_Insert_New_Element(TYPE_VARCHAR, "objectID", "AK_sequence", "name", row_root);
+        AK_Insert_New_Element(TYPE_VARCHAR, &name, "AK_sequence", "name", row_root);
         current_value = ID_START_VALUE;
         AK_Insert_New_Element(TYPE_INT, &current_value, "AK_sequence", "current_value", row_root);
         int increment = 1;
