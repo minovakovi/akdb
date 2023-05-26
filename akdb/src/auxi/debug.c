@@ -32,17 +32,19 @@ int AK_dbg_messg(DEBUG_LEVEL level, DEBUG_TYPE type, const char *format, ...) {
 	/*if (DEBUG_NONE) {
 		return 0;
 	}*/
-        AK_PRO;
+	AK_PRO;
 	
 	if ((level == 0 || type == 0 || format == NULL) && !DEBUG_ALL) {
-                AK_EPI;
+		AK_EPI;
 		return 0;
 	}
 	
 	va_list args;
 	va_start(args, format);
-	vprintf(format, args);
+	char buffer[MAX_DEBUG_MESSAGE_LENGTH];
+	vsnprintf(buffer, MAX_DEBUG_MESSAGE_LENGTH, format, args);
 	va_end(args);
-        AK_EPI;
+	printf("[%s][%s]: %s\n", debug_level_to_string(level), debug_type_to_string(type), buffer);
+	AK_EPI;
 	return 1;
 }
