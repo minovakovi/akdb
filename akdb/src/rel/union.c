@@ -18,9 +18,9 @@
  */
 
 #include "union.h"
- 
+
 /**
- * @author Dino Laktašić
+ * @author Dino Laktašić; updated by Elena Kržina
  * @brief  Function that makes a union of two tables. Union is implemented for working with multiple sets of data, i.e. duplicate 
  * 	   tuples can be written in same table (union) 
  * @param srcTable1 name of the first table
@@ -37,99 +37,45 @@ int AK_union(char *srcTable1, char *srcTable2, char *dstTable) {
     int startAddress2 = src_addr2->address_from[0];
 	
     if ((startAddress1 != 0) && (startAddress2 != 0)) {
-        register int i, j, k;
-        i = j = k = 0;
 
         AK_mem_block *tbl1_temp_block = (AK_mem_block *) AK_get_block(startAddress1);
         AK_mem_block *tbl2_temp_block = (AK_mem_block *) AK_get_block(startAddress2);
         
         int num_att = AK_check_tables_scheme(tbl1_temp_block, tbl2_temp_block, "Union");
 
-	int address, type, size;
-        char data[MAX_VARCHAR_LENGTH];
+		if (num_att == EXIT_ERROR) {
 
-	//initialize new segment
-        AK_header *header = (AK_header *) AK_malloc(num_att * sizeof (AK_header));
-        memcpy(header, tbl1_temp_block->block->header, num_att * sizeof (AK_header));
-        AK_initialize_new_segment(dstTable, SEGMENT_TYPE_TABLE, header);
-        AK_free(header);
-
-	struct list_node *row_root = (struct list_node *) AK_malloc(sizeof (struct list_node));
-		
-	//writing first block or table to new segment
-	for (i = 0; src_addr1->address_from[i] != 0; i++) {
-            startAddress1 = src_addr1->address_from[i];
-
-                //BLOCK: for each block in table1 extent
-                for (j = startAddress1; j < src_addr1->address_to[i]; j++) {
-                    tbl1_temp_block = (AK_mem_block *) AK_get_block(j); //read block from first table
-
-                    //if there is data in the block
-                    if (tbl1_temp_block->block->AK_free_space != 0) {
-
-						for (k = 0; k < DATA_BLOCK_SIZE; k++) {
-							if (tbl1_temp_block->block->tuple_dict[k].type == FREE_INT)
-								break;
-								
-							address = tbl1_temp_block->block->tuple_dict[k].address;
-							size = tbl1_temp_block->block->tuple_dict[k].size;
-							type = tbl1_temp_block->block->tuple_dict[k].type;
-
-							memset(data, '\0', MAX_VARCHAR_LENGTH);
-							memcpy(data, tbl1_temp_block->block->data + address, size);
-						
-							AK_Insert_New_Element(type, data, dstTable, tbl1_temp_block->block->header[k % num_att].att_name, row_root);
-							
-							if ((k + 1) % num_att == 0 && k != 0) {
-								AK_insert_row(row_root);
-								
-								AK_DeleteAll_L3(&row_root);
-							}
-						}
-					}
-				}
-		}
-		
-	//writing first block or table to new segment
-	for (i = 0; src_addr2->address_from[i] != 0; i++) {
-            startAddress2 = src_addr2->address_from[i];
-
-                //BLOCK: for each block in table2 extent
-                for (j = startAddress2; j < src_addr2->address_to[i]; j++) {
-                    tbl2_temp_block = (AK_mem_block *) AK_get_block(j); //read block from second table
-
-                    //if there is data in the block
-                    if (tbl2_temp_block->block->AK_free_space != 0) {
+			AK_free(src_addr1);
+			AK_free(src_addr2);
+			AK_free(tbl1_temp_block);
+			AK_free(tbl2_temp_block);
 				
-						for (k = 0; k < DATA_BLOCK_SIZE; k++) {
-							if (tbl2_temp_block->block->tuple_dict[k].type == FREE_INT)
-								break;
-						
-							address = tbl2_temp_block->block->tuple_dict[k].address;
-							size = tbl2_temp_block->block->tuple_dict[k].size;
-							type = tbl2_temp_block->block->tuple_dict[k].type;
-							
-							memset(data, '\0', MAX_VARCHAR_LENGTH);
-							memcpy(data, tbl2_temp_block->block->data + address, size);
-
-							AK_Insert_New_Element(type, data, dstTable, tbl2_temp_block->block->header[k % num_att].att_name, row_root);
-							
-							if ((k + 1) % num_att == 0) {
-								AK_insert_row(row_root);
-								
-								AK_DeleteAll_L3(&row_root);
-							}
-						}
-					}
-				}
+			AK_EPI;
+			return EXIT_ERROR;
 		}
+
+		//initialize new segment
+		AK_header *header = (AK_header *) AK_malloc(num_att * sizeof (AK_header));
+		memcpy(header, tbl1_temp_block->block->header, num_att * sizeof (AK_header));
+		AK_initialize_new_segment(dstTable, SEGMENT_TYPE_TABLE, header);
+		AK_free(header);
+
+		struct list_node *row_root = (struct list_node *) AK_malloc(sizeof (struct list_node));
+
+		AK_Write_Segments(dstTable, num_att, src_addr1, startAddress1, tbl1_temp_block, row_root);
+		AK_Write_Segments(dstTable, num_att, src_addr2, startAddress2, tbl2_temp_block,row_root);
 		
-	    AK_free(src_addr1);
-	    AK_free(src_addr2);
-	    AK_dbg_messg(LOW, REL_OP, "UNION_TEST_SUCCESS\n\n");
-	    AK_EPI;
-	    return EXIT_SUCCESS;
-	} else {
+		AK_free(src_addr1);
+		AK_free(src_addr2);
+		AK_free(tbl1_temp_block);
+		AK_free(tbl2_temp_block);
+		AK_free(row_root);
+
+		AK_dbg_messg(LOW, REL_OP, "UNION_TEST_SUCCESS\n\n");
+		AK_EPI;
+		return EXIT_SUCCESS;
+	} 
+	else {
 		AK_dbg_messg(LOW, REL_OP, "\nAK_union: Table/s doesn't exist!");
 		AK_free(src_addr1);
 		AK_free(src_addr2);
@@ -138,6 +84,62 @@ int AK_union(char *srcTable1, char *srcTable2, char *dstTable) {
 	}
 	AK_EPI;
 }
+
+/**
+ * @author Dino Laktašić edited by Elena Kržina
+ * @brief  Auxiliary function for writing blocks or tables into new segment, made by Dino Laktašić originally and separated and 
+ * edited by Elena Kržina for code transparency
+ * @param dstTable destination table of function
+ * @param num_att number of attributes of table
+ * @param src_addr1 source address
+ * @param startAddress1 starting address
+ * @param tbl1_temp_block table block that is accessed
+ * @param row_root root of linked list
+ * @return void
+ */
+void AK_Write_Segments(char *dstTable, int num_att, table_addresses *src_addr1, int startAddress1, AK_mem_block *tbl1_temp_block, struct list_node *row_root){
+	AK_PRO;
+	//registers used for faster working speed of variables
+    register int i, j, k;
+    i = j = k = 0;
+
+	int address, type, size;
+    char data[MAX_VARCHAR_LENGTH];
+
+	for (i = 0; src_addr1->address_from[i] != 0; i++) {
+            startAddress1 = src_addr1->address_from[i];
+
+            //BLOCK: for each block in table1 extent
+            for (j = startAddress1; j < src_addr1->address_to[i]; j++) {
+                tbl1_temp_block = (AK_mem_block *) AK_get_block(j); //read block from first table
+
+                //if there is data in the block
+                if (tbl1_temp_block->block->AK_free_space != 0) {
+
+					for (k = 0; k < DATA_BLOCK_SIZE; k++) {
+						if (tbl1_temp_block->block->tuple_dict[k].type == FREE_INT)
+							break;
+								
+						address = tbl1_temp_block->block->tuple_dict[k].address;
+						size = tbl1_temp_block->block->tuple_dict[k].size;
+						type = tbl1_temp_block->block->tuple_dict[k].type;
+
+						memset(data, '\0', MAX_VARCHAR_LENGTH);
+						memcpy(data, tbl1_temp_block->block->data + address, size);
+						
+						AK_Insert_New_Element(type, data, dstTable, tbl1_temp_block->block->header[k % num_att].att_name, row_root);
+							
+						if ((k + 1) % num_att == 0 && k != 0) {
+							AK_insert_row(row_root);
+							AK_DeleteAll_L3(&row_root);
+						}
+					}
+				}
+			}
+		}
+	AK_EPI;
+}
+
 
 /**
  * @author Dino Laktašić
@@ -161,3 +163,4 @@ TestResult AK_op_union_test() {
 		return TEST_result(0,1);
     }	
 }
+
