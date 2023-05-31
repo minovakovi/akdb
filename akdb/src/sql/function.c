@@ -19,6 +19,8 @@
  */
 
 #include "function.h"
+#include "api_functions.c"
+#include <math.h>
 
 /**
  * @author Unknown, updated by Jurica Hlevnjak - check function arguments included for drop purpose, updated by Tomislav Ilisevic
@@ -458,7 +460,154 @@ int AK_function_change_return_type(char *name, struct list_node *arguments_list,
 }
 
 /**
- * @author Boris Kišić, updated by Tomislav Ilisevic
+ * @author Sara Sušac
+ * @brief Function to get the current date and time.
+ * @return A string representation of the current date and time.
+ */
+char* AK_now() {
+    time_t current_time;
+    time(&current_time);
+    return ctime(&current_time);
+}
+
+/**
+ * @author Sara Sušac
+ * @brief Function to calculate the length of a string.
+ * @param str The input string.
+ * @return The length of the string.
+ */
+int AK_len(const char* str) {
+    int length = 0;
+    while (*str != '\0') {
+        length++;
+        str++;
+    }
+    return length;
+}
+
+/**
+ * @author Sara Sušac
+ * @brief Function to extract the left portion of a string.
+ * @param str The input string.
+ * @param n The number of characters to extract.
+ * @return The left portion of the string up to 'n' characters, or the original string if 'n' is greater than or equal to the length.
+ */
+char* AK_left(char* str, int n) {
+    int length = AK_len(str);
+    if (n >= length)
+        return str;
+    
+    char* result = (char*)malloc((n + 1) * sizeof(char));
+    strncpy(result, str, n);
+    result[n] = '\0';
+    return result;
+}
+
+/**
+ * @author Sara Sušac
+ * @brief Function to convert a string to lowercase.
+ * @param str The input string.
+ * @return A new string with all characters converted to lowercase.
+ */
+char* AK_lower(char* str) {
+     int length = AK_len(str);
+    char* result = (char*)malloc((length + 1) * sizeof(char));
+    for (int i = 0; i < length; i++) {
+        if (str[i] >= 'A' && str[i] <= 'Z') {
+            result[i] = str[i] + ('a' - 'A');
+        } else {
+            result[i] = str[i];
+        }
+    }
+    result[length] = '\0';
+    return result;
+}
+
+/**
+ * @author Sara Sušac
+ * @brief Function to replace occurrences of a substring in a string.
+ * @param str The input string.
+ * @param old_sub The substring to be replaced.
+ * @param new_sub The replacement substring.
+ * @return A new string with all occurrences of the old substring replaced by the new substring.
+ */
+char* AK_replace(char* str, char* old_sub, char* new_sub) {
+    int str_length = AK_len(str);
+    int old_sub_length = AK_len(old_sub);
+    int new_sub_length = AK_len(new_sub);
+    int result_length = str_length;
+    
+     // Count the number of occurrences of the old substring
+    int count = 0;
+    char* position = strstr(str, old_sub);
+    while (position != NULL) {
+        count++;
+        position = strstr(position + old_sub_length, old_sub);
+    }
+
+    // Calculate the length of the resulting string after replacements
+    result_length += (new_sub_length - old_sub_length) * count;
+    
+    // Create a new string to store the result
+    char* result = (char*)malloc((result_length + 1) * sizeof(char));
+    int result_index = 0;
+    int str_index = 0;
+
+     // Replace occurrences of the old substring with the new substring
+    while (str_index < str_length) {
+        if (strstr(&str[str_index], old_sub) == &str[str_index]) {
+            // Found an occurrence of the old substring, copy the new substring
+            strncpy(&result[result_index], new_sub, new_sub_length);
+            result_index += new_sub_length;
+            str_index += old_sub_length;
+        } else {
+            // Copy a character from the original string
+            result[result_index++] = str[str_index++];
+        }
+    }
+    // Null-terminate the result string
+    result[result_index] = '\0';
+    
+    return result;
+
+}
+
+/**
+ * @author Sara Sušac
+ * @brief Function to convert a string to uppercase.
+ * @param str The input string.
+ * @return A new string with all characters converted to uppercase.
+ */
+char* AK_upper(char* str) {
+     int length = AK_len(str);
+    char* result = (char*)malloc((length + 1) * sizeof(char));
+    for (int i = 0; i < length; i++) {
+        if (str[i] >= 'a' && str[i] <= 'z') {
+            result[i] = str[i] - ('a' - 'A');
+        } else {
+            result[i] = str[i];
+        }
+    }
+    result[length] = '\0';
+    return result;
+}
+
+/**
+ * @author Sara Sušac
+ * @brief Function to calculate the absolute value of a number.
+ * @param num The input number.
+ * @return The absolute value of the input number.
+ */
+int AK_abs(int num) {
+    if (num < 0) {
+        return -num;
+    } else {
+        return num;
+    }
+}
+
+/**
+ * @author Boris Kišić, updated by Tomislav Ilisevic, Sara Sušac
  * @brief Function for functions testing.
  * @return No return value
  */
@@ -572,8 +721,189 @@ TestResult AK_function_test()
         printf("\n\nAll tests has successfully completed!!\n\n");
     }
 
-    AK_free(arguments_list5);
+    
+    printf("\n--- SQL Operator Tests ---\n\n");
+
+    // Addition operator +
+    int int_result = 2 + 3;
+    if (int_result == 5 ){ 
+        printf("2 + 3 = %d\n", int_result);
+        success++;
+    }
+    else {
+        printf("Addition test failed!\n");
+        failed++;
+    }
+    // Subtraction operator -
+    int_result = 5 - 3;
+    if (int_result == 2){
+        printf("5 - 3 = %d\n", int_result);
+        success++;
+    }
+    else{
+        printf("Addition test failed!\n");
+        failed++;
+    }
+
+    // Multiplication operator *
+    int_result = 2 * 3;
+    if (int_result == 6){
+        printf("2 * 3 = %d\n", int_result);
+        success++;
+    }
+    else{
+        printf("Addition test failed!\n");
+        failed++;
+    }
+    /// Division operator /
+    int_result = 10 / 5;
+    if (int_result == 2){
+        printf("10 / 5 = %d\n", int_result);
+        success++;
+    }
+    else{
+        printf("Addition test failed!\n");
+        failed++;
+    }
+
+    // Modulo operator %
+    int_result = 10 % 3;
+    if (int_result == 1){
+        printf("10 %% 3 = %d\n", int_result);
+        success++;
+    }
+    else{
+        printf("Addition test failed!\n");
+        failed++;
+    }
+
+    // Exponentiation operator ^ with integral operands(XOR)
+    int_result = 2 ^ 4;
+    if (int_result == 6){
+        printf("2 ^ 4 = %d\n", int_result);
+        success++;
+    }
+    else{
+        printf("Addition test failed!\n");
+        failed++;
+    }
+
+    // Floating-point division operator / with float operands
+    float float_result = 10.0 / 4.0;
+    if (float_result == 2.5){
+        printf("10.0 / 4.0 = %.2f\n", float_result);
+        success++;
+    }
+    else{
+        printf("Addition test failed!");
+        failed++;
+    }
+
+    // Floating-point division operator / with int and float operands
+    float_result = 10 / 4.0;
+    if (float_result == 2.5){
+        printf("10 / 4 = %.2f\n", float_result);
+        success++;
+        printf("\n");
+    }
+    else{
+        printf("Addition test failed!");
+        failed++;
+    }
+
+    // AK_now - Get the current datetime
+    {
+    char* current_datetime = AK_now();
+    printf("Current datetime: %s", current_datetime);
+    success++;
+    }
+
+    // AK_len - Get the length of a string
+    {
+    char* str = "Hello, World!";
+    int length = AK_len(str);
+    if (length == 13) {
+        printf("Length of '%s': %d\n", str, length);
+        success++;
+    } else {
+        printf("AK_len test failed!\n");
+        failed++;
+    }
+    }
+
+    // AK_left - Get the left part of a string up to a specified length
+    {
+     char* str = "Hello, World!";
+    int n = 5;
+    char* left_str = AK_left(str, n);
+    if (strcmp(left_str, "Hello") == 0) {
+        printf("Left %d characters of '%s': %s\n", n, str, left_str);
+        success++;
+    } else {
+        printf("AK_left test failed!\n");
+        failed++;
+    }
+    }
+    
+
+    // AK_lower - Convert a string to lowercase
+    {
+     char* str = "Hello, World!";
+    char* lower_str = AK_lower(str);
+    if (strcmp(lower_str, "hello, world!") == 0) {
+        printf("Lowercase string of '%s': %s\n", str, lower_str);
+        success++;
+    } else {
+        printf("AK_lower test failed!\n");
+        failed++;
+    }
+    }
+
+    // AK_replace - Replace occurrences of a substring in a string
+    {
+    char* str = "Hello, World!";
+    char* old_sub = "World";
+    char* new_sub = "Universe";
+    char* replaced_str = AK_replace(str, old_sub, new_sub);
+    if (strcmp(replaced_str, "Hello, Universe!") == 0) {
+        printf("Replaced string: %s\nOld text: %s\nNew text: %s\n", replaced_str, old_sub, new_sub);
+        success++;
+    } else {
+        printf("AK_replace test failed!\n");
+        failed++;
+    }
+    }
+
+
+   // AK_upper - Convert a string to uppercase
+    {
+    char* str = "Hello, World!";
+    char* upper_str = AK_upper(str);
+    if (strcmp(upper_str, "HELLO, WORLD!") == 0) {
+        printf("Uppercase string of '%s': %s\n", str, upper_str);
+        success++;
+    } else {
+        printf("AK_upper test failed!\n");
+        failed++;
+    }
+    }
+
+   // AK_abs - Get the absolute value of a number
+    {
+     int num = -10;
+    int abs_num = AK_abs(num);
+    if (abs_num == 10) {
+        printf("Absolute value of %d: %d\n", num, abs_num);
+        success++;
+    } else {
+    printf("AK_abs test failed!\n");
+    failed++;
+    }
+    }   
+
+AK_free(arguments_list5);
     AK_EPI;
     return TEST_result(success, failed);
 }
+
 

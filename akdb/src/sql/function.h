@@ -18,14 +18,16 @@
  */
 
 #ifndef FUNCTION
+
 #define FUNCTION
+
+
 
 #include "../auxi/test.h"
 #include "../file/table.h"
 #include "../file/fileio.h"
 #include "../auxi/mempro.h"
 #include "../auxi/auxiliary.h"
-
 
 /**
  * @author Unknown, updated by Jurica Hlevnjak - check function arguments included for drop purpose, updated by Tomislav Ilisevic
@@ -121,5 +123,68 @@ int AK_function_rename(char *name, struct list_node *arguments_list, char *new_n
  */
 int AK_function_change_return_type(char *name, struct list_node *arguments_list, int new_return_type);
 TestResult AK_function_test();
+//TestResult test_AK_now();
+
+#endif
+#ifndef FUNCTION_H
+#define FUNCTION_H
+
+/**
+ * @author Sara Sušac
+ * @brief Get the current datetime.
+ * @return Current datetime as a string.
+ */
+char* AK_now();
+
+/**
+ * @author Sara Sušac
+ * @brief Get the length of a string.
+ * @param *str Input string.
+ * @return Length of the string.
+ */
+int AK_len(const char* str);
+
+/**
+ * @author Sara Sušac
+ * @brief Get the left part of a string up to a specified length.
+ * @param *str Input string.
+ * @param n Length of the left part.
+ * @return Left part of the string.
+ */
+char* AK_left(char* str, int n);
+
+/**
+ * @author Sara Sušac
+ * @brief Convert a string to lowercase.
+ * @param *str Input string.
+ * @return Lowercase string.
+ */
+char* AK_lower(char* str);
+
+/**
+ * @author Sara Sušac
+ * @brief Replace occurrences of a substring in a string.
+ * @param *str Input string.
+ * @param *old_sub Substring to be replaced.
+ * @param *new_sub Substring to replace with.
+ * @return String with replacements.
+ */
+char* AK_replace(char* str, char* old_sub, char* new_sub);
+
+/**
+ * @author Sara Sušac
+ * @brief Convert a string to uppercase.
+ * @param *str Input string.
+ * @return Uppercase string.
+ */
+char* AK_upper(char* str);
+
+/**
+ * @author Sara Sušac
+ * @brief Get the absolute value of a number.
+ * @param num Input number.
+ * @return Absolute value of the number.
+ */
+int AK_abs(int num);
 
 #endif
