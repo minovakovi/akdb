@@ -21,14 +21,15 @@
 #include "intersect.h"
 
 /**
- * @author Dino Laktašić
- * @brief  Function that makes a intersect of the two tables. Intersect is implemented for working with multiple sets of data, i.e. duplicate 
+ * @author Dino Laktašić; updated by Elena Kržina
+ * @brief  Function that makes an intersect of two tables. Intersect is implemented for working with multiple sets of data, i.e. duplicate 
           tuples can be written in same table (intersect)
  * @param srcTable1 name of the first table
  * @param srcTable2 name of the second table
  * @param dstTable name of the new table
  * @return if success returns EXIT_SUCCESS, else returns EXIT_ERROR
  */
+
 int AK_intersect(char *srcTable1, char *srcTable2, char *dstTable) {
     AK_PRO;
     table_addresses *src_addr1 = (table_addresses*) AK_get_table_addresses(srcTable1);
@@ -39,6 +40,7 @@ int AK_intersect(char *srcTable1, char *srcTable2, char *dstTable) {
 
     if ((startAddress1 != 0) && (startAddress2 != 0)) 
 	{
+		//register int used for faster processing
         register int i, j, k, l;
         i = j = k = l = 0;
 
@@ -47,9 +49,20 @@ int AK_intersect(char *srcTable1, char *srcTable2, char *dstTable) {
         
         int num_att = AK_check_tables_scheme(tbl1_temp_block, tbl2_temp_block, "Intersect");
 
+        if (num_att == EXIT_ERROR) {
+
+			AK_free(src_addr1);
+       		AK_free(src_addr2);
+			AK_free(tbl1_temp_block);
+			AK_free(tbl2_temp_block);
+			
+			AK_EPI;
+			return EXIT_ERROR;
+		}
+
         int m, n, o;
-	int address, type, size,thesame;
-	thesame=0;
+		int address, type, size,thesame;
+		thesame = 0;
 		
         char data1[MAX_VARCHAR_LENGTH];
         char data2[MAX_VARCHAR_LENGTH];
@@ -60,7 +73,7 @@ int AK_intersect(char *srcTable1, char *srcTable2, char *dstTable) {
         AK_initialize_new_segment(dstTable, SEGMENT_TYPE_TABLE, header);
         AK_free(header);
 
-	struct list_node *row_root = (struct list_node * ) AK_malloc(sizeof(struct list_node));
+		struct list_node *row_root = (struct list_node * ) AK_malloc(sizeof(struct list_node));
 
         //TABLE1: for each extent in table1
         for (i = 0; src_addr1->address_from[i] != 0; i++) 
@@ -83,7 +96,6 @@ int AK_intersect(char *srcTable1, char *srcTable2, char *dstTable) {
 
                             if (startAddress2 != 0) 
 							{
-
                                 //BLOCK: for each block in table2 extent
                                 for (l = startAddress2; l < src_addr2->address_to[k]; l++) 
 								{
@@ -92,7 +104,6 @@ int AK_intersect(char *srcTable1, char *srcTable2, char *dstTable) {
                                     //if there is data in the block
                                     if (tbl2_temp_block->block->AK_free_space != 0) 
 									{
-										
                                         //TUPLE_DICTS: for each tuple_dict in the block
                                         for (m = 0; m < DATA_BLOCK_SIZE; m += num_att) 
 										{
@@ -125,7 +136,7 @@ int AK_intersect(char *srcTable1, char *srcTable2, char *dstTable) {
 													else if(strcmp(data1, data2) == 0 && n==(num_att-1)) thesame=1;
                                                 }
 
-                                                if (thesame==1) 
+                                                if (thesame == 1) 
 												{
                                                     for (n = 0; n < num_att; n++) 
 													{
@@ -155,20 +166,24 @@ int AK_intersect(char *srcTable1, char *srcTable2, char *dstTable) {
 
         AK_free(src_addr1);
         AK_free(src_addr2);
-	AK_dbg_messg(LOW, REL_OP, "INTERSECT_TEST_SUCCESS\n\n");
+		AK_free(tbl1_temp_block);
+		AK_free(tbl2_temp_block);
+		AK_free(row_root);
 		
-	AK_free(row_root);
-	AK_EPI;
-    return EXIT_SUCCESS;
-    } 
+		AK_dbg_messg(LOW, REL_OP, "INTERSECT_TEST_SUCCESS\n\n");
+	
+		AK_EPI;
+		return EXIT_SUCCESS;
+		} 
+
 	else 
 	{
         AK_dbg_messg(LOW, REL_OP, "\nAK_intersect: Table/s doesn't exist!");
         AK_free(src_addr1);
         AK_free(src_addr2);
 		
-	AK_EPI;
-	return EXIT_ERROR;
+		AK_EPI;
+		return EXIT_ERROR;
     }
     AK_EPI;
 }
@@ -213,4 +228,5 @@ TestResult AK_op_intersect_test() {
     AK_EPI;
     return TEST_result(success,failed);
 }
+
 
