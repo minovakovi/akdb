@@ -18,7 +18,7 @@
  17 */
 
 #include "selection.h"
-
+#include "aggregation.h"
 
 /**
  * @author Matija Šestak, updated by Elena Kržina
@@ -477,4 +477,158 @@ int AK_selection_op_rename(char *srcTable, char *dstTable, struct list_node *exp
 	AK_EPI;
 	return EXIT_SUCCESS;
 }
+
+/* @author Marin Bogešić
+* @brief Added new functions for HAVING SQL command function
+*/
+ExprNode* AK_create_expr_node() {
+    ExprNode* newNode = (ExprNode*)malloc(sizeof(ExprNode));
+    newNode->next = NULL;
+    return newNode;
+}
+
+// Function to append a new attribute to the expression node
+void AK_append_attribute(ExprNode* exprNode, char* attribute, char* op, char* value) {
+    while (exprNode->next != NULL) {
+        exprNode = exprNode->next;
+    }
+    ExprNode* newAttribute = AK_create_expr_node();
+    strncpy(newAttribute->attribute, attribute, MAX_ATT_NAME);
+    strncpy(newAttribute->op, op, MAX_OP_NAME);
+    strncpy(newAttribute->value, value, MAX_VARCHAR_LENGTH);
+    exprNode->next = newAttribute;
+}
+
+// Function to free the expression node and its linked list
+void AK_free_expr_node(ExprNode* exprNode) {
+    if (exprNode == NULL) {
+        return;
+    }
+    AK_free_expr_node(exprNode->next);
+    free(exprNode);
+}
+
+/*@author: Marin Bogešić
+* @brief: HAVING SQL command function and its test (below)
+*/
+int AK_selection_having(char *srcTable, char *dstTable, struct list_node *expr, struct list_node *havingExpr)
+{
+	AK_PRO;
+	AK_header *t_header = (AK_header *)AK_get_header(srcTable);
+	int num_attr = AK_num_attr(srcTable);
+
+	AK_add_to_redolog_select(SELECT, expr, srcTable);
+	AK_check_redo_log_select(SELECT, expr, srcTable);
+
+	int startAddress = AK_initialize_new_segment(dstTable, SEGMENT_TYPE_TABLE, t_header);
+
+	if (startAddress == EXIT_ERROR)
+	{
+		AK_free(t_header);
+		AK_EPI;
+		return EXIT_ERROR;
+	}
+
+	AK_dbg_messg(LOW, REL_OP, "\nTable %s created from %s.\n", dstTable, srcTable);
+
+	table_addresses *src_addr = (table_addresses *)AK_get_table_addresses(srcTable);
+	struct list_node *row_root = (struct list_node *)AK_malloc(sizeof(struct list_node));
+	AK_Init_L3(&row_root);
+
+	int type, size, address;
+	char data[MAX_VARCHAR_LENGTH];
+	/* Code steps through all addresses of the table, gets the block of each current address, counts the number of attributes,
+	   fetches values for each attribute and inserts data into the destination table if the row satisfies the given expression */
+	for (int i = 0; src_addr->address_from[i] != 0; i++)
+	{
+		for (int j = src_addr->address_from[i]; j < src_addr->address_to[i]; j++)
+		{
+			AK_mem_block *temp = (AK_mem_block *)AK_get_block(j);
+
+			if (temp->block->last_tuple_dict_id != 0)
+			{
+				for (int k = 0; k < DATA_BLOCK_SIZE && !(temp->block->tuple_dict[k].type == FREE_INT); k += num_attr)
+				{
+					for (int l = 0; l < num_attr; l++)
+					{
+						type = temp->block->tuple_dict[k + l].type;
+						size = temp->block->tuple_dict[k + l].size;
+						address = temp->block->tuple_dict[k + l].address;
+						memcpy(data, &(temp->block->data[address]), size);
+						data[size] = '\0';
+						AK_Insert_New_Element(type, data, dstTable, t_header[l].att_name, row_root);
+					}
+
+					// Check if the row satisfies the WHERE expression
+					if (AK_check_if_row_satisfies_expression(row_root, expr))
+					{
+						// Evaluate the HAVING condition
+						if (AK_check_if_row_satisfies_expression(row_root, havingExpr))
+						{
+							AK_insert_row(row_root);
+						}
+					}
+
+					AK_DeleteAll_L3(&row_root);
+				}
+			}
+		}
+	}
+
+	AK_free(src_addr);
+	AK_free(t_header);
+	AK_DeleteAll_L3(&row_root);
+	AK_free(row_root);
+
+	AK_print_table(dstTable);
+
+	AK_dbg_messg(LOW, REL_OP, "\nSelection test success.\n\n");
+	AK_EPI;
+	return EXIT_SUCCESS;
+}
+
+TestResult AK_selection_having_test() {
+    // Test variables
+    int successful = 0;
+    int failed = 0;
+
+    // Source table and destination table names
+    char srcTable[] = "source_table";
+    char dstTable[] = "dst_table";
+
+    // Create the WHERE expression
+    ExprNode* whereExpr = AK_create_expr_node();
+    strncpy(whereExpr->attribute, "attribute1", MAX_ATT_NAME);
+    strncpy(whereExpr->op, AK_OP_EQUAL, MAX_OP_NAME);
+    strncpy(whereExpr->value, "value1", MAX_VARCHAR_LENGTH);
+    AK_append_attribute(whereExpr, "attribute2", AK_OP_GREATER, "value2");
+
+    // Create the HAVING expression
+    ExprNode* havingExpr = AK_create_expr_node();
+    strncpy(havingExpr->attribute, "COUNT", MAX_ATT_NAME);
+    strncpy(havingExpr->op, AK_OP_GREATER, MAX_OP_NAME);
+    strncpy(havingExpr->value, "1", MAX_VARCHAR_LENGTH);
+
+    // Call the AK_selection function
+    int result = AK_selection_having(srcTable, dstTable, whereExpr, havingExpr);
+
+    // Check the result and update test statistics
+    if (result == EXIT_SUCCESS) {
+        successful++;
+        printf("Selection with HAVING test successful.\n");
+    } else {
+        failed++;
+        printf("Selection with HAVING test failed.\n");
+    }
+
+    // Clean up
+    AK_free_expr_node(whereExpr);
+    AK_free_expr_node(havingExpr);
+
+    // Return the test results
+    return TEST_result(successful, failed);
+}
+
+
+
 
