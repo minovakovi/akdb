@@ -746,7 +746,7 @@ int32_t AK_debmod_func_add(AK_debmod_state* ds, const char *func_name){
 }
 
 /**
-* @author Marin Rukavina, Mislav Bozicevic
+* @author Marin Rukavina, Mislav Bozicevic, updated by Andrej Hrebak Pajk
 * @param ds debug mode state
 * @param func_id function id
 * @brief Push function id on stack [private function]
@@ -754,7 +754,13 @@ int32_t AK_debmod_func_add(AK_debmod_state* ds, const char *func_name){
 */
 void AK_debmod_fstack_push(AK_debmod_state* ds, int32_t func_id){
     assert(ds != NULL && ds->init == 1);
-    assert(ds->fstack_size < AK_DEBMOD_STACKSIZE); /* stack overflow */
+    
+    if (ds->fstack_size >= AK_DEBMOD_STACKSIZE) {
+        // Handle stack overflow gracefully
+        printf("Stack overflow!\n");
+        return;
+    }
+
     ds->fstack_items[ds->fstack_size++] = func_id;
 }
 
