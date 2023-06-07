@@ -46,7 +46,7 @@ int AK_dbg_messg(DEBUG_LEVEL level, DEBUG_TYPE type, const char *format, ...) {
 	va_end(args);
 	//Dodana opcionalna logika za ispis razine i tipa debuga.
 	//printf("[%s][%s]: %s\n", debug_level_to_string(level), debug_type_to_string(type), buffer);
-		AK_EPI;
-	AK_EPI;
+
+	    AK_EPI;
 	return 1;
 }
