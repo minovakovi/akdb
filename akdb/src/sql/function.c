@@ -1,22 +1,22 @@
-/**
-@file function.c Provides functions for functions
- */
 /*
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Library General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * 
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor Boston, MA 02110-1301,  USA
- */
+This program is free software; you can redistribute it and/or
+modify it under the terms of the GNU General Public License
+as published by the Free Software Foundation; either version 2
+of the License, or (at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program; if not, write to the Free Software
+Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+*/
+
+/**
+ @file function.c Provides functions for functions
+*/
 
 #include "function.h"
 #include "api_functions.c"
@@ -236,55 +236,26 @@ int AK_function_arguments_add(int function_id, int arg_number, int arg_type, cha
 
     struct list_node *row_root = (struct list_node *)AK_malloc(sizeof(struct list_node));
     AK_Init_L3(&row_root);
-    char *arg_type_name;
-    switch (arg_type)
-    {
-    case 0:
-        arg_type_name = "internal";
-        break;
-    case 1:
-        arg_type_name = "int";
-        break;
-    case 2:
-        arg_type_name = "float";
-        break;
-    case 3:
-        arg_type_name = "number";
-        break;
-    case 4:
-        arg_type_name = "varchar";
-        break;
-    case 5:
-        arg_type_name = "date";
-        break;
-    case 6:
-        arg_type_name = "datetime";
-        break;
-    case 7:
-        arg_type_name = "time";
-        break;
-    case 8:
-        arg_type_name = "blob";
-        break;
-    case 9:
-        arg_type_name = "bool";
-        break;
-    case 10:
-        arg_type_name = "operand";
-        break;
-    case 11:
-        arg_type_name = "operator";
-        break;
-    case 12:
-        arg_type_name = "attribs";
-        break;
-    case 13:
-        arg_type_name = "condition";
-        break;
-    default:
-        arg_type_name = "unknown";
-        break;
-    }
+    //char *arg_type_name;
+   const char* arg_type_names[] = {
+    "internal",
+    "int",
+    "float",
+    "number",
+    "varchar",
+    "date",
+    "datetime",
+    "time",
+    "blob",
+    "bool",
+    "operand",
+    "operator",
+    "attribs",
+    "condition"
+ };
+
+const char* arg_type_name = (arg_type >= 0 && arg_type < 14) ? arg_type_names[arg_type] : "unknown";
+
     AK_Insert_New_Element(TYPE_INT, &function_id, "AK_function_arguments", "func_id", row_root);
     AK_Insert_New_Element(TYPE_INT, &arg_number, "AK_function_arguments", "att_num", row_root);
     AK_Insert_New_Element(TYPE_VARCHAR, arg_type_name, "AK_function_arguments", "att_type", row_root);
@@ -319,7 +290,6 @@ int AK_function_remove_by_obj_id(int obj_id, int num_args)
         return EXIT_ERROR;
     }
 
-    
     //delete function arguments
     AK_DeleteAll_L3(&row_root);
     if(num_args>0){
@@ -904,6 +874,4 @@ TestResult AK_function_test()
 AK_free(arguments_list5);
     AK_EPI;
     return TEST_result(success, failed);
-}
-
 
