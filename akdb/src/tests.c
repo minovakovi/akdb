@@ -114,7 +114,7 @@ Test tests[] = {
 {"rel: AK_op_join", &AK_op_join_test}, // rel/nat_join.c
 {"rel: AK_op_product", &AK_op_product_test}, //rel/product.c
 {"rel: AK_aggregation", &AK_aggregation_test}, //rel/aggregation.c
-{"rel: AK_GroupBy", &test_groupBy}, //MARIN BOGEŠIĆ TEST
+{"rel: AK_group_by", &test_groupBy}, //MARIN BOGESIC TEST
 {"rel: AK_selection_having", &AK_selection_having_test},
 {"rel: AK_op_intersect", &AK_op_intersect_test}, //rel/intersect.c
 {"rel: AK_op_selection", &AK_op_selection_test}, //rel/selection.c
