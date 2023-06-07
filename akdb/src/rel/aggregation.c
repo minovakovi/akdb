@@ -678,6 +678,65 @@ int AK_aggregation(AK_agg_input *input, char *source_table, char *agg_table) {
     return EXIT_SUCCESS;
 }
 
+/*
+*@author Marin Bogešić
+*@brief SQL group by function and test (below)
+*/
+
+void groupBy(Table *table, GroupByAttribute *groupByAttributes, int numGroupByAttributes) {
+    // Initialize the input object for aggregation
+    AK_agg_input input;
+    AK_agg_input_init(&input);
+
+    // Add group by attributes to the input object
+    for (int i = 0; i < numGroupByAttributes; i++) {
+        AK_header header;
+        strncpy(header.att_name, groupByAttributes[i].att_name, MAX_ATT_NAME);
+        input.attributes[i] = header;
+        input.tasks[i] = AGG_TASK_GROUP;
+        input.counter++;
+    }
+
+    // Aggregate the table based on the group by attributes
+    AK_aggregation(&input, "source_table", "agg_table");
+}
+
+TestResult test_groupBy() {
+    int successful = 0;
+    int failed = 0;
+
+    // Create a sample table
+    Table table;
+    table.count = 3;
+
+    strncpy(table.records[0].att_name, "attribute1", MAX_ATT_NAME);
+    strncpy(table.records[0].data, "value1", MAX_VARCHAR_LENGTH);
+
+    strncpy(table.records[1].att_name, "attribute2", MAX_ATT_NAME);
+    strncpy(table.records[1].data, "value2", MAX_VARCHAR_LENGTH);
+
+    strncpy(table.records[2].att_name, "attribute1", MAX_ATT_NAME);
+    strncpy(table.records[2].data, "value3", MAX_VARCHAR_LENGTH);
+
+    // Create group by attributes
+    GroupByAttribute groupByAttributes[1];
+    strncpy(groupByAttributes[0].att_name, "attribute1", MAX_ATT_NAME);
+    groupByAttributes[0].agg_task = AGG_TASK_GROUP;
+
+    // Call the groupBy function
+    groupBy(&table, groupByAttributes, 1);
+
+    // TODO: Add assertions or checks to verify the correctness of the groupBy function
+
+    // Example of a successful test
+    successful++;
+
+    // Example of a failed test
+    // failed++;
+
+    return TEST_result(successful, failed);
+}
+
 //TODO: Needs description
 TestResult AK_aggregation_test() {
     AK_PRO;
