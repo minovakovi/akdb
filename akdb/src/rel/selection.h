@@ -41,5 +41,8 @@ int AK_selection(char *srcTable, char *dstTable, struct list_node *expr);
 TestResult AK_op_selection_test();
 TestResult AK_op_selection_test_pattern();
 
+int AK_selection_having(char *srcTable, char *dstTable, struct list_node *expr, struct list_node *havingExpr);
+TestResult AK_selection_having_test();
+
 #endif
 

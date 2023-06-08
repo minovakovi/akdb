@@ -1657,6 +1657,39 @@ TestResult AK_table_test()
         failedTests += !testConditions[i];
     }
 
+    char *table_name = "table_c_create_table_test";
+
+    printf("\nTable \"%s\":AK_create_table\n", table_name);
+
+    AK_create_table_parameter *params = (AK_create_table_parameter *)AK_malloc(2 * sizeof(AK_create_table_parameter *));
+
+    params[0] = *(AK_create_create_table_parameter(TYPE_INT, "ID"));
+    params[1] = *(AK_create_create_table_parameter(TYPE_VARCHAR, "Name"));
+
+    AK_create_table(table_name, params, 2);
+
+    if (AK_table_exist(table_name))
+    {
+        successfulTests++;
+    }
+    else
+    {
+        printf("Table \"%s\" doesn't exists.", table_name);
+        failedTests++;
+    }
+
+    if (AK_num_attr("table_c_create_table_test") == 2)
+    {
+        successfulTests++;
+    }
+    else
+    {
+        printf("Table \"%s\" should have 2 attributes.", table_name);
+        failedTests++;
+    }
+
+    AK_free(params);
+
     AK_EPI;
     return TEST_result(successfulTests, failedTests);
 }
