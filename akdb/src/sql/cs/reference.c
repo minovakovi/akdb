@@ -58,6 +58,15 @@ int AK_add_reference(char *childTable, char *childAttNames[], char *parentTable,
     AK_EPI;
     return EXIT_SUCCESS;
 }
+struct list_node* AK_get_nth_next(struct list_node* node, int n) {
+    for (int i = 0; i < n; i++) {
+        if (node == NULL) {
+            return NULL;
+        }
+        node = node->next;
+    }
+    return node;
+}
 
 /**
  * @author Dejan Frankovic
@@ -75,14 +84,14 @@ AK_ref_item AK_get_reference(char *tableName, char *constraintName) {
     reference.attributes_number = 0;
 
     while ((list = AK_get_row(i, "AK_reference")) != NULL) {
-        if (strcmp(list->next->data, tableName) == 0 &&
-                strcmp(list->next->next->data, constraintName) == 0) {
-            strcpy(reference.table, tableName);
-            strcpy(reference.constraint, constraintName);
-            strcpy(reference.attributes[reference.attributes_number], list->next->next->next->data);
-            strcpy(reference.parent, list->next->next->next->next->data);
-            strcpy(reference.parent_attributes[reference.attributes_number], list->next->next->next->next->next->data);
-            memcpy(&reference.type, list->next->next->next->next->next->next->data, sizeof (int));
+        if (strncmp(AK_get_nth_next(list->next, 1)->data, tableName) == 0 &&
+                strcmp(AK_get_nth_next(list->next, 2)->data, constraintName) == 0) {
+            strncpy(reference.table, tableName);
+            strncpy(reference.constraint, constraintName);
+            strncpy(reference.attributes[reference.attributes_number], AK_get_nth_next(list->next, 3)->data);
+            strncpy(reference.parent, AK_get_nth_next(list->next, 4)->data);
+            strncpy(reference.parent_attributes[reference.attributes_number], AK_get_nth_next(list->next, 5)->data);
+            memmove(&reference.type, AK_get_nth_next(list->next, 6)->data, sizeof(int));
             reference.attributes_number++;
         }
         i++;
@@ -90,6 +99,7 @@ AK_ref_item AK_get_reference(char *tableName, char *constraintName) {
     AK_EPI;
     return reference;
 }
+
 
 /**
  * @author Dejan Frankovic
@@ -100,29 +110,30 @@ AK_ref_item AK_get_reference(char *tableName, char *constraintName) {
  * @return EXIT ERROR if check failed, EXIT_SUCCESS if referential integrity is ok
  */
 int AK_reference_check_attribute(char *tableName, char *attribute, char *value) {
-    int i;
+    int i = 0;
     int att_index;
 
     struct list_node *list_row, *list_col;
     AK_PRO;
     while ((list_row = AK_get_row(i, "AK_reference")) != NULL) {
-        if (strcmp(list_row->next->data, tableName) == 0 &&
-                strcmp(list_row->next->next->next->data, attribute) == 0) {
-            att_index = AK_get_attr_index(list_row->next->next->next->next->data, list_row->next->next->next->next->next->data);
-            list_col = AK_get_column(att_index, list_row->next->next->next->next->data);
-            while (strcmp(list_col->data, value) != 0) {
+        if (strncmp(list_row->next->data, tableName) == 0 &&
+                strncmp(AK_get_nth_next(list_row->next, 2)->data, attribute) == 0) {
+            att_index = AK_get_attr_index(AK_get_nth_next(list_row->next, 3)->data, AK_get_nth_next(list_row->next, 4)->data);
+            list_col = AK_get_column(att_index, AK_get_nth_next(list_row->next, 4)->data);
+            while (list_col != NULL) {
+                if (strncmp(list_col->data, value) == 0) {
+                    AK_EPI;
+                    return EXIT_SUCCESS;
+                }
                 list_col = list_col->next;
-                if (list_col == NULL){
-		    AK_EPI;
-                    return EXIT_ERROR;
-		}
             }
         }
         i++;
     }
     AK_EPI;
-    return EXIT_SUCCESS;
+    return EXIT_ERROR;
 }
+
 
 /**
  * @author Dejan Frankovic
@@ -133,25 +144,23 @@ int AK_reference_check_attribute(char *tableName, char *attribute, char *value) 
  */
 
 int AK_reference_check_if_update_needed(struct list_node *lista, int action) {
-
     struct list_node *temp;
     int i = 0;
 
     struct list_node *row;
     AK_PRO;
     while ((row = AK_get_row(i, "AK_reference")) != NULL) {
-        if (strcmp(row->next->next->next->next->data, lista->next->table) == 0) {
-	    temp = AK_First_L2(lista);
+        if (strncmp(AK_get_nth_next(row->next, 3)->data, lista->next->table) == 0) {
+            temp = AK_First_L2(lista);
             while (temp != NULL) {
-                if (action == UPDATE && temp->constraint == 0 && strcmp(row->next->next->next->next->next->data, temp->attribute_name) == 0){
-		    AK_EPI;
+                if (action == UPDATE && temp->constraint == 0 && strncmp(AK_get_nth_next(row->next, 4)->data, temp->attribute_name) == 0) {
+                    AK_EPI;
                     return EXIT_SUCCESS;
-		}
-                else if (action == DELETE && strcmp(row->next->next->next->next->next->data, temp->attribute_name) == 0){
-		    AK_EPI;
+                } else if (action == DELETE && strncmp(AK_get_nth_next(row->next, 4)->data, temp->attribute_name) == 0) {
+                    AK_EPI;
                     return EXIT_SUCCESS;
-		}
-		temp = AK_Next_L2(temp);
+                }
+                temp = AK_Next_L2(temp);
             }
         }
         i++;
@@ -159,6 +168,7 @@ int AK_reference_check_if_update_needed(struct list_node *lista, int action) {
     AK_EPI;
     return EXIT_ERROR;
 }
+
 
 /**
  * @author Dejan Franković
@@ -168,26 +178,25 @@ int AK_reference_check_if_update_needed(struct list_node *lista, int action) {
  * @return EXIT_SUCCESS if there is no restriction on this action, EXIT_ERROR if there is
  */
 
-int AK_reference_check_restricion(struct list_node *lista, int action) {    
+int AK_reference_check_restricion(struct list_node *lista, int action) {
     int i = 0;
 
     struct list_node *temp;
     struct list_node *row;
     AK_PRO;
     while ((row = AK_get_row(i, "AK_reference")) != NULL) {
-        if (strcmp(row->next->next->next->next->data, lista->next->table) == 0) {
-
-	    temp = AK_First_L2(lista);
+        if (strncmp(AK_get_nth_next(row->next, 3)->data, lista->next->table) == 0) {
+            temp = AK_First_L2(lista);
             while (temp != NULL) {
-                if (action == UPDATE && temp->constraint == 0 && memcmp(row->next->next->next->next->next->data, temp->attribute_name, row->next->next->next->next->next->size) == 0 && (int) * row->next->next->next->next->next->next->data == REF_TYPE_RESTRICT){
-		    AK_EPI;
+                if (action == UPDATE && temp->constraint == 0 && memcmp(AK_get_nth_next(row->next, 4)->data, temp->attribute_name, AK_get_nth_next(row->next, 4)->size) == 0 && (int)*AK_get_nth_next(row->next, 6)->data == REF_TYPE_RESTRICT) {
+                    AK_EPI;
                     return EXIT_ERROR;
-		}
-                else if (action == DELETE && memcmp(row->next->next->next->next->next->data, temp->attribute_name, row->next->next->next->next->next->size) == 0 && (int) * row->next->next->next->next->next->next->data == REF_TYPE_RESTRICT){
-		    AK_EPI;
+                }
+                else if (action == DELETE && memcmp(AK_get_nth_next(row->next, 4)->data, temp->attribute_name, AK_get_nth_next(row->next, 4)->size) == 0 && (int)*AK_get_nth_next(row->next, 6)->data == REF_TYPE_RESTRICT) {
+                    AK_EPI;
                     return EXIT_ERROR;
-		}
-		temp = AK_Next_L2(temp);
+                }
+                temp = AK_Next_L2(temp);
             }
         }
         i++;
@@ -196,6 +205,7 @@ int AK_reference_check_restricion(struct list_node *lista, int action) {
     AK_EPI;
     return EXIT_SUCCESS;
 }
+
 
 /**
  * @author Dejan Franković
@@ -219,24 +229,25 @@ int AK_reference_update(struct list_node *lista, int action) {
     char tempData[MAX_VARCHAR_LENGTH];
     AK_PRO;
 
-    struct list_node *row_root = (struct list_node *) AK_malloc(sizeof (struct list_node));
+    struct list_node *row_root = (struct list_node *)AK_malloc(sizeof(struct list_node));
     AK_Init_L3(&row_root);
 
     while ((ref_row = AK_get_row(ref_i, "AK_reference")) != NULL) {
-        if (strcmp(ref_row->next->next->next->next->data, lista->next->table) == 0) { // we're searching for PARENT table here
+        if (strncmp(AK_get_nth_next(ref_row->next, 4)->data, lista->next->table) == 0) { // we're searching for PARENT table here
             for (j = 0; j < con_num; j++) {
-                if (strcmp(constraints[j], ref_row->next->next->data) == 0 && strcmp(child_tables[j], ref_row->next->data) == 0) {
+                if (strncmp(constraints[j], AK_get_nth_next(ref_row->next, 3)->data) == 0 && strncmp(child_tables[j], ref_row->next->data) == 0) {
                     break;
                 }
             }
             if (j == con_num) {
-                strcpy(constraints[con_num], ref_row->next->next->data);
-                strcpy(child_tables[con_num], ref_row->next->data);
+                strncpy(constraints[con_num], AK_get_nth_next(ref_row->next, 3)->data);
+                strncpy(child_tables[con_num], ref_row->next->data);
                 con_num++;
             }
         }
         ref_i++;
     }
+
 
     struct list_node *expr;
     AK_Init_L3(&expr);
@@ -279,7 +290,7 @@ int AK_reference_update(struct list_node *lista, int action) {
             for (j = 0; j < reference.attributes_number; j++) {
 		 tempcell = AK_GetNth_L2(AK_get_attr_index(reference.parent, reference.parent_attributes[j]), parent_row); // from the row of parent table, take the value of attribute with name from parent_attribute
 	      
-                memcpy(tempData, tempcell->data, tempcell->size);
+                memmove(tempData, tempcell->data, tempcell->size);
                 tempData[tempcell->size] = '\0';
 
                 AK_Update_Existing_Element(tempcell->type, tempData, reference.table, reference.attributes[j], row_root);
@@ -290,8 +301,8 @@ int AK_reference_update(struct list_node *lista, int action) {
                             
 			    temp = AK_First_L2(lista);
                             while (temp != NULL) {
-                                if (strcmp(temp->attribute_name, reference.parent_attributes[j]) == 0 && temp->constraint == 0) {
-                                    memcpy(tempData, tempcell->data, tempcell->size);
+                                if (strncmp(temp->attribute_name, reference.parent_attributes[j]) == 0 && temp->constraint == 0) {
+                                    memmove(tempData, tempcell->data, tempcell->size);
                                     //tempData[tempcell->size] == '\0';
                                     AK_Insert_New_Element(tempcell->type, tempData, reference.table, reference.attributes[j], row_root);
                                     break;
@@ -313,7 +324,7 @@ int AK_reference_update(struct list_node *lista, int action) {
 
 			  temp = AK_First_L2(lista);
                             while (temp != NULL) {
-                                if (strcmp(temp->attribute_name, reference.parent_attributes[j]) == 0 && temp->constraint == 0) {
+                                if (strncmp(temp->attribute_name, reference.parent_attributes[j]) == 0 && temp->constraint == 0) {
                                     AK_Insert_New_Element(0, "", reference.table, reference.attributes[j], row_root);
                                     break;
                                 }
@@ -371,18 +382,18 @@ int AK_reference_check_entry(struct list_node *lista) {
 
     while ((row = AK_get_row(i, "AK_reference")) != NULL) 
 	{
-        if (strcmp(row->next->data, lista->next->table) == 0) 
+        if (strncmp(row->next->data, lista->next->table) == 0) 
 		{
             for (j = 0; j < con_num; j++) 
 			{
-                if (strcmp(constraints[j], row->next->next->data) == 0) 
+                if (strncmp(constraints[j], row->next->next->data) == 0) 
 				{
                     break;
                 }
             }
             if (j == con_num) 
 			{
-                strcpy(constraints[con_num], row->next->next->data);
+                strncpy(constraints[con_num], row->next->next->data);
                 con_num++;
             }
         }
@@ -404,9 +415,9 @@ int AK_reference_check_entry(struct list_node *lista) {
             temp = lista->next;
             while (temp != NULL) {
 
-                if (temp->constraint == 0 && strcmp(temp->attribute_name, reference.attributes[j]) == 0) {
-                    strcpy(attributes[j], temp->data);
-                    if (reference.type == REF_TYPE_SET_NULL && strcmp(temp->data, "\0") == 0) //if type is 0, the value is PROBABLY null
+                if (temp->constraint == 0 && strncmp(temp->attribute_name, reference.attributes[j]) == 0) {
+                    strncpy(attributes[j], temp->data);
+                    if (reference.type == REF_TYPE_SET_NULL && strncmp(temp->data, "\0") == 0) //if type is 0, the value is PROBABLY null
                         is_att_null[j] = 1;
                     else
                         is_att_null[j] = 0;
@@ -431,7 +442,7 @@ int AK_reference_check_entry(struct list_node *lista) {
             for (k = 0; k < reference.attributes_number; k++) { // attributes in reference
 		temp1 = AK_GetNth_L2(AK_get_attr_index(reference.parent, reference.parent_attributes[k]), row);
                 if (temp1 != 0x0) {
-                  if (is_att_null[k] || strcmp(temp1->data, attributes[k]) != 0) {
+                  if (is_att_null[k] || strncmp(temp1->data, attributes[k]) != 0) {
                       success = 0;
                       break;
                   }
@@ -472,17 +483,17 @@ TestResult AK_reference_test() {
     int a;
 
     char *att[2];
-    att[0] = AK_malloc(sizeof (char) *20);
-    strcpy(att[0], "FK");
-    att[1] = AK_malloc(sizeof (char) *20);
-    strcpy(att[1], "Value");
+    att[0] = AK_malloc(sizeof (char) *3);
+    strncpy(att[0], "FK");
+    att[1] = AK_malloc(sizeof (char) *6);
+    strncpy(att[1], "Value",5);
 
 
     char *patt[2];
-    patt[0] = AK_malloc(sizeof (char) *20);
-    strcpy(patt[0], "mbr");
-    patt[1] = AK_malloc(sizeof (char) *20);
-    strcpy(patt[1], "firstname");
+    patt[0] = AK_malloc(sizeof (char) *4);
+    strncpy(patt[0], "mbr",3);
+    patt[1] = AK_malloc(sizeof (char) *10);
+    strncpy(patt[1], "firstname",9);
 
     AK_add_reference("ref_test", att, "student", patt, 2, "constraint", REF_TYPE_SET_NULL);
     AK_print_table("AK_reference");
