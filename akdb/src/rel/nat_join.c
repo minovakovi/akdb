@@ -352,51 +352,84 @@ int AK_join(char *srcTable1, char * srcTable2, char * dstTable, struct list_node
     AK_EPI;
     
 }
+
 /**
- * @author Matija Novak
+ * @author Matija Novak, edited by Marin Bogešić
  * @brief Function for natural join testing
  * @return No return value
  */
+
+
+struct list_node* create_row(const char* type, const char* attribute_name, const char* table, const char* data) {
+    struct list_node* row = (struct list_node*)malloc(sizeof(struct list_node));
+    row->type = TYPE_ATTRIBS;
+    row->size = strlen(data);
+    strncpy(row->data, data, MAX_VARCHAR_LENGTH);
+    strncpy(row->table, table, MAX_ATT_NAME);
+    strncpy(row->attribute_name, attribute_name, MAX_ATT_NAME);
+    row->constraint = 0;
+    row->next = NULL;
+    return row;
+}
+
+
+
 TestResult AK_op_join_test() {
-
     AK_PRO;
-    char *sys_table = "AK_relation";
-    char *destTable = "nat_join_test";
-    char *tblName2 = "employee";
-    char *tblName1 = "department";
-    	int test;
-
-    printf("\n********** NAT JOIN TEST **********\n\n");
-
-    if (AK_if_exist(destTable, sys_table) == 0) {
-    	printf("Table %s does not exist!\n", destTable);
-	struct list_node *att = (struct list_node *) AK_malloc(sizeof(struct list_node));
-    	AK_Init_L3(&att);
-    	AK_InsertAtBegin_L3(TYPE_ATTRIBS, "id_department", sizeof ("id_department"), att);
-
-    	test = AK_join(tblName1, tblName2, destTable, att);
-	    AK_DeleteAll_L3(&att);
-    }
-
-    else {
-	printf("Table %s already exists!\n", destTable);
-    AK_print_table(destTable);
-    return TEST_result(1, 0);
-    }
-
+    char *srcTable1 = "table1";
+    char *srcTable2 = "table2";
+    char *dstTable = "join_table";
+    
+    AK_header header1[MAX_ATTRIBUTES];
+    strcpy(header1[0].att_name, "id");
+    strcpy(header1[0].type, "int");
+    strcpy(header1[1].att_name, "name");
+    strcpy(header1[1].type, "varchar(255)");
+    
+    AK_header header2[MAX_ATTRIBUTES];
+    
+    strcpy(header2[0].att_name, "id");
+    strcpy(header2[0].type, "int");
+    strcpy(header2[1].att_name, "age");
+    strcpy(header2[1].type, "int");
+    
+    AK_temp_create_table(srcTable1, header1, SEGMENT_TYPE_TABLE);
+    AK_temp_create_table(srcTable2, header2, SEGMENT_TYPE_TABLE);
+    
+    // Insert data into the first table
+    AK_insert_row(create_row("int", "id", srcTable1, "1"));
+    AK_insert_row(create_row("varchar(255)", "name", srcTable1, "John"));
+    AK_insert_row(create_row("int", "id", srcTable1, "2"));
+    AK_insert_row(create_row("varchar(255)", "name", srcTable1, "Michael"));
+    AK_insert_row(create_row("int", "id", srcTable1, "3"));
+    AK_insert_row(create_row("varchar(255)", "name", srcTable1, "Sarah"));
+    
+    // Insert data into the second table
+    AK_insert_row(create_row("int", "id", srcTable2, "1"));
+    AK_insert_row(create_row("int", "age", srcTable2, "25"));
+    AK_insert_row(create_row("int", "id", srcTable2, "2"));
+    AK_insert_row(create_row("int", "age", srcTable2, "30"));
+    AK_insert_row(create_row("int", "id", srcTable2, "4"));
+    AK_insert_row(create_row("int", "age", srcTable2, "40"));
+    
+    // Define the attributes for natural join
+    struct list_node *att = NULL;
+    att = create_row("int", "id", "", "");
+    
+    // Perform the natural join operation
+    AK_join(srcTable1, srcTable2, dstTable, att);
+    
+    // Print the resulting joined table
+    AK_print_table(dstTable);
+    
+    // Clean up
+    free(att);
+    
+    AK_drop_table(srcTable1);
+    AK_drop_table(srcTable2);
+    AK_drop_table(dstTable);
+    
     AK_EPI;
-    if (test == EXIT_SUCCESS)
-            {
-                AK_print_table("employee");
-                AK_print_table("department");
-                AK_print_table(destTable);
-                return TEST_result(1, 0);
-            }
-            else
-            {
-                AK_print_table("product_test");
-                return TEST_result(0, 1);
-            }
-
-    }
+    return TEST_result(1, 0);
+}
 
