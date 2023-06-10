@@ -268,7 +268,10 @@ int AK_aggregation(AK_agg_input *input, char *source_table, char *agg_table) {
 							if (strcmp(needed_values[m].att_name, temp->header[l].att_name) == 0) {
 								switch (needed_values[m].agg_task) {
 									case AGG_TASK_COUNT:
-										//no break is intentional
+										 counter++;
+										 memcpy(needed_values[m].data, &counter, sizeof(int));
+										 needed_values[m].data[sizeof(int)] = '\0';
+										 break;
 									case AGG_TASK_AVG_COUNT:
 										memcpy(needed_values[m].data, &counter, sizeof(int));
 										needed_values[m].data[sizeof(int)] = '\0';
@@ -321,7 +324,28 @@ int AK_aggregation(AK_agg_input *input, char *source_table, char *agg_table) {
 										break;
 
 									case AGG_TASK_SUM:
-										//no break is intentional
+										switch (agg_head[m].type)
+										{
+										case TYPE_INT:
+												memcpy(&inttemp, &(temp->data[temp->tuple_dict[k + l].address]), temp->tuple_dict[k + l].size);
+												inttemp += *((int *)needed_values[m].data);
+												memcpy(needed_values[m].data, &inttemp, sizeof(int));
+												break;
+
+										case TYPE_FLOAT:
+												memcpy(&floattemp, &(temp->data[temp->tuple_dict[k + l].address]), temp->tuple_dict[k + l].size);
+												floattemp += *((float *)needed_values[m].data);
+												memcpy(needed_values[m].data, &floattemp, sizeof(float));
+												break;
+
+										case TYPE_NUMBER:
+												memcpy(&doubletemp, &(temp->data[temp->tuple_dict[k + l].address]), temp->tuple_dict[k + l].size);
+												doubletemp += *((double *)needed_values[m].data);
+												memcpy(needed_values[m].data, &doubletemp, sizeof(double));
+												break;
+										}
+										needed_values[m].data[temp->tuple_dict[k + l].size] = '\0';
+										break;
 									case AGG_TASK_AVG_SUM:
 										switch (agg_head[m].type) {
 											case TYPE_INT:
@@ -377,65 +401,143 @@ int AK_aggregation(AK_agg_input *input, char *source_table, char *agg_table) {
 						for (l = 0; l < num_aggregations; l++) {
 							switch (needed_values[l].agg_task) {
 								case AGG_TASK_COUNT:
-									//no break is intentional
-								case AGG_TASK_AVG_COUNT:
-									inttemp = 1;
-									/**
-									 * THIS SINGLE LINE BELOW (memcpy) is the purpose of ALL evil in the world!
-									 * This line is the reason why test function prints one extra empty 
-									 * row with "nulls" at the end! Trust me! Comment it, and you will see - 
-									 * test function will not print extra row with nulls (but counts and averages 
-									 * in table will be all messed up!)
-									 * After two days of hard research, I still have not found what is the
-									 * reason behind printing extra row at the end! Fellow programmer,
-									 * if you really really want to solve this issue, arm yourself with
-									 * at least 2 liters of hot coffee!
-									 *
-									 * What this line does? What is the purpose of this line in the universe?
-									 * Well, fellow programmer, this line sets the initial count to 1.
-									 * That means if name "Ivan" is found, it will have count of 1
-									 * because, well, that's the first Ivan that is found!
-									 * If function finds another Ivan (which, actually, will happen),
-									 * this part of code will not handle it (other part of code will).
-									 *
-									 * That actually means that this little piece of code 
-									 * (this line below) only (and ONLY) sets count to 1! And besides that
-									 * causes every other evil in the world. :O
-									 *
-									 * P.S. The reason for that may be in linked list, or in AK_insert_row()
-									 * You'll have to check every piece of AKDB code to find cause!
-									 * I have found out that additional line is added when k == 25.
-									 * There may be problem in linked lists or in AK_insert_row function
-									 * or somewhere else. Who knows.
-									 *
-									 * If I didn't handle that last row (which has one attribute of size 0),
-									 * test would not pass!
-									 *
-									 * Good luck, fellow programmer!
-									 */
+
+									inttemp = 0;
 									memcpy(needed_values[l].data, &inttemp, sizeof(int));
-									needed_values[l].data[sizeof (int) ] = '\0';
+									needed_values[l].data[sizeof(int)] = '\0';
+									AK_Insert_New_Element(agg_head[l].type, needed_values[l].data, new_table, agg_head[l].att_name, rowroot_table.row_root);
+									break;
+								case AGG_TASK_AVG_COUNT:
+									inttemp = counter;
+									memcpy(needed_values[l].data, &inttemp, sizeof(int));
+									needed_values[l].data[sizeof(int)] = '\0';
 									AK_Insert_New_Element(agg_head[l].type, needed_values[l].data, new_table, agg_head[l].att_name, rowroot_table.row_root);
 									break;
 
 								case AGG_TASK_AVG:
-									//no break is intentional
+									floattemp = floattemp / inttemp;
+									memcpy(needed_values[l].data, &floattemp, sizeof(float));
+									needed_values[l].data[sizeof(float)] = '\0';
+									AK_Insert_New_Element(agg_head[l].type, needed_values[l].data, new_table, agg_head[l].att_name, rowroot_table.row_root);
+									break;
 								case AGG_TASK_MAX:
-									//no break is intentional
+									int inttemp_max;
+									float floattemp_max;
+									double doubletemp_max;
+
+									switch (agg_head[l].type)
+									{
+									case TYPE_INT:
+										inttemp_max = INT_MIN;
+										memcpy(&inttemp, needed_values[l].data, sizeof(int));
+										if (inttemp < inttemp_max || counter == 1)
+													memcpy(needed_values[l].data, &inttemp_max, sizeof(int));
+										break;
+
+									case TYPE_FLOAT:
+										floattemp_max = -FLT_MAX; 
+										memcpy(&floattemp, needed_values[l].data, sizeof(float));
+										if (floattemp < floattemp_max || counter == 1)
+													memcpy(needed_values[l].data, &floattemp_max, sizeof(float));
+										break;
+
+									case TYPE_NUMBER:
+										doubletemp_max = -DBL_MAX; 
+										memcpy(&doubletemp, needed_values[l].data, sizeof(double));
+										if (doubletemp < doubletemp_max || counter == 1)
+													memcpy(needed_values[l].data, &doubletemp_max, sizeof(double));
+										
+										}
+										needed_values[l].data[temp->tuple_dict[k + l].size] = '\0';
+										AK_Insert_New_Element(agg_head[l].type, needed_values[l].data, new_table, agg_head[l].att_name, rowroot_table.row_root);
+										break;
 								case AGG_TASK_MIN:
-									//no break is intentional
+										switch (agg_head[l].type)
+										{
+											case TYPE_INT:
+												memcpy(&inttemp, needed_values[l].data, sizeof(int));
+												if (inttemp > inttemp_min || counter == 1)
+															memcpy(needed_values[l].data, &inttemp_min, sizeof(int));
+												break;
+
+											case TYPE_FLOAT:
+												memcpy(&floattemp, needed_values[l].data, sizeof(float));
+												if (floattemp > floattemp_min || counter == 1)
+															memcpy(needed_values[l].data, &floattemp_min, sizeof(float));
+												break;
+
+											case TYPE_NUMBER:
+												memcpy(&doubletemp, needed_values[l].data, sizeof(double));
+												if (doubletemp > doubletemp_min || counter == 1)
+															memcpy(needed_values[l].data, &doubletemp_min, sizeof(double));
+												break;
+											}
+											needed_values[l].data[temp->tuple_dict[k + l].size] = '\0';
+											AK_Insert_New_Element(agg_head[l].type, needed_values[l].data, new_table, agg_head[l].att_name, rowroot_table.row_root);
+											break;
 								case AGG_TASK_SUM:
-									//no break is intentional
+									switch (agg_head[l].type)
+										{
+										case TYPE_INT:
+											memcpy(&inttemp, needed_values[l].data, sizeof(int));
+											inttemp += inttemp_sum;
+											memcpy(needed_values[l].data, &inttemp, sizeof(int));
+											break;
+
+										case TYPE_FLOAT:
+											memcpy(&floattemp, needed_values[l].data, sizeof(float));
+											floattemp += floattemp_sum;
+											memcpy(needed_values[l].data, &floattemp, sizeof(float));
+											break;
+
+										case TYPE_NUMBER:
+											memcpy(&doubletemp, needed_values[l].data, sizeof(double));
+											doubletemp += doubletemp_sum;
+											memcpy(needed_values[l].data, &doubletemp, sizeof(double));
+											break;
+										}
+										needed_values[l].data[temp->tuple_dict[k + l].size] = '\0';
+										AK_Insert_New_Element(agg_head[l].type, needed_values[l].data, new_table, agg_head[l].att_name, rowroot_table.row_root);
+										break;
 								case AGG_TASK_GROUP:
-									//no break is intentional
+									AK_Insert_New_Element(agg_head[l].type, needed_values[l].data, new_table, agg_head[l].att_name, rowroot_table.row_root);
+									break;
+
 								case AGG_TASK_AVG_SUM:
-									//no break is intentional
+									switch (agg_head[l].type)
+									{
+									case TYPE_INT:
+									inttemp_sum += inttemp;
+									break;
+
+									case TYPE_FLOAT:
+									floattemp_sum += floattemp;
+									break;
+
+									case TYPE_NUMBER:
+									doubletemp_sum += doubletemp;
+									break;
+									}
+									needed_values[l].data[temp->tuple_dict[k + l].size] = '\0';
+									AK_Insert_New_Element(agg_head[l].type, needed_values[l].data, new_table, agg_head[l].att_name, rowroot_table.row_root);
+									break;
 								default:
 									AK_Insert_New_Element(agg_head[l].type, needed_values[l].data, new_table, agg_head[l].att_name, rowroot_table.row_root);
 							}
 
 						}
-                        //FILE  -  fix this!
+						FILE *file = fopen("filel_output.txt", "a");
+						if (file == NULL)
+							{
+								printf("Error opening file!\n");
+								// Handle the error appropriately
+							}
+							else
+							{
+								// Write the row data to the file
+								fprintf(file, "Row data: %s\n", rowroot_table.row_root);
+								fclose(file);
+							}
 						AK_insert_row(rowroot_table.row_root);
 
 					} else {
@@ -446,14 +548,46 @@ int AK_aggregation(AK_agg_input *input, char *source_table, char *agg_table) {
 								if (strcmp(needed_values[m].att_name, temp->header[l].att_name) == 0) {
 									switch (needed_values[m].agg_task) {
 										case AGG_TASK_COUNT:
-											//no break is intentional
+												inttemp = *((int *)needed_values[m].data);
+												inttemp++;
+												memcpy(needed_values[m].data, &inttemp, sizeof(int));
+												needed_values[m].data[sizeof(int)] = '\0';
+												break;
 										case AGG_TASK_AVG_COUNT:
 											inttemp = *((int *) (mem_block->block->data + mem_block->block->tuple_dict[sresult.aiTuple_addresses[i] + m].address)) + 1;
 											memcpy(&mem_block->block->data[mem_block->block->tuple_dict[sresult.aiTuple_addresses[i] + m].address], &inttemp, sizeof (int));
 											break;
 
 										case AGG_TASK_SUM:
-											//no break is intentional
+											for (l = 0; l < num_attr; l++)
+											{
+													for (m = 0; m < num_aggregations; m++)
+													{
+														if (strcmp(needed_values[m].att_name, temp->header[l].att_name) == 0)
+														{
+															switch (agg_head[m].type)
+															{
+															case TYPE_INT:
+																inttemp = *((int *)needed_values[m].data);
+																inttemp += *((int *)&(temp->data[temp->tuple_dict[k + l].address]));
+																memcpy(needed_values[m].data, &inttemp, sizeof(int));
+																break;
+															case TYPE_FLOAT:
+																floattemp = *((float *)needed_values[m].data);
+																floattemp += *((float *)&(temp->data[temp->tuple_dict[k + l].address]));
+																memcpy(needed_values[m].data, &floattemp, sizeof(float));
+																break;
+															case TYPE_NUMBER:
+																doubletemp = *((double *)needed_values[m].data);
+																doubletemp += *((double *)&(temp->data[temp->tuple_dict[k + l].address]));
+																memcpy(needed_values[m].data, &doubletemp, sizeof(double));
+																break;
+															}
+															needed_values[m].data[temp->tuple_dict[k + l].size] = '\0';
+														}
+													}
+											}
+											break;
 										case AGG_TASK_AVG_SUM:
 											switch (agg_head[m].type) {
 												case TYPE_INT:
@@ -616,15 +750,98 @@ int AK_aggregation(AK_agg_input *input, char *source_table, char *agg_table) {
 					floattemp = floattemp/inttemp;
 					memcpy(needed_values[l].data, &floattemp, sizeof(float));
 					needed_values[l].data[sizeof(float)] = '\0';
-					//no break is intentional
+					break;
 				case AGG_TASK_COUNT:
-					//no break is intentional
+					inttemp = 0; 
+					memcpy(needed_values[l].data, &inttemp, sizeof(int));
+					needed_values[l].data[sizeof(int)] = '\0';
+					break;
 				case AGG_TASK_MAX:
-					//no break is intentional
+				switch (agg_head[l].type) {
+				case TYPE_INT:
+					inttemp = *((int *)needed_values[l].data);
+					int currentIntValue = 
+						if (currentIntValue > inttemp)
+					{
+						inttemp = currentIntValue;
+						memcpy(needed_values[l].data, &inttemp, sizeof(int));
+					}
+					break;
+				case TYPE_FLOAT:
+					floattemp = *((float *)needed_values[l].data);
+					float currentFloatValue = 
+						if (currentFloatValue > floattemp)
+					{
+						floattemp = currentFloatValue;
+						memcpy(needed_values[l].data, &floattemp, sizeof(float));
+					}
+					break;
+				case TYPE_NUMBER:
+					doubletemp = *((double *)needed_values[l].data);
+					double currentDoubleValue = 
+						if (currentDoubleValue > doubletemp)
+					{
+						doubletemp = currentDoubleValue;
+						memcpy(needed_values[l].data, &doubletemp, sizeof(double));
+					}
+					break;
+				}
+				break;
 				case AGG_TASK_MIN:
-					//no break is intentional
+					switch (agg_head[l].type) {
+					case TYPE_INT:
+						inttemp = *((int *)needed_values[l].data);
+						int currentIntValue = 
+						if (currentIntValue < inttemp) {
+							inttemp = currentIntValue;
+							memcpy(needed_values[l].data, &inttemp, sizeof(int));
+						}
+						break;
+					case TYPE_FLOAT:
+						floattemp = *((float *)needed_values[l].data);
+						float currentFloatValue = 
+							if (currentFloatValue < floattemp)
+						{
+							floattemp = currentFloatValue;
+							memcpy(needed_values[l].data, &floattemp, sizeof(float));
+						}
+						break;
+					case TYPE_NUMBER:
+						doubletemp = *((double *)needed_values[l].data);
+						double currentDoubleValue = 
+							if (currentDoubleValue < doubletemp)
+						{
+							doubletemp = currentDoubleValue;
+							memcpy(needed_values[l].data, &doubletemp, sizeof(double));
+						}
+						break;
+					}
+					break;
 				case AGG_TASK_SUM:
-					//no break is intentional
+					switch (agg_head[l].type) {
+					case TYPE_INT:
+						inttemp = *((int *)needed_values[l].data);
+						int currentIntValue = 
+						inttemp += currentIntValue;
+						memcpy(needed_values[l].data, &inttemp, sizeof(int));
+						break;
+
+					case TYPE_FLOAT:
+						floattemp = *((float *)needed_values[l].data);
+						float currentFloatValue = 
+						floattemp += currentFloatValue;
+						memcpy(needed_values[l].data, &floattemp, sizeof(float));
+						break;
+
+					case TYPE_NUMBER:
+						doubletemp = *((double *)needed_values[l].data);
+						double currentDoubleValue = 
+						doubletemp += currentDoubleValue;
+						memcpy(needed_values[l].data, &doubletemp, sizeof(double));
+						break;
+
+				}
+					break;
 				default:
 					AK_Insert_New_Element(agg_head[l].type, needed_values[l].data, agg_table, agg_head[l].att_name, rowroot_table.row_root);
 					break;
@@ -898,7 +1115,7 @@ TestResult AK_aggregation_test() {
 	            	printf("Table showed value: '%s', but it should show: '%s'\n\n", 
 	            		tmp_first_name, first_names[current_aggregated_row]);
 	            }
-	            if ( tmp_avg_weight != sum_weights[current_aggregated_row] / counts[current_aggregated_row] ) {
+	            if (counts[current_aggregated_row] != 0 && tmp_avg_weight != sum_weights[current_aggregated_row] / counts[current_aggregated_row]) {
 	            	num_errors++;
 	            	printf("Error in aggregated table, row: %d! Wrongly calculated avg(weight)!\n", current_aggregated_row+1);
 	            	printf("Table showed value: '%f', but it should show: '%f'\n\n", 
