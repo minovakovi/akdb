@@ -18,7 +18,7 @@ def get_attr_type(value):
     period = is_period(value.replace("'", ""))
     time = is_time(value.replace("'", ""))
     boolean = is_bool(value.replace("'", ""))
-
+    
     if integer:
         return AK47.TYPE_INT
     elif decimal:

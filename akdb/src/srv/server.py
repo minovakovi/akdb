@@ -19,7 +19,7 @@ def Threaded(fn):
 #Main class of the server.py
 class Server:
     #Executor for executing sql commands
-    executor = sqle.sql_executor()
+    executor = sqle.Sql_executor()
            
     #Constructor of Server class
     def __init__(self, host="localhost", port=1998):

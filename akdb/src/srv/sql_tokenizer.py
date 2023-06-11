@@ -303,7 +303,8 @@ class sql_tokenizer:
         '''
         tokens = None
 
-        # literals
+        
+
         deleteLit = CaselessKeyword("DELETE")
         selectLit = CaselessKeyword("SELECT")
         updateLit = CaselessKeyword("UPDATE")
@@ -320,7 +321,7 @@ class sql_tokenizer:
         identifier = Word(alphas, alphanums + "_$")
         tableName = identifier
         userName = Word(alphas, alphanums)
-
+        #print(f"{tableName=}")
         # values
         E = CaselessLiteral("e")
         arithSign = Word("+-", exact=1)
@@ -446,6 +447,8 @@ class sql_tokenizer:
         update << updateStatement + \
             ZeroOrMore(updatePair) + \
             Optional(where.setResultsName("condition")) + stringEnd
+
+        
 
         sqlGrammar = select | deleteFrom | update
 

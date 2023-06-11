@@ -16,12 +16,14 @@ from modules.sql_error_module import *
 class Insert_into_command:
 
     insert_into_regex = r"^(?i)insert into(\s([a-zA-Z0-9_]+))+?$"
+    #insert_into_regex = r"insert\s+into\s+([a-zA-Z_][a-zA-Z0-9_]*)*\s*\(.*\)\s*values\s*\((.*)\)"
     pattern = None
     matcher = None
 
     def matches(self, inp):
         self.pattern = re.compile(self.insert_into_regex)
         self.matcher = self.pattern.match(inp)
+        print(self.matcher)
         return self.matcher if self.matcher is not None else None
 
     def execute(self):
@@ -106,7 +108,6 @@ class Insert_into_command:
             return True
         else:
             return False
-        return False
 
 
 # select
@@ -127,7 +128,9 @@ class Insert_into_command:
 class Select_command:
 
     #Commented regex is not valid, rewrite it.
-    select_command_regex = r".*" #r"^(?i)select(\s([a-zA-Z0-9_]+))+?$"
+    #select_command_regex = r".*" #r"^(?i)select(\s([a-zA-Z0-9_]+))+?$"
+    
+    select_command_regex = r"select([^*](?!from))*\*?([^*](?!from))* from"
     pattern = None
     matcher = None
 
@@ -136,18 +139,27 @@ class Select_command:
     def matches(self, input):
         self.pattern = re.compile(self.select_command_regex)
         self.matcher = self.pattern.match(input)
+        #print(self.matcher)
         return self.matcher if self.matcher is not None else None
 
     # execute method
     # defines what is called when select command is invoked
     def execute(self, expr):
         token = sql_tokenizer().AK_parse_where(expr)
+        
+        # Syntax error? Why? Why is there a select when I'm trying to insert the data?
         # Selection table name
-        table_name = str(token.tableName)
-        return "a\n1\n2\n3\n4\n5"
+        #try:
+        table_name = token.tableName
+        #except AttributeError:
+        #    #print("Error")
+        #    return "Not a valid table name provided."
+        
+        #return "a\n1\n2\n3\n4\n5"
         if (AK47.AK_table_exist(table_name) == 0):
-            print("Error: table '" + table_name + "' does not exist")
-            return False
+            print(f"Error: Failed because the table {table_name} does not exist.")
+            return("Table '" + table_name + "' does not exist.")
+
 
         # Get table attribute list
         table_attr_names = str(
@@ -166,17 +178,17 @@ class Select_command:
         expr_types = []
         # Result table name (randomized)
         resultTable = "student"
-
         # Specific attributes for selection
         if(token.attributes):
             if(token.attributes[0] == '*'):
-
+                
                 table_types_temp = table_attr_types
                 table_attr_types = []
-
+                print(table_types_temp)
                 for index, name in enumerate(select_attr_names):
                     table_attr_types.append(int(table_types_temp[index]))
                     expr_types.append(get_attr_type(table_types_temp[index]))
+                
             else:
                 select_attr_names = []
                 table_types_temp = table_attr_types
@@ -377,7 +389,7 @@ class Drop_command:
     pattern = None
     matcher = None
     expr = None
-
+    
     _dropType = {
         "table": 0,
         "index": 1,
@@ -402,6 +414,7 @@ class Drop_command:
     def execute(self):
         parser = sql_tokenizer()
         token = parser.AK_parse_drop(self.expr)
+        print(f"{token=}")
         if isinstance(token, str):
             print("Error: syntax error in expression")
             print(token)
