@@ -1,28 +1,28 @@
-/**
-@file union.c Provides functions for relational union operation
- */
 /*
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- * 
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Library General Public License for more details.
- * 
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor Boston, MA 02110-1301,  USA
- */
+This program is free software; you can redistribute it and/or
+modify it under the terms of the GNU General Public License
+as published by the Free Software Foundation; either version 2
+of the License, or (at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program; if not, write to the Free Software
+Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+*/
+
+/**
+ @file union.c Provides functions for relational union operation
+*/
 
 #include "union.h"
 
 /**
  * @author Dino Laktašić; updated by Elena Kržina
- * @brief  Function that makes a union of two tables. Union is implemented for working with multiple sets of data, i.e. duplicate 
- * 	   tuples can be written in same table (union) 
+ * @brief  Function that makes a union of two tables. Union is implemented for working with multiple sets of data, i.e. duplicate tuples can be written in same table (union) 
  * @param srcTable1 name of the first table
  * @param srcTable2 name of the second table
  * @param dstTable name of the new table
@@ -44,12 +44,6 @@ int AK_union(char *srcTable1, char *srcTable2, char *dstTable) {
         int num_att = AK_check_tables_scheme(tbl1_temp_block, tbl2_temp_block, "Union");
 
 		if (num_att == EXIT_ERROR) {
-
-			AK_free(src_addr1);
-			AK_free(src_addr2);
-			AK_free(tbl1_temp_block);
-			AK_free(tbl2_temp_block);
-				
 			AK_EPI;
 			return EXIT_ERROR;
 		}
@@ -67,8 +61,6 @@ int AK_union(char *srcTable1, char *srcTable2, char *dstTable) {
 		
 		AK_free(src_addr1);
 		AK_free(src_addr2);
-		AK_free(tbl1_temp_block);
-		AK_free(tbl2_temp_block);
 		AK_free(row_root);
 
 		AK_dbg_messg(LOW, REL_OP, "UNION_TEST_SUCCESS\n\n");
@@ -140,7 +132,6 @@ void AK_Write_Segments(char *dstTable, int num_att, table_addresses *src_addr1, 
 	AK_EPI;
 }
 
-
 /**
  * @author Dino Laktašić
  * @brief  Function for union operator testing
@@ -163,4 +154,3 @@ TestResult AK_op_union_test() {
 		return TEST_result(0,1);
     }	
 }
-
