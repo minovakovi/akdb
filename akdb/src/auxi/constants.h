@@ -232,35 +232,46 @@
  */
 #define TYPE_TIME 7
 /**
-  * @def TYPE_BLOB
-  * @brief Blob data type (used in AK_header->type and AK_tuple_dict->type)
+ * @def TYPE_INTERVAL
+ * @brief Blob data type (used in AK_header->type and AK_tuple_dict->type)
  */
-#define TYPE_BLOB 8
+#define TYPE_INTERVAL 8
 /**
-  * @def TYPE_BOOL
-  * @brief Constant declaring boolean data type (used in AK_header->type and AK_tuple_dict->type)
+ * @def TYPE_PERIOD
+ * @brief Blob data type (used in AK_header->type and AK_tuple_dict->type)
  */
-#define TYPE_BOOL 9
+#define TYPE_PERIOD 9
+/**
+ * @def TYPE_BLOB
+ * @brief Blob data type (used in AK_header->type and AK_tuple_dict->type)
+ */
+#define TYPE_BLOB 10
+/**
+ * @def TYPE_BOOL
+ * @brief Constant declaring boolean data type (used in AK_header->type and
+ * AK_tuple_dict->type)
+ */
+#define TYPE_BOOL 11
 /**
  * @def TYPE_OPERAND
  * @brief Constant indicating operand in AK_list
  */
-#define TYPE_OPERAND 10
+#define TYPE_OPERAND 12
 /**
-  * @def TYPE_OPERATOR
-  * @brief indicates operator in AK_list
+ * @def TYPE_OPERATOR
+ * @brief indicates operator in AK_list
  */
-#define TYPE_OPERATOR 11
+#define TYPE_OPERATOR 13
 /**
-  * @def TYPE_ATTRIBS
-  * @brief Constant indicating attribute/s in AK_list
+ * @def TYPE_ATTRIBS
+ * @brief Constant indicating attribute/s in AK_list
  */
-#define TYPE_ATTRIBS 12
+#define TYPE_ATTRIBS 14
 /**
-  * @def TYPE_CONDITION
-  * @brief Constant indicating condition in AK_list
+ * @def TYPE_CONDITION
+ * @brief Constant indicating condition in AK_list
  */
-#define TYPE_CONDITION 13
+#define TYPE_CONDITION 15
 /**
  * @def BLOCK_CLEAN
  * @brief Constant indicating block cleaning (not changed since read from disk)
@@ -582,4 +593,3 @@
 
 
 #endif
-
