@@ -71,94 +71,70 @@ void AK_debmod_dv(AK_debmod_state* ds, const char *format, ...){
 * @brief Signal handler for SIGSEGVs [private function]
 * @return void
 */
-static void AK_unlock_protected_pages(siginfo_t* si, uint8_t* mprotect_sigsegv) {
-    uint32_t i;
-    for (i = 0; i < AK_DEBMOD_PAGES_NUM; ++i) {
-        /* find the page that this memory belongs to, if any */
-        if (AK_DEBMOD_STATE->page[i] != 0 &&
-            (uintptr_t*)AK_DEBMOD_STATE->page[i]
-                <= (uintptr_t*)si->si_addr &&
-            (uintptr_t*)AK_DEBMOD_STATE->page[i] + AK_DEBMOD_STATE->real[i]
-                >= (uintptr_t*)si->si_addr) {
-            /* if the memory was protected AK_mem_write_protect, this
-            should fail */
-            assert(AK_DEBMOD_STATE->protected[i] == 0);
-            AK_debmod_dv(
-                AK_DEBMOD_STATE,
-                "%p marked dirty [%d/%d] (%s)\n",
-                AK_DEBMOD_STATE->page[i],
-                i,
-                AK_DEBMOD_PAGES_NUM,
-                AK_debmod_func_get_name(
+static void AK_debmod_signal_callback(int sig, siginfo_t* si, void* unused) {
+    if (AK_DEBMOD_STATE != NULL && AK_DEBMOD_STATE->init == 1) {
+        uint32_t i;
+        uint8_t mprotect_sigsegv; /* Indicates Whether this SIGSEGV was caused
+                                  * by writing to an mprotected page, in which
+                                  * case the program need not fail. Otherwise
+                                  * this is a classic segfault and should be
+                                  * treated as such.
+                                  */
+        mprotect_sigsegv = 0;
+
+        AK_debmod_enter_critical_sec(AK_DEBMOD_STATE);
+        for (i = 0; i < AK_DEBMOD_PAGES_NUM; ++i) {
+            /* find the page that this memory belongs to, if any */
+            if (AK_DEBMOD_STATE->page[i] != 0 &&
+                (uintptr_t*)AK_DEBMOD_STATE->page[i]
+                    <= (uintptr_t*)si->si_addr &&
+                (uintptr_t*)AK_DEBMOD_STATE->page[i] + AK_DEBMOD_STATE->real[i]
+                    >= (uintptr_t*)si->si_addr) {
+                /* if the memory was protected AK_mem_write_protect, this
+                should fail  */
+                assert(AK_DEBMOD_STATE->protected[i] == 0);
+                AK_debmod_dv(
                     AK_DEBMOD_STATE,
-                    AK_DEBMOD_STATE->fstack_items[
-                        AK_DEBMOD_STATE->fstack_size - 1]
-                )
-            );
+                    "%p marked dirty [%d/%d] (%s)\n",
+                    AK_DEBMOD_STATE->page[i],
+                    i,
+                    AK_DEBMOD_PAGES_NUM,
+                    AK_debmod_func_get_name(
+                        AK_DEBMOD_STATE,
+                        AK_DEBMOD_STATE->fstack_items[
+                            AK_DEBMOD_STATE->fstack_size - 1]
+                    )
+                );
 
-            /* unlock the page for RW access */
-            assert(mprotect(AK_DEBMOD_STATE->page[i],
-                AK_DEBMOD_STATE->real[i], PROT_READ | PROT_WRITE) == 0);
+                /* unlock the page for RW access */
+                assert(mprotect(AK_DEBMOD_STATE->page[i],
+                    AK_DEBMOD_STATE->real[i], PROT_READ | PROT_WRITE) == 0);
 
-            AK_DEBMOD_STATE->dirty[i] = 1;
-            AK_DEBMOD_STATE->unlocked[i] = 1;
-            *mprotect_sigsegv = 1;
+                AK_DEBMOD_STATE->dirty[i] = 1;
+                AK_DEBMOD_STATE->unlocked[i] = 1;
+                mprotect_sigsegv = 1;
+            }
+        }
+        AK_debmod_leave_critical_sec(AK_DEBMOD_STATE);
+
+        /* end program execution if the sigsegv was caused by non-protected
+        memory access */
+	if(mprotect_sigsegv == 0){
+		printf("************* Real SIGSEGV occured *************\n");
+                printf("This means a memory address which is not under\n");
+		printf("our control has been accessed somewhere in your\n");
+		printf("code. Please use AK_calloc, AK_free, etc.\n");
+		printf("You've got some bugfixing to do :(\n");
+                AK_print_active_functions();
+		AK_print_function_uses();
+		printf("Probable current function: %s\n",
+        		AK_debmod_func_get_name(AK_DEBMOD_STATE,
+			AK_DEBMOD_STATE->fstack_items[
+			AK_DEBMOD_STATE->fstack_size - 1]));
+        	assert(mprotect_sigsegv);
         }
     }
 }
-
-static void AK_handle_non_protected_page_faults(siginfo_t* si, uint8_t mprotect_sigsegv) {
-    printf("************* Real SIGSEGV occurred *************\n");
-    printf("This means a memory address which is not under\n");
-    printf("our control has been accessed somewhere in your\n");
-    printf("code. Please use AK_calloc, AK_free, etc.\n");
-    printf("You've got some bug fixing to do :(\n");
-    
-    AK_print_active_functions();
-    AK_print_function_uses();
-    
-    printf("Probable current function: %s\n",
-        AK_debmod_func_get_name(AK_DEBMOD_STATE, AK_DEBMOD_STATE->fstack_items[AK_DEBMOD_STATE->fstack_size - 1]));
-    
-    assert(mprotect_sigsegv);
-}
-
-static int AK_handle_protected_page_faults(siginfo_t* si, uint8_t* mprotect_sigsegv) {
-    if (AK_DEBMOD_STATE == NULL || AK_DEBMOD_STATE->init != 1) {
-        return -2;
-    }
-    
-
-    AK_debmod_enter_critical_sec(AK_DEBMOD_STATE);
-    AK_unlock_protected_pages(si, &mprotect_sigsegv);
-    AK_debmod_leave_critical_sec(AK_DEBMOD_STATE);
-
-    /* end program execution if the sigsegv was caused by non-protected
-    memory access */
-    if(mprotect_sigsegv == 0){
-        return -1;
-    }
-    return 0;
-    
-}
-
-static void AK_debmod_signal_callback(int sig, siginfo_t* si, void* unused) {
-    uint8_t mprotect_sigsegv = 0;  /* Indicates Whether this SIGSEGV was caused
-                                    * by writing to an mprotected page, in which
-                                    * case the program need not fail. Otherwise
-                                    * this is a classic segfault and should be
-                                    * treated as such.
-                                    */
-    if (AK_handle_protected_page_faults(si, &mprotect_sigsegv) == -1){
-        AK_handle_non_protected_page_faults(si,mprotect_sigsegv);
-    }
-    else{
-        printf("AK_DEBMOD_STATE is NULL or AK_DEBMOD_STATE->init is not 1");
-    }
-}
-
-
-
 
 /**
 * @author Marin Rukavina, Mislav Bozicevic
@@ -409,62 +385,54 @@ void* AK_debmod_calloc(AK_debmod_state* ds, uint32_t size){
 * @brief Frees memory allocated with debmod_alloc [private function]
 * @return void
 */
-void AK_debmod_free(AK_debmod_state* ds, void* memory) {
+void AK_debmod_free(AK_debmod_state* ds, void* memory){
+    int32_t i, selected_spot;
     assert(ds != NULL && ds->init == 1);
 #ifdef __linux__
     AK_debmod_sample_state(ds);
 #endif
-    if (memory == NULL) {
+    if (memory == NULL){
         AK_debmod_dv(ds, "tried to free NULL (%s)\n",
             AK_debmod_func_get_name(ds,
-                ds->fstack_items[ds->fstack_size - 1]));
+            ds->fstack_items[ds->fstack_size - 1]));
         return;
     }
     AK_debmod_enter_critical_sec(ds);
-    int selected_spot = find_memory_location(ds, memory);
-    if (selected_spot == -1) {
+    selected_spot = -1;
+    for (i = 0; i < AK_DEBMOD_PAGES_NUM; ++i){
+        if (memory == ds->page[i]){
+            selected_spot = i;
+            break;
+        }
+    }
+    if (selected_spot == -1){
         AK_debmod_dv(ds, "%s tried to free %p which does not belong\n",
             AK_debmod_func_get_name(ds,
-                ds->fstack_items[ds->fstack_size - 1]),
+            ds->fstack_items[ds->fstack_size - 1]),
             memory);
         AK_debmod_leave_critical_sec(ds);
         return;
     }
-    release_memory(ds, selected_spot);
-    AK_debmod_leave_critical_sec(ds);
-}
-
-int find_memory_location(AK_debmod_state* ds, void* memory) {
-    int32_t i;
-    for (i = 0; i < AK_DEBMOD_PAGES_NUM; ++i) {
-        if (memory == ds->page[i]) {
-            return i;
-        }
-    }
-    return -1;
-}
-
-void release_memory(AK_debmod_state* ds, int spot) {
 #ifdef _WIN32
-    assert(VirtualFree(ds->page[spot], 0, MEM_RELEASE) != 0);
+    assert(VirtualFree(ds->page[selected_spot], 0, MEM_RELEASE) != 0);
 #endif
 #ifdef __linux__
-    assert(mprotect(AK_DEBMOD_STATE->page[spot], AK_DEBMOD_STATE->real[spot],
+    assert(mprotect(AK_DEBMOD_STATE->page[i], AK_DEBMOD_STATE->real[i],
         PROT_READ | PROT_WRITE) == 0);
-    free(ds->page[spot]);
-    ds->protected[spot] = 0;
-    ds->unlocked[spot] = 0;
+    free(ds->page[selected_spot]);
+    ds->protected[selected_spot] = 0;
+    ds->unlocked[selected_spot] = 0;
 #endif
-    ds->page[spot] = NULL;
-    ds->used[spot] = 0;
-    ds->nomi[spot] = 0;
-    ds->real[spot] = 0;
-    AK_debmod_dv(ds, "%p free [%d/%d] (%s)\n", ds->page[spot],
-        spot, AK_DEBMOD_PAGES_NUM,
+    ds->page[selected_spot] = NULL;
+    ds->used[selected_spot] = 0;
+    ds->nomi[selected_spot] = 0;
+    ds->real[selected_spot] = 0;
+    AK_debmod_dv(ds, "%p free [%d/%d] (%s)\n", memory,
+        selected_spot, AK_DEBMOD_PAGES_NUM,
         AK_debmod_func_get_name(ds, ds->fstack_items[ds->fstack_size - 1]));
-    ds->free_owner[spot] = ds->fstack_items[ds->fstack_size - 1];
+    ds->free_owner[selected_spot] = ds->fstack_items[ds->fstack_size - 1];
+    AK_debmod_leave_critical_sec(ds);
 }
-
 
 /**
 * @author Marin Rukavina, Mislav Bozicevic
@@ -522,103 +490,76 @@ void AK_free(void* ptr){
 * @brief Reallocates memory (see realloc) [public function]
 * @return reallocated memory or NULL
 */
-void* AK_realloc(void* ptr, size_t size) {
-    void* ret;
+void* AK_realloc(void* ptr, size_t size){
+    void *ret;
     size_t dest_size;
     int32_t i;
     uint32_t old_size;
-
+#ifdef __linux__
+    int32_t ret_i;
+    int32_t ret_pos;
+#endif
 #if !AK_DEBMOD_ON
     return realloc(ptr, size);
 #endif
-
-    if (ptr == NULL) {
+    if (ptr == NULL){
         return AK_malloc(size);
     }
-
-    if (size == 0) {
+    if (size == 0){
         AK_free(ptr);
         return NULL;
     }
-
     ret = AK_malloc(size);
-
-    if (ret == NULL) {
+    if (ret == NULL){
         return NULL;
     }
-
     assert(AK_DEBMOD_STATE != NULL && AK_DEBMOD_STATE->init == 1);
     AK_debmod_enter_critical_sec(AK_DEBMOD_STATE);
-    old_size = get_memory_size(AK_DEBMOD_STATE, ptr);
-
-    if (old_size == -1) {
+    old_size = -1;
+    for (i = 0; i < AK_DEBMOD_PAGES_NUM; ++i){
+        if (ptr == AK_DEBMOD_STATE->page[i]){
+            old_size = AK_DEBMOD_STATE->nomi[i];
+            break;
+        }
+    }
+    if (old_size == -1){
         AK_debmod_dv(AK_DEBMOD_STATE,
             "%s tried to realloc memory which does not belong\n",
             AK_debmod_func_get_name(AK_DEBMOD_STATE,
-                AK_DEBMOD_STATE->fstack_items[
-                    AK_DEBMOD_STATE->fstack_size - 1]));
+            AK_DEBMOD_STATE->fstack_items[
+                AK_DEBMOD_STATE->fstack_size - 1]));
         AK_debmod_leave_critical_sec(AK_DEBMOD_STATE);
         AK_free(ret);
         return NULL;
     }
-
     dest_size = (size_t)old_size <= size ? (size_t)old_size : size;
-    unlock_return_memory(AK_DEBMOD_STATE, ret);
-
+#ifdef __linux__
+    ret_pos = -1;
+    for (ret_i = 0; ret_i < AK_DEBMOD_PAGES_NUM; ++ret_i) {
+        /* get the page pointer for the return memory so it can be unlocked */
+        if (ret == AK_DEBMOD_STATE->page[ret_i]) {
+            ret_pos = ret_i;
+        }
+    }
+    assert(ret_pos > -1);
+    assert(mprotect(AK_DEBMOD_STATE->page[ret_pos],
+        AK_DEBMOD_STATE->real[ret_pos], PROT_READ | PROT_WRITE) == 0);
+#endif
     ret = memcpy(ret, (const void*)ptr, dest_size);
-
-    lock_return_memory(AK_DEBMOD_STATE, ret);
-
+#ifdef __linux__
+    assert(mprotect(AK_DEBMOD_STATE->page[ret_pos],
+        AK_DEBMOD_STATE->real[ret_pos], PROT_READ) == 0);
+#endif
     AK_debmod_leave_critical_sec(AK_DEBMOD_STATE);
     AK_free(ptr);
     AK_debmod_dv(AK_DEBMOD_STATE,
         "realloc %p (%d) -> %p (%d) (%s)\n",
         ptr, old_size, ret, size,
         AK_debmod_func_get_name(AK_DEBMOD_STATE,
-            AK_DEBMOD_STATE->fstack_items[
-                AK_DEBMOD_STATE->fstack_size - 1]));
-
+        AK_DEBMOD_STATE->fstack_items[
+            AK_DEBMOD_STATE->fstack_size - 1]));
     return ret;
 }
-
-int32_t get_memory_size(AK_debmod_state* ds, void* ptr) {
-    int32_t i;
-    for (i = 0; i < AK_DEBMOD_PAGES_NUM; ++i) {
-        if (ptr == ds->page[i]) {
-            return ds->nomi[i];
-        }
-    }
-    return -1;
-}
-
-void unlock_return_memory(AK_debmod_state* ds, void* ret) {
-#ifdef __linux__
-    int32_t ret_i;
-    int32_t ret_pos;
-    for (ret_i = 0; ret_i < AK_DEBMOD_PAGES_NUM; ++ret_i) {
-        if (ret == ds->page[ret_i]) {
-            ret_pos = ret_i;
-            assert(mprotect(ds->page[ret_pos], ds->real[ret_pos], PROT_READ | PROT_WRITE) == 0);
-            break;
-        }
-    }
-#endif
-}
-
-void lock_return_memory(AK_debmod_state* ds, void* ret) {
-#ifdef __linux__
-    int32_t ret_i;
-    int32_t ret_pos;
-    for (ret_i = 0; ret_i < AK_DEBMOD_PAGES_NUM; ++ret_i) {
-        if (ret == ds->page[ret_i]) {
-            ret_pos = ret_i;
-            assert(mprotect(ds->page[ret_pos], ds->real[ret_pos], PROT_READ) == 0);
-            break;
-        }
-    }
-#endif
-}
-
 
 /**
 * @author Marin Rukavina, Mislav Bozicevic
@@ -829,18 +770,11 @@ void AK_debmod_fstack_push(AK_debmod_state* ds, int32_t func_id){
 * @brief Pops function id from stack [private function]
 * @return function id popped
 */
-int32_t AK_debmod_fstack_pop(AK_debmod_state* ds) {
+int32_t AK_debmod_fstack_pop(AK_debmod_state* ds){
     assert(ds != NULL && ds->init == 1);
-
-    if (ds->fstack_size > 0) {
-        return ds->fstack_items[--ds->fstack_size];
-    } else {
-        /* Handle stack underflow error */
-        fprintf(stderr, "Stack underflow error in AK_debmod_fstack_pop\n");
-        exit(EXIT_FAILURE); // or return an appropriate error code
-    }
+    assert(ds->fstack_size > 0); /* stack underflow */
+    return ds->fstack_items[--ds->fstack_size];
 }
-
 
 /**
 * @author Marin Rukavina, Mislav Bozicevic
