@@ -35,18 +35,18 @@ static inline int AK_register_observer(AK_observable *self, AK_observer *observe
     int i;
     AK_PRO;
     for (i = 0; i < MAX_OBSERVABLE_OBSERVERS; ++i) {
-        if(self->observers[i] == NULL) {
+        if(self->observers[i] == 0) {
             // Assigning unique ID to new observer
             observer->observer_id = self->observer_id_counter++;
             self->observers[i] = observer;
             AK_dbg_messg(LOW, GLOBAL, "NEW OBSERVER ADDED");
             AK_EPI;
-            return OK;
+            return OBSERVER_REGISTER_SUCCESS;
         }
     }
     AK_dbg_messg(LOW, GLOBAL, "ERROR IN FUNCTION FOR ADDING NEW OBSERVER!");
     AK_EPI;
-    return NOT_OK;
+    return OBSERVER_REGISTER_FAILURE_MAX_OBSERVERS;
 }
 
 /** 
@@ -64,16 +64,16 @@ static inline int AK_unregister_observer(AK_observable *self, AK_observer *obser
     for(i = 0; i < MAX_OBSERVABLE_OBSERVERS; ++i) {
         if(observer == self->observers[i]) {
             AK_free(self->observers[i]);
-            self->observers[i] = NULL;
+            self->observers[i] = 0;
             AK_dbg_messg(LOW, GLOBAL, "OBSERVER DELETED");
             AK_EPI;
-            return OK;
+            return OBSERVER_UNREGISTER_SUCCESS;
         }
     }
     
     AK_dbg_messg(LOW, GLOBAL, "ERROR IN FUNCTION FOR DELETING OBSERVER!");
     AK_EPI;    
-    return NOT_OK;
+    return OBSERVER_UNREGISTER_FAILURE_NOT_FOUND;
 }
 
 /** 
@@ -89,17 +89,17 @@ static inline int AK_notify_observer(AK_observable *self, AK_observer *observer)
     int i;
     AK_PRO;
     for(i = 0; i < MAX_OBSERVABLE_OBSERVERS; ++i) {
-        if(self->observers[i] != NULL && self->observers[i] == observer) {
+        if(self->observers[i] != 0 && self->observers[i] == observer) {
             observer->AK_notify(observer, self->AK_observable_type, self->AK_ObservableType_Def);
             AK_dbg_messg(LOW, GLOBAL, "NOTIFICATION SENT TO OBSERVER");
             AK_EPI;
-            return OK;
+            return OBSERVER_NOTIFY_SUCCESS;
         }
     }
     
     AK_dbg_messg(LOW, GLOBAL, "ERROR IN FUNCTION FOR SENDING NOTIFICATION TO SPECIFIED OBSERVER!");
     AK_EPI;
-    return NOT_OK;
+    return OBSERVER_NOTIFY_FAILURE_NOT_FOUND;
 }
 
 /** 
@@ -114,7 +114,7 @@ static inline int AK_notify_observers(AK_observable *self)
     int i;
     AK_PRO;
     for(i = 0; i < MAX_OBSERVABLE_OBSERVERS; ++i) {
-        if(self->observers[i] != NULL) {
+        if(self->observers[i] != 0 ) {
             // Call AK_notify and pass AK_observer observer and custom observable instances
             self->observers[i]->AK_notify(self->observers[i], self->AK_observable_type, self->AK_ObservableType_Def);
         }
@@ -122,7 +122,7 @@ static inline int AK_notify_observers(AK_observable *self)
     
     AK_dbg_messg(LOW, GLOBAL, "OBSERVERS NOTIFIED");
     AK_EPI;
-    return OK;
+    return OBSERVER_NOTIFY_SUCCESS;
 }
 
 /** 
@@ -138,7 +138,7 @@ static inline AK_observer *AK_get_observer_by_id(AK_observable *self, int id)
     int i;
     AK_PRO;
     for(i = 0; i < MAX_OBSERVABLE_OBSERVERS; ++i) {
-        if(self->observers[i] != NULL && self->observers[i]->observer_id == id) {
+        if(self->observers[i] != 0  && self->observers[i]->observer_id == id) {
             AK_dbg_messg(LOW, GLOBAL, "REQUESTED OBSERVER FOUND. RETURNING OBSERVER BY ID");
             AK_EPI;
             return self->observers[i];
@@ -189,17 +189,17 @@ AK_observable * AK_init_observable(void *AK_observable_type, AK_ObservableType_E
 static inline int AK_destroy_observer(AK_observer *self)
 {
     AK_PRO;
-    if(self != NULL) {
+    if(self) {
         AK_free(self);
-        self = NULL;
+        self = 0;
         AK_dbg_messg(LOW, GLOBAL, "OBSERVER DESTROYED!");    
         AK_EPI;    
-        return OK;
+        return OBSERVER_DESTROY_SUCCESS;
     }
     
     AK_dbg_messg(LOW, GLOBAL, "ERROR WHILE DESTROYING OBSERVER");
     AK_EPI;
-    return NOT_OK;
+    return OBSERVER_DESTROY_FAILURE_INVALID_ARGUMENT;
 }
 
 /** 
@@ -503,7 +503,7 @@ TestResult AK_observable_pattern(){
 
     AK_observer *requested_observer = observable_type->observable->AK_get_observer_by_id(observable_type->observable, 1);
     
-    if(requested_observer!=NULL) 
+    if(requested_observer!=0) 
 	{
         printf ("Observer was found. Observer adress: %p\n\n", requested_observer);
 	passed_tests++;

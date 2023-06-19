@@ -247,6 +247,7 @@
 /**
  * @def TYPE_INTERVAL
  * @brief Blob data type (used in AK_header->type and AK_tuple_dict->type)
+
  */
 #define TYPE_INTERVAL 8
 /**
@@ -563,5 +564,52 @@
  * @brief Constant which defines the length of system_catalog
  */
 #define NUM_SYS_TABLES 20
+
+/**
+ * @def OBSERVER_REGISTER_SUCCESS
+ * @brief AK_register_observer function succesfully registered observer. Return code 1
+ */
+#define OBSERVER_REGISTER_SUCCESS 1
+
+/**
+ * @def OBSERVER_REGISTER_FAILURE_MAX_OBSERVERS
+ * @brief AK_register_observer function failed to registered observer. Max observers reached or internal error. Return code 0
+ */
+#define OBSERVER_REGISTER_FAILURE_MAX_OBSERVERS 0
+
+/**
+ * @def OBSERVER_UNREGISTER_SUCCESS
+ * @brief AK_unregister_observer successfully delted/unregistered observer. Return code 1
+ */
+#define OBSERVER_UNREGISTER_SUCCESS 1
+
+/**
+ * @def OBSERVER_UNREGISTER_FAILURE_NOT_FOUND
+ * @brief AK_unregister_observer failed to delted/unregistered observer. Couldn't find the observer or internal error. Return code 0
+ */
+#define OBSERVER_UNREGISTER_FAILURE_NOT_FOUND 0
+
+/**
+ * @def OBSERVER_NOTIFY_SUCCESS
+ * @brief AK_notify_observer successfully sent notification to observer. Return code 1
+ */
+#define OBSERVER_NOTIFY_SUCCESS 1
+
+/**
+ * @def OBSERVER_NOTIFY_FAILURE_NOT_FOUND
+ * @brief AK_notify_observer failed to sent notification to observer. Couldn't find the observer or internal error. Return code 0.
+ */
+#define OBSERVER_NOTIFY_FAILURE_NOT_FOUND 0
+
+/**
+ * @def OBSERVER_DESTROY_SUCCESS
+ * @brief AK_destroy_observer succesfully destroyed the observer. Return code 1.
+ */
+#define OBSERVER_DESTROY_SUCCESS 1
+/**
+ * @def OBSERVER_DESTROY_FAILURE_INVALID_ARGUMENT
+ * @brief AK_destroy_observer failed to destroyed the observer. Invalid observer argument or problems with the observer.Return code 0.
+ */
+#define OBSERVER_DESTROY_FAILURE_INVALID_ARGUMENT 0
 
 #endif
