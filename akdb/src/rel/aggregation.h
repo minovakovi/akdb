@@ -36,6 +36,36 @@
 #define AGG_TASK_AVG_COUNT 10 //used internaly
 #define AGG_TASK_AVG_SUM 11 //used internaly
 
+//nove definicije @author Marin Bogešić
+#define MAX_RECORDS 100
+#define MAX_ATTRIBUTES 10
+#define AK_OP_EQUAL 0
+#define AK_OP_GREATER 1
+#define MAX_OP_NAME 10
+
+typedef struct expr_node {
+    char attribute[MAX_ATT_NAME];
+    char op[MAX_OP_NAME];
+    char value[MAX_VARCHAR_LENGTH];
+    struct expr_node* next;
+} ExprNode;
+
+typedef struct {
+    char att_name[MAX_ATT_NAME];
+    char data[MAX_VARCHAR_LENGTH];
+} Record;
+
+typedef struct {
+    Record records[MAX_RECORDS];
+    int count;
+} Table;
+
+typedef struct {
+    char att_name[MAX_ATT_NAME];
+    int agg_task;
+} GroupByAttribute;
+
+
 /**
   * @author Unknown
   * @struct AK_agg_value
@@ -140,5 +170,11 @@ void AK_agg_input_fix(AK_agg_input *input);
  */
 int AK_aggregation(AK_agg_input *input, char *source_table, char *agg_table);
 TestResult AK_aggregation_test();
+
+/*
+*@author: Marin Bogešić
+*/
+void groupBy(Table *table, GroupByAttribute *groupByAttributes, int numGroupByAttributes);
+TestResult test_groupBy();
 
 #endif

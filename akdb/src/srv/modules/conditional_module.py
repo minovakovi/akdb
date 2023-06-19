@@ -64,6 +64,43 @@ def is_time(lit):
         return True
     except ValueError:
         return False
+    
+
+# is_interval
+# returns true if the input value is in interval format
+# @param lit the value to be checked
+def is_interval(lit):
+    isTypeCorrect = False
+    try:
+        parts = lit.split()
+        if len(parts) == 12:
+                    if parts[1] == "year" or parts[1] == "years":
+                        if parts[3] == "month" or parts[3] == "months":
+                            if parts[5] == "day" or parts[5] == "days":
+                                if parts[7] == "hour" or parts[7] == "hours":
+                                    if parts[9] == "minute" or parts[9] == "minutes":
+                                        if parts[11] == "second" or parts[11] == "seconds":
+                                            if int(parts[0]) or int(parts[0]) == 0 and int(parts[2]) or int(parts[2]) == 0 and int(parts[4]) or int(parts[4]) == 0 and int(parts[6]) or int(parts[6]) == 0 and int(parts[8]) or int(parts[8]) == 0 and int(parts[10]) or int(parts[10]) == 0:
+                                                    if 0 <= int(parts[2]) <= 11:
+                                                        if 0 <= int(parts[4]) <= 365:
+                                                            if 0 <= int(parts[6]) <= 23:
+                                                                if 0 <= int(parts[8]) <= 59:
+                                                                    if 0 <= int(parts[10]) <= 59:
+                                                                            isTypeCorrect = True
+        return(isTypeCorrect)                                                                    
+    except Exception:
+        return(isTypeCorrect)
+    
+
+# is_period
+# returns true if the input value is in period format
+# @param lit the value to be checked
+def is_period(lit):
+    try:
+        time.strptime(lit, '%Y-%m-%d %H:%M:%S - %Y-%m-%d %H:%M:%S')
+        return True
+    except ValueError:
+        return False
 
 
 # is_bool
