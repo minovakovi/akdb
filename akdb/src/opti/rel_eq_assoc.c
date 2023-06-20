@@ -35,8 +35,16 @@ int AK_compare(const void *a, const void *b) {
     return ret;
 }
 
+
+//prototypes
+char* AK_get_operand(struct list_node* temp_elem, struct list_node* from_data);
+int AK_check_subset(char *tbl_attr_first, char *tbl_attr_second,char *tbl_attr_third, char *cond_attr_first);
+struct list_node* AK_ro_intersect_assoc_function(struct list_node *temp_elem, struct list_node *temp_elem_prev, struct list_node *list_elem_next, struct list_node *list_elem, struct list_node *temp);
+struct list_node* AK_ro_nat_join_assoc_function(struct list_node *temp_elem, struct list_node *temp_elem_prev, struct list_node *list_elem_next, struct list_node *list_elem, struct list_node *temp, int *next_cost);
+struct list_node* AK_ro_theta_assoc_function(struct list_node *temp_elem, struct list_node *temp_elem_prev, struct list_node *list_elem_next, struct list_node *list_elem, struct list_node *temp, struct list_node *tmp, int *next_cost, int i);
+
 /**
- * @author Dino Laktašić.
+ * @author Dino Laktašić, updated by Elena Kržina.
  * @brief Main function for generation of RA expresion according to associativity equivalence rules 
  * @param *list_rel_eq RA expresion as the struct list_node
  * @return optimised RA expresion as the struct list_node
@@ -72,41 +80,8 @@ struct list_node *AK_rel_eq_assoc(struct list_node *list_rel_eq) {
                                     list_elem_next->type == TYPE_OPERAND && (list_elem_next->next)->type == TYPE_OPERATOR &&
                                     strcmp(list_elem->data, (list_elem_next->next)->data) == 0) {
 
-                                cost_eval cost[3];
+                                    list_elem = AK_ro_intersect_assoc_function(temp_elem,temp_elem_prev,list_elem_next,list_elem,temp);
 
-                                //We can later consider some other options than number of table records
-                                //to get heuristic values for table reordering in association construction
-                                //Getting table rows count requires loop through all rows in table (very expansive)
-                                cost[0].value = AK_get_num_records(temp_elem->data);
-                                cost[1].value = AK_get_num_records(temp_elem_prev->data);
-                                cost[2].value = AK_get_num_records(list_elem_next->data);
-
-                                strcpy(cost[0].data, temp_elem->data);
-                                strcpy(cost[1].data, temp_elem_prev->data);
-                                strcpy(cost[2].data, list_elem_next->data);
-                                qsort(cost, 3, sizeof (cost_eval), AK_compare);
-
-                                //Change inserted relation to largest table
-								AK_dbg_messg(MIDDLE, REL_EQ, "::table_name (%s) in temp list changed to %s\n", temp_elem_prev->data, cost[2].data); 
-                                temp_elem_prev->size = strlen(cost[2].data) + 1;
-                                memset(temp_elem_prev->data, '\0', MAX_VARCHAR_LENGTH);
-                                strcpy(temp_elem_prev->data, cost[2].data);
-
-                                //Change last inserted relation
-                                AK_dbg_messg(MIDDLE, REL_EQ, "::table_name (%s) in temp list changed to %s\n", temp_elem->data, cost[1].data);
-                                temp_elem->size = strlen(cost[1].data) + 1;
-                                memset(temp_elem->data, '\0', MAX_VARCHAR_LENGTH);
-                                strcpy(temp_elem->data, cost[1].data);
-
-                                //Insert smallest table at the end of temp list
-                                AK_InsertAtEnd_L3(TYPE_OPERAND, cost[0].data, strlen(cost[0].data) + 1, temp);
-								AK_dbg_messg(MIDDLE, REL_EQ, "::table_name (%s) inserted in temp list\n", cost[0].data);
-								
-                                //Insert operator
-								AK_InsertAtEnd_L3(list_elem->type, list_elem->data, list_elem->size, temp);
-								AK_dbg_messg(MIDDLE, REL_EQ, "::operator %s inserted in temp list\n", list_elem->data);
-								
-                                list_elem = list_elem->next;
                             } else {
                             	AK_InsertAtEnd_L3(list_elem->type, list_elem->data, list_elem->size, temp);
 								AK_dbg_messg(MIDDLE, REL_EQ, "::operator %s inserted in temp list\n", list_elem->data);
@@ -137,52 +112,15 @@ struct list_node *AK_rel_eq_assoc(struct list_node *list_rel_eq) {
                         //tmp >> n, tmp->next >> [L2]
 
                         //If there is valid move
-                        if (i == 1) {
-                            //Check for valid types (don't need to check operator, neither type for
-                            //list_elem because it's alreacdy checked in the switch statement)
+                        if (i == 1)
+                        {
+                            // Check for valid types (don't need to check operator, neither type for
+                            // list_elem because it's alreacdy checked in the switch statement)
                             if ((list_elem->data[0] == tmp->data[0] && tmp->type == TYPE_OPERATOR) &&
-                                    (list_elem_next->type == (tmp->next)->type)) {
-                                cost_eval cost[3];
+                                (list_elem_next->type == (tmp->next)->type))
+                            {
 
-                                //read previous two relations and save their rows number to cost_eval struct,
-                                //save also table name
-                                while (temp_elem->type == TYPE_OPERAND) {
-                                    cost[next_cost].value = AK_get_num_records(temp_elem->data);
-                                    strcpy(cost[next_cost].data, temp_elem->data);
-                                    next_cost++;
-                                    temp_elem = (struct list_node *) AK_Previous_L2(temp_elem, temp);
-                                }
-
-                                //see comment on the previous operator for getting heuristics values
-                                //check for relation after natural join operator, if exists save data to cost_eval struct
-                                //and then sort all three elements ascending (lower index -> less rows in table)
-                                if ((list_elem_next->next)->type == TYPE_OPERAND) {
-                                    cost[next_cost].value = AK_get_num_records((list_elem_next->next)->data);
-                                    strcpy(cost[next_cost].data, (list_elem_next->next)->data);
-                                    qsort(cost, 3, sizeof (cost_eval), AK_compare);
-                                }
-
-                                //if values for all three relations are saved, rearrange tables in list
-                                if (next_cost-- == 2) {
-                                    temp_elem = (struct list_node *) AK_End_L2(temp);
-                                    while (next_cost < 3) {
-                                        if (temp_elem->type == TYPE_OPERAND) {
-                                            temp_elem->size = strlen(cost[next_cost].data) + 1;
-                                            memset(temp_elem->data, '\0', MAX_VARCHAR_LENGTH);
-                                            strcpy(temp_elem->data, cost[next_cost].data);
-                                            AK_dbg_messg(MIDDLE, REL_EQ, "::table_name (%s) in temp list changed to %s\n", temp_elem->data, cost[next_cost].data);
-                                            next_cost++;
-                                        }
-                                        temp_elem = (struct list_node *) AK_Previous_L2(temp_elem, temp);
-                                    }
-                                    //insert final relation
-                                    AK_InsertAtEnd_L3(TYPE_OPERAND, cost[0].data, strlen(cost[0].data) + 1, temp);
-                                    AK_dbg_messg(MIDDLE, REL_EQ, "::table_name (%s) inserted in temp list\n", cost[0].data);
-
-                                    next_cost = 1;
-                                } else {
-                                    next_cost = 0;
-                                }
+                                AK_ro_nat_join_assoc_function(temp_elem, temp_elem_prev, list_elem_next, list_elem, temp, &next_cost);
                             }
                         }
                         //insert operator
@@ -213,107 +151,7 @@ struct list_node *AK_rel_eq_assoc(struct list_node *list_rel_eq) {
                         }
                         tmp = list_elem_next->next;
 
-                        //if exists elements in range
-                        if (temp_elem_prev != NULL && i == 2) {
-                            char *cond_attr_first, *cond_attr_second;
-                            char *tbl_attr_first, *tbl_attr_second, *tbl_attr_third;
-
-                            //get attributes from condition F1 (E1 E2 t[F1])
-                            cond_attr_first = NULL;
-                            if (list_elem_next->type == TYPE_CONDITION) {
-                                cond_attr_first = (char *) AK_rel_eq_cond_attributes(list_elem_next->data);
-                            }
-
-                            //get attributes from condition F2 (t[F2])
-                            cond_attr_second = NULL;
-                            if (((tmp->next)->data[0] == RO_THETA_JOIN && (tmp->next)->type == TYPE_OPERATOR) && (tmp->next->next)->type == TYPE_CONDITION) {
-                                cond_attr_second = (char *) AK_rel_eq_cond_attributes((tmp->next->next)->data);
-                            }
-
-                            //get attributes from table E1
-                            tbl_attr_first = NULL;
-                            if (temp_elem->type == TYPE_OPERAND) {
-                                tbl_attr_first = (char *) AK_rel_eq_get_attributes(temp_elem_prev->data);
-                            }
-
-                            //get attributes from table E2
-                            tbl_attr_second = NULL;
-                            if (temp_elem->type == TYPE_OPERAND) {
-                                tbl_attr_second = (char *) AK_rel_eq_get_attributes(temp_elem->data);
-                            }
-
-                            //get attributes from table E3
-                            tbl_attr_third = NULL;
-                            if (temp_elem->type == TYPE_OPERAND) {
-                                tbl_attr_third = (char *) AK_rel_eq_get_attributes(tmp->data);
-                            }
-
-                            if (cond_attr_first != NULL && cond_attr_second != NULL &&
-                                    tbl_attr_first != NULL && tbl_attr_second != NULL && tbl_attr_third != NULL) {
-
-                                //attributes from F1 are subset of attributes from E2
-                                //and attributes from F1 are subset of attributes from E1, and they are not susbset of E3
-                                if (AK_rel_eq_is_attr_subset(tbl_attr_first, cond_attr_first) == EXIT_SUCCESS &&
-                                        AK_rel_eq_is_attr_subset(tbl_attr_second, cond_attr_first) == EXIT_SUCCESS &&
-                                        AK_rel_eq_is_attr_subset(tbl_attr_third, cond_attr_first) == EXIT_FAILURE) {
-                                    //first condition check completed successfully
-                                    next_cost++;
-                                }
-
-                                //attributes from F2 are subset of attributes from E2
-                                //and attributes from F2 are subset of attributes from E3, and they are not susbset of E1
-                                if (AK_rel_eq_is_attr_subset(tbl_attr_second, cond_attr_second) == EXIT_SUCCESS &&
-                                        AK_rel_eq_is_attr_subset(tbl_attr_third, cond_attr_second) == EXIT_SUCCESS &&
-                                        AK_rel_eq_is_attr_subset(tbl_attr_first, cond_attr_second) == EXIT_FAILURE) {
-                                    //second condition check completed successfully
-                                    next_cost++;
-                                }
-
-                                AK_free(cond_attr_first);
-                                AK_free(tbl_attr_first);
-                                AK_free(tbl_attr_second);
-                                AK_free(tbl_attr_third);
-
-                            } //end of check for NULLs
-
-                            if (next_cost) {
-                                next_cost = 0;
-                                cost_eval cost[3];
-
-                                while (temp_elem->type == TYPE_OPERAND) {
-                                    cost[next_cost].value = AK_get_num_records(temp_elem->data);
-                                    strcpy(cost[next_cost].data, temp_elem->data);
-                                    next_cost++;
-                                    temp_elem = (struct list_node *) AK_Previous_L2(temp_elem, temp);
-                                }
-
-                                if (next_cost > 1) {
-                                    //see comment on the previous operator for getting heuristics values
-                                    cost[next_cost].value = AK_get_num_records((list_elem_next->next)->data);
-                                    strcpy(cost[next_cost].data, (list_elem_next->next)->data);
-                                    qsort(cost, 3, sizeof (cost_eval), AK_compare);
-                                    temp_elem = (struct list_node *) AK_End_L2(temp);
-
-                                    next_cost = 1;
-                                    while (next_cost < 3) {
-                                        if (temp_elem->type == TYPE_OPERAND) {
-                                            temp_elem->size = strlen(cost[next_cost].data) + 1;
-                                            memset(temp_elem->data, '\0', MAX_VARCHAR_LENGTH);
-                                            strcpy(temp_elem->data, cost[next_cost].data);
-                                            AK_dbg_messg(MIDDLE, REL_EQ, "::table_name (%s) in temp list changed to %s\n", temp_elem->data, cost[next_cost].data);
-                                            next_cost++;
-                                        }
-                                        temp_elem = (struct list_node *) AK_Previous_L2(temp_elem, temp);
-                                    }
-
-                                    AK_InsertAtEnd_L3(TYPE_OPERAND, cost[0].data, strlen(cost[0].data) + 1, temp);
-                                    AK_dbg_messg(MIDDLE, REL_EQ, "::table_name (%s) inserted in temp list\n", cost[0].data);
-                                    next_cost = 1;
-                                } else {
-                                    next_cost = -1;
-                                }
-                            }
-                        }
+                        AK_ro_theta_assoc_function(temp_elem,temp_elem_prev,list_elem_next,list_elem,temp,tmp,&next_cost,i);
 
                         AK_InsertAtEnd_L3(list_elem->type, list_elem->data, list_elem->size, temp);
                         AK_InsertAtEnd_L3(list_elem_next->type, list_elem_next->data, list_elem_next->size, temp);
@@ -331,6 +169,7 @@ struct list_node *AK_rel_eq_assoc(struct list_node *list_rel_eq) {
                         break;
                     case RO_PROJECTION:
                     case RO_SELECTION:
+                        //nisam vidio razlog ovaj skratiti
                     	AK_InsertAtEnd_L3(list_elem->type, list_elem->data, list_elem->size, temp);
                         AK_InsertAtEnd_L3(list_elem_next->type, list_elem_next->data, list_elem_next->size, temp);
                         AK_dbg_messg(MIDDLE, REL_EQ, "::operator %s inserted with condition (%s) in temp list\n", list_elem->data, list_elem_next->data);
@@ -393,6 +232,282 @@ struct list_node *AK_rel_eq_assoc(struct list_node *list_rel_eq) {
     AK_EPI;
     return temp;
 }
+
+/**
+ * @author Elena Kržina.
+ * @brief RA expression for intersect
+ * @param list_node* temp_elem for a table element
+ * @param list_node* temp_elem_prev for the previous element
+ * @param list_node* list_elem_next for the next element
+ * @param list_node* list_elem for a table element
+ * @param list_node* temp for a temporary table
+ * @result optimised RA expresion projection 
+ * 
+*/
+struct list_node* AK_ro_intersect_assoc_function(struct list_node *temp_elem, struct list_node *temp_elem_prev, struct list_node *list_elem_next, struct list_node *list_elem, struct list_node *temp)
+{
+    cost_eval cost[3];
+
+    // We can later consider some other options than number of table records
+    // to get heuristic values for table reordering in association construction
+    // Getting table rows count requires loop through all rows in table (very expansive)
+    cost[0].value = AK_get_num_records(temp_elem->data);
+    cost[1].value = AK_get_num_records(temp_elem_prev->data);
+    cost[2].value = AK_get_num_records(list_elem_next->data);
+
+    strcpy(cost[0].data, temp_elem->data);
+    strcpy(cost[1].data, temp_elem_prev->data);
+    strcpy(cost[2].data, list_elem_next->data);
+    qsort(cost, 3, sizeof(cost_eval), AK_compare);
+
+    // Change inserted relation to largest table
+    AK_dbg_messg(MIDDLE, REL_EQ, "::table_name (%s) in temp list changed to %s\n", temp_elem_prev->data, cost[2].data);
+    temp_elem_prev->size = strlen(cost[2].data) + 1;
+    memset(temp_elem_prev->data, '\0', MAX_VARCHAR_LENGTH);
+    strcpy(temp_elem_prev->data, cost[2].data);
+
+    // Change last inserted relation
+    AK_dbg_messg(MIDDLE, REL_EQ, "::table_name (%s) in temp list changed to %s\n", temp_elem->data, cost[1].data);
+    temp_elem->size = strlen(cost[1].data) + 1;
+    memset(temp_elem->data, '\0', MAX_VARCHAR_LENGTH);
+    strcpy(temp_elem->data, cost[1].data);
+
+    // Insert smallest table at the end of temp list
+    AK_InsertAtEnd_L3(TYPE_OPERAND, cost[0].data, strlen(cost[0].data) + 1, temp);
+    AK_dbg_messg(MIDDLE, REL_EQ, "::table_name (%s) inserted in temp list\n", cost[0].data);
+
+    // Insert operator
+    AK_InsertAtEnd_L3(list_elem->type, list_elem->data, list_elem->size, temp);
+    AK_dbg_messg(MIDDLE, REL_EQ, "::operator %s inserted in temp list\n", list_elem->data);
+
+    list_elem = list_elem->next;
+    return list_elem;
+}
+
+/**
+ * @author Elena Kržina.
+ * @brief gets cost of next element
+ * @param list_node* temp_elem for a table element
+ * @param list_node* temp_elem_prev for the previous element
+ * @param list_node* list_elem_next for the next element
+ * @param list_node* list_elem for a table element
+ * @param list_node* temp for a temporary table
+ * @param int* next_cost cost of the next element that will be referenced
+ * @result result of cost
+ * 
+*/
+struct list_node* AK_ro_nat_join_assoc_function(struct list_node *temp_elem, struct list_node *temp_elem_prev, struct list_node *list_elem_next, struct list_node *list_elem, struct list_node *temp, int *next_cost)
+{
+    cost_eval cost[3];
+
+    // read previous two relations and save their rows number to cost_eval struct,
+    // save also table name
+    while (temp_elem->type == TYPE_OPERAND)
+    {
+        cost[*next_cost].value = AK_get_num_records(temp_elem->data);
+        strcpy(cost[*next_cost].data, temp_elem->data);
+        *next_cost=next_cost+1;
+        temp_elem = (struct list_node *)AK_Previous_L2(temp_elem, temp);
+    }
+
+    // see comment on the previous operator for getting heuristics values
+    // check for relation after natural join operator, if exists save data to cost_eval struct
+    // and then sort all three elements ascending (lower index -> less rows in table)
+    if ((list_elem_next->next)->type == TYPE_OPERAND)
+    {
+        cost[*next_cost].value = AK_get_num_records((list_elem_next->next)->data);
+        strcpy(cost[*next_cost].data, (list_elem_next->next)->data);
+        qsort(cost, 3, sizeof(cost_eval), AK_compare);
+    }
+
+    // if values for all three relations are saved, rearrange tables in list
+    if (*next_cost == 2)
+    {
+        *next_cost = *next_cost-1;
+        temp_elem = (struct list_node *)AK_End_L2(temp);
+        while (*next_cost < 3)
+        {
+                if (temp_elem->type == TYPE_OPERAND)
+                {
+                        temp_elem->size = strlen(cost[*next_cost].data) + 1;
+                        memset(temp_elem->data, '\0', MAX_VARCHAR_LENGTH);
+                        strcpy(temp_elem->data, cost[*next_cost].data);
+                        AK_dbg_messg(MIDDLE, REL_EQ, "::table_name (%s) in temp list changed to %s\n", temp_elem->data, cost[*next_cost].data);
+                        *next_cost++;
+                }
+                temp_elem = (struct list_node *)AK_Previous_L2(temp_elem, temp);
+        }
+        // insert final relation
+        AK_InsertAtEnd_L3(TYPE_OPERAND, cost[0].data, strlen(cost[0].data) + 1, temp);
+        AK_dbg_messg(MIDDLE, REL_EQ, "::table_name (%s) inserted in temp list\n", cost[0].data);
+
+        *next_cost = 1;
+    }
+    else
+    {
+        *next_cost = 0;
+    }
+}
+/**
+ * @author Elena Kržina.
+ * @brief RA expression for nat_join
+ * @param list_node* temp_elem for a table element
+ * @param list_node* temp_elem_prev for the previous element
+ * @param list_node* list_elem_next for the next element
+ * @param list_node* list_elem for a table element
+ * @param list_node* temp for a temporary table
+ * @param int* next_cost cost of the next element that will be referenced
+ * @param int* i place of member with next nat_join operator
+ * 
+ * @result result of cost
+ * 
+*/
+struct list_node* AK_ro_theta_assoc_function(struct list_node *temp_elem, struct list_node *temp_elem_prev, struct list_node *list_elem_next, struct list_node *list_elem, struct list_node *temp, struct list_node *tmp, int *next_cost, int i){
+    // if exists elements in range
+    if (temp_elem_prev != NULL && i == 2)
+    {
+        char *cond_attr_first, *cond_attr_second;
+        char *tbl_attr_first, *tbl_attr_second, *tbl_attr_third;
+
+        // get attributes from condition F1 (E1 E2 t[F1])
+        cond_attr_first = NULL;
+        if (list_elem_next->type == TYPE_CONDITION)
+        {
+                cond_attr_first = (char *)AK_rel_eq_cond_attributes(list_elem_next->data);
+        }
+
+        // get attributes from condition F2 (t[F2])
+        cond_attr_second = NULL;
+        if (((tmp->next)->data[0] == RO_THETA_JOIN && (tmp->next)->type == TYPE_OPERATOR) && (tmp->next->next)->type == TYPE_CONDITION)
+        {
+                cond_attr_second = (char *)AK_rel_eq_cond_attributes((tmp->next->next)->data);
+        }
+
+
+        // get attributes from table E1
+        tbl_attr_first = AK_get_operand(temp_elem, temp_elem_prev);
+        // get attributes from table E2
+        tbl_attr_first = AK_get_operand(temp_elem, temp_elem);
+        // get attributes from table E3
+        tbl_attr_first = AK_get_operand(temp_elem, tmp);
+
+
+        if (cond_attr_first != NULL && cond_attr_second != NULL &&
+            tbl_attr_first != NULL && tbl_attr_second != NULL && tbl_attr_third != NULL)
+        {
+
+
+                // attributes from F1 are subset of attributes from E2
+                // and attributes from F1 are subset of attributes from E1, and they are not susbset of E3
+                if (AK_check_subset(tbl_attr_first,tbl_attr_second,tbl_attr_third,cond_attr_first))
+                {
+                        // first condition check completed successfully
+                        next_cost++;
+                }
+
+                // attributes from F2 are subset of attributes from E2
+                // and attributes from F2 are subset of attributes from E3, and they are not susbset of E1
+                
+                if (AK_check_subset(tbl_attr_second,tbl_attr_third,tbl_attr_first,cond_attr_second))
+                {
+                        // second condition check completed successfully
+                        next_cost++;
+                }
+
+                AK_free(cond_attr_first);
+                AK_free(tbl_attr_first);
+                AK_free(tbl_attr_second);
+                AK_free(tbl_attr_third);
+
+        } // end of check for NULLs
+
+        if (*next_cost)
+        {
+                *next_cost = 0;
+                cost_eval cost[3];
+
+                while (temp_elem->type == TYPE_OPERAND)
+                {
+                        cost[*next_cost].value = AK_get_num_records(temp_elem->data);
+                        strcpy(cost[*next_cost].data, temp_elem->data);
+                        next_cost++;
+                        temp_elem = (struct list_node *)AK_Previous_L2(temp_elem, temp);
+                }
+
+                if (*next_cost > 1)
+                {
+                        // see comment on the previous operator for getting heuristics values
+                        cost[*next_cost].value = AK_get_num_records((list_elem_next->next)->data);
+                        strcpy(cost[*next_cost].data, (list_elem_next->next)->data);
+                        qsort(cost, 3, sizeof(cost_eval), AK_compare);
+                        temp_elem = (struct list_node *)AK_End_L2(temp);
+
+                        next_cost = 1;
+                        while (next_cost < 3)
+                        {
+                            if (temp_elem->type == TYPE_OPERAND)
+                            {
+                                temp_elem->size = strlen(cost[*next_cost].data) + 1;
+                                memset(temp_elem->data, '\0', MAX_VARCHAR_LENGTH);
+                                strcpy(temp_elem->data, cost[*next_cost].data);
+                                AK_dbg_messg(MIDDLE, REL_EQ, "::table_name (%s) in temp list changed to %s\n", temp_elem->data, cost[*next_cost].data);
+                                *next_cost=*next_cost+1;
+                            }
+                            temp_elem = (struct list_node *)AK_Previous_L2(temp_elem, temp);
+                        }
+
+                        AK_InsertAtEnd_L3(TYPE_OPERAND, cost[0].data, strlen(cost[0].data) + 1, temp);
+                        AK_dbg_messg(MIDDLE, REL_EQ, "::table_name (%s) inserted in temp list\n", cost[0].data);
+                        next_cost = 1;
+                }
+                else
+                {
+                        next_cost = -1;
+                }
+        }
+    }
+}
+
+/**
+ * @author Elena Kržina.
+ * @brief gets an operand from element
+ * @param *temp_elem element whose type is checked
+ * @param *from_data from which table to get attributes
+ * @result tbl_attr that represents the table attribute
+ * 
+*/
+char* AK_get_operand(struct list_node* temp_elem, struct list_node* from_data){
+    char *tbl_attr = NULL;
+    if (temp_elem->type == TYPE_OPERAND)
+    {
+        tbl_attr = (char *)AK_rel_eq_get_attributes(from_data->data);
+    }
+    return tbl_attr;
+}
+/**
+ * @author Elena Kržina.
+ * @brief Checks table attributes and conditions, returns 1 if first two attributes return with EXIT_SUCCESS
+ * @param *tbl_attr_first first attribute
+ * @param *tbl_attr_second second attribute
+ * @param *tbl_attr_third third attribute that needs to fail
+ * @result 1 like true if all conditions are met, otherwise 0 like false
+ * 
+*/
+int AK_check_subset(char *tbl_attr_first, char *tbl_attr_second,char *tbl_attr_third, char *cond_attr_first)
+{
+    if (AK_rel_eq_is_attr_subset(tbl_attr_first, cond_attr_first) == EXIT_SUCCESS &&
+        AK_rel_eq_is_attr_subset(tbl_attr_second, cond_attr_first) == EXIT_SUCCESS &&
+        AK_rel_eq_is_attr_subset(tbl_attr_third, cond_attr_first) == EXIT_FAILURE)
+    {
+        return 1;
+    }
+    else
+    {
+        return 0;
+    }
+}
+
+
 /**
  * @author Dino Laktašić.
  * @brief Function for printing RA expresion struct list_node
@@ -734,4 +849,5 @@ TestResult AK_rel_eq_assoc_test() {
     
     return TEST_result(success,failed);
 }
+
 
