@@ -78,7 +78,6 @@ class Create_table_command:
     pattern = None
     matcher = None
     expr = None
-
     # matches method
     # checks whether given input matches table_exists command syntax
     def matches(self, input):
@@ -102,23 +101,31 @@ class Create_table_command:
             print(token)
             return False
         # get table name
+        
         table_name = str(token.tableName)
+        
         # table should not exist yet
+        if (AK47.AK_table_exist(table_name) == 1):
+                print("Error: table'" + table_name + "' already exist")
+                return "Table'" + table_name + "' already exist"
+           
         '''
             For some reason, AK_table_exist won't work, it always just exits here, so it's commented out
-            if (AK47.AK_table_exist(table_name) == 1):
-                print "Error: table'" + table_name + "' already exist"
-                return False
+            
         '''
         # get attributes
         '''
             Create table in table.c currently takes only name and type of attributes.
             Parsing works for other attribute properties as well, so it should be added here when possible.
         '''
+        
         create_table_attributes = []
+        # print(len(token.attributes))
         for attribute in token.attributes:
             create_table_attributes.append(
-                [{'name': str(attribute[0])}, {'type': get_attr_type(str(attribute[1]))}])
+                [{'name': str(attribute[0])}, {'type': str(attribute[1])}])
+            # print(create_table_attributes)
+        # print(create_table_attributes)
         attribute_count = len(create_table_attributes)
         # executing
         try:

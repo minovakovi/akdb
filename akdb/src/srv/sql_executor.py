@@ -20,7 +20,7 @@ def initialize():
 
 # sql_executor
 # contaions methods for sql operations
-class sql_executor:
+class Sql_executor:
 
     # initialize classes for the available commands
     print_system_table_command = Print_system_table_command()
@@ -38,6 +38,8 @@ class sql_executor:
     update_command = Update_command()
     drop_command = Drop_command()
 
+    # Missing delete from
+
     # add command instances to the commands array
     commands = [print_command, table_details_command, table_exists_command, create_sequence_command, create_table_command,
                 create_index_command, create_trigger_command, insert_into_command, grant_command, select_command, update_command, drop_command, print_system_table_command]
@@ -49,12 +51,15 @@ class sql_executor:
         if isinstance(command, str) and len(command) > 0:
             for elem in self.commands:
                 if elem.matches(command) is not None:
+                    print(elem)
                     return (elem.__class__.__name__, elem.execute(command))
         return ("",  "Error. Wrong command: " + command)
 
     # execute method
     # called when a new command is received (from client)
     def execute(self, command):
+        #tmp = self.commands_for_input(command)
+        #print(f"{tmp=}")
         return self.commands_for_input(command)
 
     # insert
@@ -64,12 +69,15 @@ class sql_executor:
     def insert(self, expr):
         parser = sql_tokenizer()
         token = parser.AK_parse_insert_into(expr)
+        
         if isinstance(token, str):
             print("Error: syntax error in expression")
-            print(expr)
-            print(token)
+            #print(expr)
+            #print(token)
             return False
+        
         table_name = str(token.tableName)
+        
         # is there a table
         if (AK47.AK_table_exist(table_name) == 0):
             print("Error: table '" + table_name + "' does not exist")
@@ -142,4 +150,3 @@ class sql_executor:
             return True
         else:
             return False
-        return False
