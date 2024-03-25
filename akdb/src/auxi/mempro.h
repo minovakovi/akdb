@@ -173,7 +173,7 @@ typedef struct {
 #endif
 } AK_debmod_state;
 
-AK_debmod_state* AK_DEBMOD_STATE;
+extern AK_debmod_state* AK_DEBMOD_STATE;
 
 
 /**
