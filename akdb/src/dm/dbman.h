@@ -21,34 +21,30 @@ of Kalashnikov DB
 #ifndef DBMAN
 #define DBMAN
 
-#include "../auxi/test.h"
-#include "../auxi/auxiliary.h"
-#include "../auxi/ptrcontainer.h"
 #include <errno.h>
-#include <pthread.h>
-
-
-#include "sys/time.h"
-#include <sys/types.h>
-#include <sys/stat.h>
 #include <fcntl.h>
+#include <limits.h> /* for CHAR_BIT */
+#include <pthread.h>
+#include <sys/stat.h>
+#include <sys/stat.h> /* for stat structure*/
+#include <sys/types.h>
+
+#include "../auxi/auxiliary.h"
 #include "../auxi/mempro.h"
+#include "../auxi/ptrcontainer.h"
+#include "../auxi/test.h"
+#include "sys/time.h"
 
+// #define false 0
+// #define true  !false
 
-#include <sys/stat.h>   /* for stat structure*/
-#include <limits.h>     /* for CHAR_BIT */
-
-//#define false 0
-//#define true  !false
-
-#define BITMASK(b)      (1 << ((b) % CHAR_BIT))
-#define BITSLOT(b)      ((int)((b) / CHAR_BIT))
-#define BITSET(a, b)    ((a)[BITSLOT(b)] |=  BITMASK(b))
-#define BITCLEAR(a, b)  ((a)[BITSLOT(b)] &= ~BITMASK(b))
-#define BITTEST(a, b)   ((a)[BITSLOT(b)] &   BITMASK(b))
-#define BITNSLOTS(nb)   ((int)(nb + CHAR_BIT - 1) / CHAR_BIT)
-#define SEGMENTLENGTH() (BITNSLOTS(DB_FILE_BLOCKS_NUM) + 2*sizeof(int))
-
+#define BITMASK(b) (1 << ((b) % CHAR_BIT))
+#define BITSLOT(b) ((int)((b) / CHAR_BIT))
+#define BITSET(a, b) ((a)[BITSLOT(b)] |= BITMASK(b))
+#define BITCLEAR(a, b) ((a)[BITSLOT(b)] &= ~BITMASK(b))
+#define BITTEST(a, b) ((a)[BITSLOT(b)] & BITMASK(b))
+#define BITNSLOTS(nb) ((int)(nb + CHAR_BIT - 1) / CHAR_BIT)
+#define SEGMENTLENGTH() (BITNSLOTS(DB_FILE_BLOCKS_NUM) + 2 * sizeof(int))
 
 /**
  * @author Markus Schatten
@@ -108,44 +104,40 @@ typedef struct {
     unsigned char data[DATA_BLOCK_SIZE * DATA_ENTRY_SIZE];
 } AK_block;
 
-
-
 /**
  * @author Markus Schatten
  * @var db
  * @brief Variable that defines the DB file file handle
  */
 
-
-PtrContainer db;
+extern PtrContainer db;
 
 /**
  * @author Markus Schatten
  * @var db_file_size
  * @brief Variable that defines the size of the DB file (in blocks)
  */
-unsigned int db_file_size;
+extern unsigned int db_file_size;
 
 /**
-  * @author Matija Novak
-  * @struct table_addresses
-  * @brief Structure that defines start and end address of extent
-  */
+ * @author Matija Novak
+ * @struct table_addresses
+ * @brief Structure that defines start and end address of extent
+ */
 typedef struct {
-    ///sturcture for extents start end stop adresses
-    int address_from[MAX_EXTENTS_IN_SEGMENT]; //start adress of the extent
-    int address_to[MAX_EXTENTS_IN_SEGMENT]; //end adress of the extent
+    /// sturcture for extents start end stop adresses
+    int address_from[MAX_EXTENTS_IN_SEGMENT];  // start adress of the extent
+    int address_to[MAX_EXTENTS_IN_SEGMENT];    // end adress of the extent
 } table_addresses;
 
 #define DB_FILE_SIZE_EX 200
 #define DB_FILE_BLOCKS_NUM_EX (int)(1024 * 1024 * DB_FILE_SIZE_EX / sizeof(AK_block))
 
-
 /**
-  * @author dv
-  * @struct blocktable
-  * @brief Structure that defines bit status of blocks, last initialized and last allocated index
-  */
+ * @author dv
+ * @struct blocktable
+ * @brief Structure that defines bit status of blocks, last initialized and last allocated index
+ */
 typedef struct {
     unsigned int allocationtable[DB_FILE_BLOCKS_NUM_EX];
     unsigned char bittable[BITNSLOTS(DB_FILE_BLOCKS_NUM_EX)];
@@ -153,17 +145,14 @@ typedef struct {
     int last_initialized;
     int prepared;
     time_t ltime;
-}AK_blocktable;
+} AK_blocktable;
 
 /**
  * @author dv
  * @var AK_allocationbit
  * @brief Global variable that holds allocation bit-vector
  */
-PtrContainer AK_allocationbit;
-
-
-
+extern PtrContainer AK_allocationbit;
 
 /**
  * @author dv
@@ -171,13 +160,11 @@ PtrContainer AK_allocationbit;
  */
 #define AK_ALLOCATION_TABLE_SIZE sizeof(AK_blocktable)
 
-
 /**
  * @author dv
  * @brief How many characters could line contain
  */
 #define CHAR_IN_LINE 80
-
 
 /**
  * @author dv
@@ -193,13 +180,13 @@ PtrContainer AK_allocationbit;
  * LOWER    - set tries to place itself to lower part od allocation table
  * AROUND   - set tries to place itself around targeted index
  */
-typedef enum{
+typedef enum {
     allocationSEQUENCE = 10001,
     allocationUPPER,
     allocationLOWER,
     allocationAROUND,
     allocationNOMODE
-}AK_allocation_set_mode;
+} AK_allocation_set_mode;
 
 /**
  * @author Domagoj Šitum
@@ -233,51 +220,50 @@ typedef struct {
  * @brief Blocks which are currently being written to disk or read from it.
  */
 
-PtrContainer AK_block_activity_info;
-
+extern PtrContainer AK_block_activity_info;
 
 /**
  * @author Marko Sinko
  * @var fileLock
  * @brief Synchronization object for files used by dbman.c
  */
-PtrContainer dbmanFileLock;
+extern PtrContainer dbmanFileLock;
 
-int AK_print_block(AK_block * block, int num, char* gg, FILE *fpp);
+int AK_print_block(AK_block *block, int num, char *gg, FILE *fpp);
 TestResult AK_allocationbit_test();
 TestResult AK_allocationtable_test();
-int* AK_increase_extent(int start_address, int add_size, AK_allocation_set_mode* mode, int border, int target, AK_header *header, int gl);
-int* AK_get_extent(int start_address, int desired_size, AK_allocation_set_mode* mode, int border, int target, AK_header *header, int gl);
-int AK_get_allocation_set(int* bitsetbs, int fromWhere, int gaplength, int num, AK_allocation_set_mode mode, int target);
-int AK_copy_header(AK_header *header, int * blocknum, int num);
-int  AK_allocate_blocks(FILE* db, AK_block * block, int FromWhere, int HowMany);
-AK_block *  AK_init_block();
+int *AK_increase_extent(int start_address, int add_size, AK_allocation_set_mode *mode, int border, int target, AK_header *header, int gl);
+int *AK_get_extent(int start_address, int desired_size, AK_allocation_set_mode *mode, int border, int target, AK_header *header, int gl);
+int AK_get_allocation_set(int *bitsetbs, int fromWhere, int gaplength, int num, AK_allocation_set_mode mode, int target);
+int AK_copy_header(AK_header *header, int *blocknum, int num);
+int AK_allocate_blocks(FILE *db, AK_block *block, int FromWhere, int HowMany);
+AK_block *AK_init_block();
 int AK_allocationtable_dump(int zz);
 void AK_blocktable_dump(int zz);
 int AK_blocktable_flush();
 // void AK_allocate_array_currently_accessed_blocks(); // ne postoji nikakva implementacija
 TestResult AK_thread_safe_block_access_test();
-void* AK_read_block_for_testing(void *address);
-void* AK_write_block_for_testing(void *block);
+void *AK_read_block_for_testing(void *address);
+void *AK_write_block_for_testing(void *block);
 int AK_blocktable_get();
 int fsize(FILE *fp);
 int AK_init_allocation_table();
 int AK_init_db_file(int size);
-AK_block * AK_read_block(int address);
-int AK_write_block(AK_block * block);
+AK_block *AK_read_block(int address);
+int AK_write_block(AK_block *block);
 int AK_new_extent(int start_address, int old_size, int extent_type, AK_header *header);
-int AK_new_segment(char * name, int type, AK_header *header);
-AK_header * AK_create_header(char * name, int type, int integrity, char * constr_name, char * contr_code);
-void AK_insert_entry(AK_block * block_address, int type, void * entry_data, int i);
+int AK_new_segment(char *name, int type, AK_header *header);
+AK_header *AK_create_header(char *name, int type, int integrity, char *constr_name, char *contr_code);
+void AK_insert_entry(AK_block *block_address, int type, void *entry_data, int i);
 int AK_init_system_tables_catalog(int relation, int attribute, int index, int view, int sequence, int function, int function_arguments,
-    int trigger, int trigger_conditions, int db, int db_obj, int user, int group, int user_group, int user_right, int group_right, int constraint, int constraintNull, int constraintCheck, int constraintUnique, int reference);
+                                  int trigger, int trigger_conditions, int db, int db_obj, int user, int group, int user_group, int user_right, int group_right, int constraint, int constraintNull, int constraintCheck, int constraintUnique, int reference);
 void AK_memset_int(void *block, int value, size_t num);
 int AK_register_system_tables(int relation, int attribute, int index, int view, int sequence, int function, int function_arguments,
-    int trigger, int trigger_conditions, int db, int db_obj, int user, int group, int user_group, int user_right, int group_right, int constraint, int constraintNull, int constraintCheck, int constraintUnique, int reference);
+                              int trigger, int trigger_conditions, int db, int db_obj, int user, int group, int user_group, int user_right, int group_right, int constraint, int constraintNull, int constraintCheck, int constraintUnique, int reference);
 int AK_init_system_catalog();
 int AK_delete_block(int address);
 int AK_delete_extent(int begin, int end);
-int AK_delete_segment(char * name, int type);
+int AK_delete_segment(char *name, int type);
 int AK_init_disk_manager();
 
 #endif

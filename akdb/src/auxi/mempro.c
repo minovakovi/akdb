@@ -21,6 +21,9 @@ USE OR PERFORMANCE OF THIS SOFTWARE.
 */
 
 #include "mempro.h"
+
+AK_debmod_state* AK_DEBMOD_STATE = NULL;
+
 /**
 * @author Marin Rukavina, Mislav Bozicevic
 * @param ds debug mode state

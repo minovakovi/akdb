@@ -18,7 +18,7 @@
  */
 
 #include "auxiliary.h"
-
+int testMode = 0;
 AK_graph G;
 AK_stackHead S;
 int indexCounter = 0;
