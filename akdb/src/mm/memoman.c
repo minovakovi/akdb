@@ -24,6 +24,10 @@
 #include "memoman.h"
 #include "../dm/dbman.h"
 
+PtrContainer db_cache;
+PtrContainer redo_log;
+PtrContainer query_mem;
+
 /**
   * @author Nikola Bakoš, Matija Šestak(revised)
   * @brief Function that caches a block into the memory.
