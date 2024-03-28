@@ -22,11 +22,11 @@ Auxiliary:
   2. OBSERVABLE ( AK_observable )
   3. OBSERVABLE PATTERN ( AK_observable_patte )
   4. MEMPRO ( auxi: AK_mempro )
-
-Disk manager:
-
   5. DICTIONARY ( AK_dictionary )
   6. PARSER ( AK_iniparser )
+
+Disk manager:
+  
   7. ALLOCATION BIT ( AK_allocationbit )
   8. ALLOCATION TABLE ( AK_allocationtable )
   9. THREAD SAFE BLOCK ( AK_thread_safe_block_ )
@@ -68,35 +68,37 @@ Relational operators:
   30. JOIN  ( AK_op_join )
   31. PRODUCT ( AK_op_product )
   32. AGGREGATION ( AK_aggregation )
-  33. INTERSECTION ( AK_op_intersect )
-  34. SELECTION ( AK_op_selection )
-  35. SELECTION PATTERN ( AK_op_selection_patt  )
-  36. CHECK EXPRESSION ( AK_expression_check_  )
-  37. DIFFERENCE ( AK_op_difference )
-  38. PROJECTION ( AK_op_projection )
-  39. THETA JOIN ( AK_op_theta_join )
+  33. GROUP BY (AK_group_by)
+  34. HAVING (AK_selection_having)
+  35. INTERSECTION ( AK_op_intersect )
+  36. SELECTION ( AK_op_selection )
+  37. SELECTION PATTERN ( AK_op_selection_patt  )
+  38. CHECK EXPRESSION ( AK_expression_check_  )
+  39. DIFFERENCE ( AK_op_difference )
+  40. PROJECTION ( AK_op_projection )
+  41. THETA JOIN ( AK_op_theta_join )
 
 SQL tests:
 
-  40. COMMAND ( AK_command )
-  41. DROP  ( AK_drop )
-  42. VIEW ( AK_view )
-  43.  NULL ( AK_nnull )
-  44. SELECT ( AK_select )
-  45. TRIGGER ( AK_trigger )
-  46. UNIQUE ( AK_unique )
-  47. FUNCTION ( AK_function  )
-  48. PRIVILEGES ( AK_privileges )
-  49. REFERENCE ( AK_reference )
-  50. CONSTRAINT BETWEEN ( AK_constraint_betwee )
-  51. CHECK ( AK_check_constraint )
-  52. CONSTRAINT NAMES ( AK_constraint_names )
-  53. INSERT ( AK_insert )
+  42. COMMAND ( AK_command )
+  43. DROP  ( AK_drop )
+  44. VIEW ( AK_view )
+  45. NNULL ( AK_nnull )
+  46. SELECT ( AK_select )
+  47. TRIGGER ( AK_trigger )
+  48. UNIQUE ( AK_unique )
+  49. FUNCTION ( AK_function  )
+  50. PRIVILEGES ( AK_privileges )
+  51. REFERENCE ( AK_reference )
+  52. CONSTRAINT BETWEEN ( AK_constraint_betwee )
+  53. CHECK ( AK_check_constraint )
+  54. CONSTRAINT NAMES ( AK_constraint_names )
+  55. INSERT ( AK_insert )
   
 Transaction:
 
-  54. TRANSACTION ( AK_transaction )
+  56. TRANSACTION ( AK_transaction )
   
 Recovery:
 
-  55. RECOVERY ( AK_recovery )
+  57. RECOVERY ( AK_recovery )
