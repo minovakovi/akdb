@@ -21,12 +21,11 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #ifndef FUNCTION
 #define FUNCTION
 
-#include "../auxi/test.h"
-#include "../file/table.h"
-#include "../file/fileio.h"
-#include "../auxi/mempro.h"
 #include "../auxi/auxiliary.h"
-
+#include "../auxi/mempro.h"
+#include "../auxi/test.h"
+#include "../file/fileio.h"
+#include "../file/table.h"
 
 /**
  * @author Unknown, updated by Jurica Hlevnjak - check function arguments included for drop purpose, updated by Tomislav Ilisevic
@@ -35,7 +34,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  * @param [out] arguments_list list of arguments
  * @return obj_id of the function or EXIT_ERROR
  */
-int AK_get_function_obj_id(char* function, struct list_node *arguments_list);
+int AK_get_function_obj_id(char *function, struct list_node *arguments_list);
 
 /**
  * @author Boris Kišić
@@ -50,7 +49,7 @@ int AK_check_function_arguments(int function_id, struct list_node *arguments_lis
  * @author Jurica Hlevnjak, updated by Aleksandra Polak
  * @brief Function that checks whether arguments belong to a function but only checks argument type (not name). Used for drop function.
  * @param [out] function_id id of the function
- * @param [out] args function arguments 
+ * @param [out] args function arguments
  * @return EXIT_SUCCESS or EXIT_ERROR
  */
 int AK_check_function_arguments_type(int function_id, struct list_node *args);
@@ -132,6 +131,7 @@ TestResult AK_function_test();
  * @param[out] arguments_list pointer to store the list of function arguments
  * @return EXIT_SUCCESS if the function details are successfully retrieved, or EXIT_ERROR otherwise
  */
-int AK_get_function_details_by_obj_id(int obj_id, char **name, int *return_type, struct list_node **arguments_list);
+
+// int AK_get_function_details_by_obj_id(int obj_id, char **name, int *return_type, struct list_node **arguments_list);
 
 #endif
