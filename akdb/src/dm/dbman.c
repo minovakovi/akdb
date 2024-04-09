@@ -27,6 +27,11 @@
 #include "../mm/memoman.h"
 pthread_mutex_t fileLockMutex = PTHREAD_MUTEX_INITIALIZER;
 
+PtrContainer db;
+unsigned int db_file_size;
+PtrContainer AK_allocationbit;
+PtrContainer AK_block_activity_info;
+PtrContainer dbmanFileLock;
 
 /**
 * @author Markus Schatten

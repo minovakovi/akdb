@@ -157,17 +157,17 @@ typedef struct {
  * @var db_cache
  * @brief Variable that defines the db cache
  */
-PtrContainer db_cache;
+extern PtrContainer db_cache;
 /**
  * @var redo_log
  * @brief Variable that defines the global redo log
  */
-PtrContainer redo_log;
+extern PtrContainer redo_log;
 /**
  * @var query_mem
  * @brief Variable that defines the global query memory
  */
-PtrContainer query_mem;
+extern PtrContainer query_mem;
 
 /**
   * @author Mario Novoselec
