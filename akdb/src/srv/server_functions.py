@@ -18,16 +18,16 @@ columns = cursor.fetchall()
  #   print(column[1])  # Ispisuje ime svakog stupca
 
 
-#cursor.execute("CREATE TABLE IF NOT EXISTS example (id INTEGER, usr TEXT, pas_hash TEXT)")  
+cursor.execute("CREATE TABLE IF NOT EXISTS example (id INTEGER, usr TEXT, pas_hash TEXT)")  
 
-#cursor.execute("INSERT INTO example VALUES (1, 'testingUser', ?)", (hashlib.sha256("testingPass".encode()).hexdigest(),))
-#cursor.execute("INSERT INTO example VALUES (2, 'user', ?)", (hashlib.sha256("pass".encode()).hexdigest(),))
+cursor.execute("INSERT INTO example VALUES (1, 'testingUser', ?)", (hashlib.sha256("testingPass".encode()).hexdigest(),))
+cursor.execute("INSERT INTO example VALUES (2, 'user', ?)", (hashlib.sha256("pass".encode()).hexdigest(),))
 
 cursor.execute("SELECT * FROM example")
 rows = cursor.fetchall()
 
-for row in rows:
-   print(row)
+#for row in rows:
+ #  print(row)
 
 # Potvrda promjena i zatvaranje veze s bazom podataka
 connection.commit()
