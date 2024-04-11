@@ -4,6 +4,38 @@ import threading
 import sys
 import json
 import configparser
+import sqlite3
+import hashlib
+
+# Povezivanje s bazom podataka
+connection = sqlite3.connect("test.db")
+cursor = connection.cursor()
+
+cursor.execute("PRAGMA table_info(example)")
+columns = cursor.fetchall()
+
+#for column in columns:
+ #   print(column[1])  # Ispisuje ime svakog stupca
+
+
+#cursor.execute("CREATE TABLE IF NOT EXISTS example (id INTEGER, usr TEXT, pas_hash TEXT)")  
+
+#cursor.execute("INSERT INTO example VALUES (1, 'testingUser', ?)", (hashlib.sha256("testingPass".encode()).hexdigest(),))
+#cursor.execute("INSERT INTO example VALUES (2, 'user', ?)", (hashlib.sha256("pass".encode()).hexdigest(),))
+
+cursor.execute("SELECT * FROM example")
+rows = cursor.fetchall()
+
+for row in rows:
+   print(row)
+
+# Potvrda promjena i zatvaranje veze s bazom podataka
+connection.commit()
+connection.close()
+
+
+
+
 
 sys.path.append("../swig/")
 import kalashnikovDB as AK47
@@ -24,34 +56,24 @@ class ParamikoServer(paramiko.ServerInterface):
         return paramiko.OPEN_FAILED_ADMINISTRATIVELY_PROHIBITED
     #Function that checks if the clients username and password match
     def check_auth_password(self, username, password):
-        usr = "testingUser" #TODO get users and passwords from database
-        #Testing the data format of AK_user_get_id(usr)
-        AK47.AK_user_get_id(usr)
-        #SIGSEGV ISSUE again
-        #return AK47.AK_user_get_id(usr)
-        pas = "testingPass"
-        #local login using swig
+        #print("Received username:", username)
+        #print("Received password:", password)
+        
+        connection = sqlite3.connect("test.db")
+        cursor = connection.cursor()
+        cursor.execute("SELECT usr, pas_hash FROM example WHERE usr = ?", (username,))
+        user_data = cursor.fetchone()
+        print("User data from database:", user_data)
+        connection.close()
 
-    #Fran fix:
-    #if(AK47.AK_user_check_pass(username,password)==1)
-    #    return paramiko.AUTH_SUCCESSFUL
-    #return paramiko.AUTH_FAILED
-
-
-
-
-    #    if(AK47.AK_user_get_id(usr)!=null):
-    #       return paramiko.AUTH_SUCCESSFUL
-    #    elif(username == usr) and (password == pas):
-    #        return paramiko.AUTH_SUCCESSFUL
-    #         return paramiko.AUTH_FAILED
-    #    pas = "testingPass"
-        if (username == usr) and (password == pas):
-            return paramiko.AUTH_SUCCESSFUL
+        if user_data:
+            stored_username, stored_password_hash = user_data
+            if username == stored_username and hashlib.sha256(password.encode()).hexdigest() == stored_password_hash:
+                return paramiko.AUTH_SUCCESSFUL
         return paramiko.AUTH_FAILED
+
 #Class that handles connection from client to the server
 class Connection:
-    #Constructor of the class 
     def __init__(self, conn, addr):
         try:
             self.addr = addr
@@ -61,83 +83,82 @@ class Connection:
             self.channel = self.transport.accept(timeout=1)
         except Exception as e:
             self.addr = False
-    #Destructor of the class
+            print("Error initializing connection:", e)
+
     def __del__(self):
         if self.channel is not None:
             self.channel.close()
         if self.transport is not None:
             self.transport.close()
-    #Function that handles sending data to the client
+
     def send_data(self, data):
         try:
             if data[1].startswith('Error'):
                 self.channel.send(self.pack_output({"success": False, "error_msg": data[1]}))
-            elif data[1] == False:                
+            elif data[1] is False:
                 self.channel.send(self.pack_output({"success": False, "error_msg": "There was an error in your command."}))
             elif data[0] == "Select_command":
                 self.select_protocol(data[1])
-            # Perhaps handle other cases differently
             else:
                 self.channel.send(self.pack_output({"success": True, "result": data[1]}))
         except Exception as e:
-            self.channel.send(self.pack_output({"success": False, "error_msg": "[-] Internal server error: %s" %e}))
-    #Function that handles recieving data from the client
+            print("[-] Failed to send data:", e)
+
     def recv_data(self):
         try:
             data = self.unpack_input(self.channel.recv(1024))
-            if type(data) is dict:
+            if isinstance(data, dict):
                 if "command" in data:
                     return data["command"]
                 elif "continue" in data:
                     return data["continue"]
             return False
         except Exception as e:
-            print("[-] Failed while unpacking data: %s" %e)
+            print("[-] Failed while unpacking data:", e)
             return False
 
-    #Function that formats data into a JSON format
     def pack_output(self, out):
         return json.dumps(out)
-    #Fucntion that reads JSON format and converts it to XY
+
     def unpack_input(self, inp):
         return json.loads(inp)
-    # Function that splits table by newline and sends 1000 by 1000 rows
+
     def select_protocol(self, table):
+        if not isinstance(table, str):
+            print("Invalid table format")
+            return
+
         l = table.splitlines()
-        print(n)
-        print(len(l))
-        if (len(l) > n):
+        if not l:
+            print("Empty table received")
+            return
+
+        if len(l) > n:
             header = [l.pop(0)]
             for i in range(0, len(l), n):
-                if i+n >= len(l):
-                    end = True
-                    endrow = len(l)
-                else:
-                    end = False
-                    endrow = i+n
-                if i == 0:
-                    data = self.pack_output({"startrow": i, "endrow": endrow, "max": len(l),"end": end, "result": '\n'.join(header + l[i:i + n]), "success": True, "packed_data": True})
-                else:
-                    data = self.pack_output({"startrow": i, "endrow": endrow, "max": len(l),"end": end, "result": '\n'.join(l[i:i + n]), "success": True, "packed_data": True})
-                self.channel.send(data)
-                if end == False:
-                    print("Sent " + str(i+n) + "/" + str(len(l)) + " rows to " + self.addr[0])
-                    res = self.recv_data()
-                    if res:
-                        continue
-                    else:
-                        print("Interrupted by client.")
-                        break
-                else:
-                    print("Sent all " + str(len(l)) + " rows to " + self.addr[0])
+                endrow = min(i + n, len(l))
+                data = {
+                    "startrow": i,
+                    "endrow": endrow,
+                    "max": len(l),
+                    "end": endrow == len(l),
+                    "result": '\n'.join(header + l[i:endrow]),
+                    "success": True,
+                    "packed_data": True
+                }
+                self.channel.send(self.pack_output(data))
+                print(f"Sent {endrow}/{len(l)} rows to {self.addr[0]}")
+                res = self.recv_data()
+                if not res:
+                    print("Interrupted by client.")
                     break
         else:
-            data = self.pack_output({"rows": len(l)-1, "result": table, "success": True})
-            self.channel.send(data)
+            data = {
+                "rows": len(l) - 1,
+                "result": table,
+                "success": True
+            }
+            self.channel.send(self.pack_output(data))
 
-
-    #Function that checks if the server is still running
     def is_alive(self):
-        if self.channel is not None and self.transport.is_active():
-            return True
-        return False
+        return self.channel is not None and self.transport.is_active()

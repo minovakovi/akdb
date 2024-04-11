@@ -2,6 +2,8 @@
 #Written by : Marko Vertus
 import sys
 import time
+from colors import bcolors
+
 
 #Test functions
 
@@ -102,3 +104,24 @@ def BeginTest():
 #Test for writing out history of actions
 def HistoryTest():
     return "history"
+
+from colors import bcolors
+
+def Help():
+    print(f"{bcolors.RED}Welcome to the AkDB Client.{bcolors.ENDC}")
+    print("--------------------------------------------------------------|")
+    print(f"{bcolors.RED}Available commands:{bcolors.ENDC}                                           |")
+    print(f"    {bcolors.RED}help{bcolors.ENDC}   - Show this help message - {bcolors.OKGREEN}Radi{bcolors.ENDC}                    |")
+    print(f"    {bcolors.RED}history{bcolors.ENDC} - List all previously typed commands - {bcolors.OKGREEN}Radi{bcolors.ENDC}       |")
+    print(f"    {bcolors.RED}testme{bcolors.ENDC}  - Executes all tests - {bcolors.OKGREEN}Radi{bcolors.ENDC}                       |")
+    print(f"    {bcolors.RED}\p{bcolors.ENDC}      - print table command                             |")
+    print(f"    {bcolors.RED}\ps{bcolors.ENDC}     - print system table command                      |")
+    print(f"    {bcolors.RED}\d{bcolors.ENDC}      - table details command                           |")
+    print(f"    {bcolors.RED}\_t{bcolors.ENDC}     - table details command                           |")
+    print(f"    {bcolors.RED}?{bcolors.ENDC}       - Help will appear, with instructions             |")
+    print(f"    {bcolors.RED}\q{bcolors.ENDC}      - Disconnect from the server and quit akdb client |")
+    print(f"    {bcolors.RED}select{bcolors.ENDC}  - select * from test                              |")
+    print(f"    {bcolors.RED}grant{bcolors.ENDC}   - grant update on test to public                  |")
+    print(f"    {bcolors.RED}create_table{bcolors.ENDC} - create table test(name varchar(50))        |")
+    print(f"    {bcolors.RED}create_index{bcolors.ENDC} - create index indeks on test(name)          |")
+    print("--------------------------------------------------------------|")
