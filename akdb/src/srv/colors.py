@@ -10,6 +10,7 @@ class bcolors:
     YELLOW = '\033[93m'
     # Red
     RED = '\033[91m'  # Dodajemo crvenu boju
+    FAIL = '\033[91m'
     ENDC = '\033[0m'
 
     ## disable method

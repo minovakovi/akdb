@@ -7,32 +7,56 @@ import configparser
 import sqlite3
 import hashlib
 
-# Povezivanje s bazom podataka
+import sqlite3
+import hashlib
+
 connection = sqlite3.connect("test.db")
 cursor = connection.cursor()
 
-cursor.execute("PRAGMA table_info(example)")
-columns = cursor.fetchall()
+# Brisanje svih zapisa iz tablice example
+cursor.execute("DELETE FROM example")
+cursor.execute("DELETE FROM quiz_questions")
 
-#for column in columns:
- #   print(column[1])  # Ispisuje ime svakog stupca
+# Kreiranje tablice example s jedinstvenim ključem na stupcu usr
+cursor.execute("CREATE TABLE IF NOT EXISTS example (id INTEGER, usr TEXT UNIQUE, pas_hash TEXT)")  
 
-
-cursor.execute("CREATE TABLE IF NOT EXISTS example (id INTEGER, usr TEXT, pas_hash TEXT)")  
-
+# Umetanje korisnika u tablicu example
 cursor.execute("INSERT INTO example VALUES (1, 'testingUser', ?)", (hashlib.sha256("testingPass".encode()).hexdigest(),))
 cursor.execute("INSERT INTO example VALUES (2, 'user', ?)", (hashlib.sha256("pass".encode()).hexdigest(),))
 
-cursor.execute("SELECT * FROM example")
+# Provjera sadržaja tablice example
+#cursor.execute("SELECT * FROM example")
 rows = cursor.fetchall()
 
-#for row in rows:
- #  print(row)
+for row in rows:
+    print(row)
+
+
+cursor.execute("CREATE TABLE IF NOT EXISTS quiz_questions (id INTEGER PRIMARY KEY, question TEXT UNIQUE, answer TEXT)")
+questions = [
+    ("Kada je započet projekt AKDB?", "2009"),
+    ("Koliko je otprilike ljudi dosad radilo na AKDB?", "Najmanje 200"),
+    ("Unutar testiranja koliko postoji testova?", "57")
+]
+cursor.executemany("INSERT OR IGNORE INTO quiz_questions (question, answer) VALUES (?, ?)", questions)
+
+# Prikaz svih pitanja u tablici quiz_questions
+cursor.execute("SELECT * FROM quiz_questions")
+rows = cursor.fetchall()
+
+for row in rows:
+    print(row)
+
+#cursor.execute("PRAGMA table_info(quiz_questions)")
+#columns = cursor.fetchall()
+
+# Ispisivanje imena stupaca
+#for column in columns:
+  #  print(column[1])
 
 # Potvrda promjena i zatvaranje veze s bazom podataka
 connection.commit()
 connection.close()
-
 
 
 
@@ -56,21 +80,30 @@ class ParamikoServer(paramiko.ServerInterface):
         return paramiko.OPEN_FAILED_ADMINISTRATIVELY_PROHIBITED
     #Function that checks if the clients username and password match
     def check_auth_password(self, username, password):
-        #print("Received username:", username)
-        #print("Received password:", password)
-        
         connection = sqlite3.connect("test.db")
         cursor = connection.cursor()
         cursor.execute("SELECT usr, pas_hash FROM example WHERE usr = ?", (username,))
         user_data = cursor.fetchone()
-        print("User data from database:", user_data)
-        connection.close()
+        #print("User data from database:", user_data)
+        connection.close()  
 
+        if not username or not password:
+            print("Korisničko ime ili lozinka nedostaju.")
+            return paramiko.AUTH_FAILED
+        
         if user_data:
             stored_username, stored_password_hash = user_data
+            #print("Received username:", username)
+            #print("Received password hash:", hashlib.sha256(password.encode()).hexdigest())
+            #print("Stored username:", stored_username)
+            #print("Stored password hash:", stored_password_hash)
             if username == stored_username and hashlib.sha256(password.encode()).hexdigest() == stored_password_hash:
+                print("Korisnik uspješno autentificiran.")
                 return paramiko.AUTH_SUCCESSFUL
+        print("Neuspješna autentifikacija.")
         return paramiko.AUTH_FAILED
+
+
 
 #Class that handles connection from client to the server
 class Connection:
