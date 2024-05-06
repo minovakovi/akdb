@@ -1,10 +1,14 @@
-import time
 import paramiko
 import tests
 from colors import bcolors
 import json
 import getpass
 import readline
+import threading
+import datetime
+from getpass import getpass as password_input
+from paramiko.ssh_exception import BadHostKeyException 
+import time  # Dodano
 
 class Client:
     def __init__(self, username, password, host="127.0.0.1", port=1998):
@@ -45,15 +49,37 @@ class Client:
             except paramiko.ssh_exception.AuthenticationException:
                 print(bcolors.YELLOW + "Invalid credentials. Please try again." + bcolors.ENDC)
                 self.username = input(bcolors.YELLOW + "Username: " + bcolors.ENDC)
-                self.password = getpass.getpass(prompt=bcolors.YELLOW + "Password: " + bcolors.ENDC)
-            except Exception as e:
-                print(bcolors.FAIL + "[ERROR] Connection failed: " + str(e) + bcolors.ENDC)
-                time.sleep(2)
+                self.password = password_input(prompt=bcolors.YELLOW + "Password: " + bcolors.ENDC)
+                if self.username and self.password:
+                    self.username = ""
+                    self.password = ""
+            except BadHostKeyException as e:  # Change here
+                print(bcolors.YELLOW + "Host key verification failed." + bcolors.ENDC)
+                accept_key = input(bcolors.YELLOW + "Do you want to accept the new key? (yes/no): " + bcolors.ENDC).lower()
+                if accept_key.lower() == "yes":
+                    self.sock.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+                    try:
+                        self.sock.connect(
+                            hostname=self.host,
+                            port=self.port,
+                            username=self.username,
+                            password=self.password,
+                            timeout=600
+                        )
+                        connected = True
+                        print("[*] Connection established.")
+                    except paramiko.ssh_exception.AuthenticationException:
+                        print(bcolors.YELLOW + "Invalid credentials. Please try again." + bcolors.ENDC)
+                        self.username = input(bcolors.YELLOW + "Username: " + bcolors.ENDC)
+                        self.password = password_input(prompt=bcolors.YELLOW + "Password: " + bcolors.ENDC)
+                    except Exception as e:
+                        print(bcolors.FAIL + "[ERROR] Connection failed: " + str(e) + bcolors.ENDC)
+                        time.sleep(2)
+                else:
+                    break
 
         self.session = self.sock.get_transport().open_session()
         print("[+] Successfully connected to server")
-
-
 
         while self.working:
             try:
@@ -63,7 +89,12 @@ class Client:
                     print("History cleared.")
                     continue  # Preskoči daljnju obradu i nastavi petlju
                 self.command_history.append(cmd)
-
+                if cmd =="time":
+                    self.show_current_time()
+                    month = datetime.datetime.now().month
+                    year = datetime.datetime.now().year
+                    calendar_output = tests.generate_calendar(month, year)
+                    print(calendar_output)
                 if cmd.strip() == "":
                     continue
                 if cmd == "\033[A":  # A ovdje je escape karakter koji gornja strelica šalje
@@ -376,6 +407,12 @@ class Client:
                     #tests.HistoryTest()
                 if cmd == "help":
                     tests.Help()
+                if cmd == "quiz":
+                    tests.start_quiz()
+
+               # if cmd == "time":
+                #    print(tests.TimeTest())
+
 
                 
 
@@ -431,3 +468,14 @@ class Client:
     # unpacks json data
     def unpack_data(self, data):
         return json.loads(data)
+    
+    def show_current_time(self):
+            print("Press CTRL+C to exit time display.")
+            try:
+                while True:
+                    now = datetime.datetime.now()
+                    current_time = now.strftime("%Y-%m-%d %H:%M:%S")  
+                    print("\rCurrent date and time:", current_time, end="", flush=True)  
+                    time.sleep(1) 
+            except KeyboardInterrupt:
+                print("\nExiting time display.")  

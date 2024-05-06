@@ -3,6 +3,8 @@
 import sys
 import time
 from colors import bcolors
+import datetime
+
 
 
 #Test functions
@@ -101,6 +103,34 @@ def DropTest():
 def BeginTest():
     return "begin"
 
+import datetime
+
+def generate_calendar(month, year):
+    today = datetime.date.today()
+    calendar_output = ""
+    calendar_output += f"{' ' * 8}{datetime.date(today.year, month, 1).strftime('%B %Y')}\n"
+    calendar_output += "Mo Tu We Th Fr Sa Su\n"
+    # Pronađi koji je dan u tjednu prvi dan u mjesecu
+    first_day_weekday = datetime.date(year, month, 1).weekday()
+    # Dodaj prazne prostore do prvog dana u mjesecu
+    calendar_output += "   " * first_day_weekday
+    for day in range(1, 32):
+        try:
+            date = datetime.date(year, month, day)
+        except ValueError:
+            break
+        if date.month != month:
+            break
+        if date == today:
+            calendar_output += f"{bcolors.RED}{day:2}{bcolors.ENDC} "
+        else:
+            calendar_output += f"{day:2} "
+        # Ako je dan subota, prebaci u novi red
+        if date.weekday() == 6:
+            calendar_output += "\n"
+    return calendar_output
+
+
 #Test for writing out history of actions
 def HistoryTest():
     return "history"
@@ -111,9 +141,11 @@ def Help():
     print(f"{bcolors.RED}Welcome to the AkDB Client.{bcolors.ENDC}")
     print("--------------------------------------------------------------|")
     print(f"{bcolors.RED}Available commands:{bcolors.ENDC}                                           |")
-    print(f"    {bcolors.RED}help{bcolors.ENDC}   - Show this help message - {bcolors.OKGREEN}Radi{bcolors.ENDC}                    |")
-    print(f"    {bcolors.RED}history{bcolors.ENDC} - List all previously typed commands - {bcolors.OKGREEN}Radi{bcolors.ENDC}       |")
-    print(f"    {bcolors.RED}testme{bcolors.ENDC}  - Executes all tests - {bcolors.OKGREEN}Radi{bcolors.ENDC}                       |")
+    print(f"    {bcolors.RED}help{bcolors.ENDC}    - Show this help message                     {bcolors.OKGREEN}Radi{bcolors.ENDC} |")
+    print(f"    {bcolors.RED}history{bcolors.ENDC} - List all previously typed commands         {bcolors.OKGREEN}Radi{bcolors.ENDC} |")
+    print(f"    {bcolors.RED}testme{bcolors.ENDC}  - Executes all tests                         {bcolors.OKGREEN}Radi{bcolors.ENDC} |")
+    print(f"    {bcolors.RED}quiz{bcolors.ENDC}    - Play the quiz                              {bcolors.OKGREEN}Radi{bcolors.ENDC} |")
+    print(f"    {bcolors.RED}time{bcolors.ENDC}    - Look at the time                           {bcolors.OKGREEN}Radi{bcolors.ENDC} |")
     print(f"    {bcolors.RED}\p{bcolors.ENDC}      - print table command                             |")
     print(f"    {bcolors.RED}\ps{bcolors.ENDC}     - print system table command                      |")
     print(f"    {bcolors.RED}\d{bcolors.ENDC}      - table details command                           |")
@@ -125,3 +157,45 @@ def Help():
     print(f"    {bcolors.RED}create_table{bcolors.ENDC} - create table test(name varchar(50))        |")
     print(f"    {bcolors.RED}create_index{bcolors.ENDC} - create index indeks on test(name)          |")
     print("--------------------------------------------------------------|")
+
+
+from quiz_manager import QuizManager
+
+def start_quiz():
+    quiz_manager = QuizManager("test.db")
+    score = 0
+    question_number = 1
+
+    while True:
+        question, options, correct_answer = quiz_manager.get_quiz_question()
+        if not question or not options or not correct_answer:
+            print("Nema dostupnih pitanja.")
+            break
+
+        print(f" {bcolors.RED}Pitanje {question_number}: {question} {bcolors.ENDC}")
+        for idx, option in enumerate(options, start=1):
+            print(f"{idx}. {option}")
+
+        user_choice = input("Odaberite točan odgovor (ili 'q' za izlaz): ")
+        if user_choice.lower() == 'q':
+            break
+
+        if user_choice.isdigit():
+            user_choice = int(user_choice)
+            if 1 <= user_choice <= len(options):
+                selected_option = options[user_choice - 1]
+                if selected_option == correct_answer:
+                    print(f"{bcolors.OKGREEN}Točan odgovor! {bcolors.ENDC}")
+                    score += 1
+                else:
+                    print("Netočan odgovor.")
+                    print("Točan odgovor je:", correct_answer)
+            else:
+                print("Nevažeći odabir.")
+        else:
+            print("Nevažeći odabir.")
+
+        question_number += 1
+
+    print("Kviz je završen. Osvojili ste", score, "bodova.")
+    quiz_manager.close_connection()
