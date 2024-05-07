@@ -382,16 +382,16 @@ TestResult AK_op_join_test() {
     
     AK_header header1[MAX_ATTRIBUTES];
     strcpy(header1[0].att_name, "id");
-    strcpy(header1[0].type, "int");
+    header1[0].type = 1;
     strcpy(header1[1].att_name, "name");
-    strcpy(header1[1].type, "varchar(255)");
+    header1[1].type = 2;
     
     AK_header header2[MAX_ATTRIBUTES];
     
     strcpy(header2[0].att_name, "id");
-    strcpy(header2[0].type, "int");
+    header2[0].type = 1;
     strcpy(header2[1].att_name, "age");
-    strcpy(header2[1].type, "int");
+    header2[1].type = 1;
     
     AK_temp_create_table(srcTable1, header1, SEGMENT_TYPE_TABLE);
     AK_temp_create_table(srcTable2, header2, SEGMENT_TYPE_TABLE);
