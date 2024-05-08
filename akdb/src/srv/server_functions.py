@@ -14,15 +14,15 @@ connection = sqlite3.connect("test.db")
 cursor = connection.cursor()
 
 # Brisanje svih zapisa iz tablice example
-cursor.execute("DELETE FROM example")
-cursor.execute("DELETE FROM quiz_questions")
+#cursor.execute("DELETE FROM example")
+#cursor.execute("DELETE FROM quiz_questions")
 
 # Kreiranje tablice example s jedinstvenim ključem na stupcu usr
 cursor.execute("CREATE TABLE IF NOT EXISTS example (id INTEGER, usr TEXT UNIQUE, pas_hash TEXT)")  
 
 # Umetanje korisnika u tablicu example
-cursor.execute("INSERT INTO example VALUES (1, 'testingUser', ?)", (hashlib.sha256("testingPass".encode()).hexdigest(),))
-cursor.execute("INSERT INTO example VALUES (2, 'user', ?)", (hashlib.sha256("pass".encode()).hexdigest(),))
+cursor.execute("INSERT OR IGNORE INTO example VALUES (1, 'testingUser', ?)", (hashlib.sha256("testingPass".encode()).hexdigest(),))
+cursor.execute("INSERT OR IGNORE INTO example VALUES (2, 'user', ?)", (hashlib.sha256("pass".encode()).hexdigest(),))
 
 # Provjera sadržaja tablice example
 #cursor.execute("SELECT * FROM example")
