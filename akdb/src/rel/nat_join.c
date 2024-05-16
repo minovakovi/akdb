@@ -380,19 +380,18 @@ TestResult AK_op_join_test() {
     char *srcTable2 = "table2";
     char *dstTable = "join_table";
     
-    AK_header header1[MAX_ATTRIBUTES];
+    AK_header header1[MAX_ATTRIBUTES] = {0};
     strcpy(header1[0].att_name, "id");
-    header1[0].type = 1;
+    header1[0].type = TYPE_INT;
     strcpy(header1[1].att_name, "name");
-    header1[1].type = 2;
+    header1[1].type = TYPE_VARCHAR;
     
-    AK_header header2[MAX_ATTRIBUTES];
+    AK_header header2[MAX_ATTRIBUTES] = {0};
     
     strcpy(header2[0].att_name, "id");
-    header2[0].type = 1;
+    header2[0].type = TYPE_INT;
     strcpy(header2[1].att_name, "age");
-    header2[1].type = 1;
-    
+    header2[1].type = TYPE_INT;
     AK_temp_create_table(srcTable1, header1, SEGMENT_TYPE_TABLE);
     AK_temp_create_table(srcTable2, header2, SEGMENT_TYPE_TABLE);
     
