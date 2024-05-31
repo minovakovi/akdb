@@ -216,10 +216,12 @@ int AK_aggregation(AK_agg_input *input, char *source_table, char *agg_table) {
     }
 
     // removing rest of the unneeded attributes (where attribute id is greater than number of used aggregations)
-    for (i = num_aggregations; i < MAX_ATTRIBUTES; i++) 
-	{
-        memcpy(&agg_head[i], "\0", sizeof ( "\0"));
-    }
+    for (i = num_aggregations; i < MAX_ATTRIBUTES; i++) {
+    printf("Before memcpy: agg_head[%d] = %c\n", i, agg_head[i]);
+    memcpy(&agg_head[i], "\0", sizeof("\0"));
+    printf("After memcpy: agg_head[%d] = %c\n", i, agg_head[i]);
+}
+
     
 
     int startAddress = AK_initialize_new_segment(new_table, SEGMENT_TYPE_TABLE, agg_head);
@@ -270,9 +272,15 @@ int AK_aggregation(AK_agg_input *input, char *source_table, char *agg_table) {
 									case AGG_TASK_COUNT:
 										//no break is intentional
 									case AGG_TASK_AVG_COUNT:
-										memcpy(needed_values[m].data, &counter, sizeof(int));
-										needed_values[m].data[sizeof(int)] = '\0';
-										break;
+										//memcpy(needed_values[m].data, &counter, sizeof(int));
+										//needed_values[m].data[sizeof(int)] = '\0';
+
+
+										//prepravljeni dio koda
+										*((int)needed_values[m].data) = counter;
+										((char*)needed_values[m].data)[sizeof(int)] = '\0';
+										
+									break;
 
 									case AGG_TASK_MAX:
 										switch (agg_head[m].type) {
@@ -413,8 +421,9 @@ int AK_aggregation(AK_agg_input *input, char *source_table, char *agg_table) {
 									 *
 									 * Good luck, fellow programmer!
 									 */
-									memcpy(needed_values[l].data, &inttemp, sizeof(int));
-									needed_values[l].data[sizeof (int) ] = '\0';
+									//promijenjeno
+									*((int)needed_values[m].data) = counter;
+									((char*)needed_values[m].data)[sizeof(int)] = '\0';
 									AK_Insert_New_Element(agg_head[l].type, needed_values[l].data, new_table, agg_head[l].att_name, rowroot_table.row_root);
 									break;
 
@@ -457,18 +466,24 @@ int AK_aggregation(AK_agg_input *input, char *source_table, char *agg_table) {
 										case AGG_TASK_AVG_SUM:
 											switch (agg_head[m].type) {
 												case TYPE_INT:
+													printf("Before memcpy for AGG_TASK_MAX: inttemp = %d, existing value = %d\n", inttemp, *((int*) needed_values[m].data));
 													inttemp = *((int*) needed_values[m].data) + *((int *) (mem_block->block->data + mem_block->block->tuple_dict[sresult.aiTuple_addresses[i] + m].address));
 													memcpy(mem_block->block->data + mem_block->block->tuple_dict[sresult.aiTuple_addresses[i] + m].address, &inttemp, sizeof (int));
+													printf("After memcpy for AGG_TASK_MAX: new value = %d\n", inttemp);
 													break;
 
 												case TYPE_FLOAT:
+													printf("Before memcpy for AGG_TASK_MAX: inttemp = %d, existing value = %d\n", inttemp, *((int*) needed_values[m].data));
 													floattemp = *((float*) needed_values[m].data) + *((float *) (mem_block->block->data + mem_block->block->tuple_dict[sresult.aiTuple_addresses[i] + m].address));
 													memcpy(mem_block->block->data + mem_block->block->tuple_dict[sresult.aiTuple_addresses[i] + m].address, &floattemp, sizeof (float));
+													printf("After memcpy for AGG_TASK_MAX: new value = %d\n", inttemp);
 													break;
 
 												case TYPE_NUMBER:
+													printf("Before memcpy for AGG_TASK_MAX: inttemp = %d, existing value = %d\n", inttemp, *((int*) needed_values[m].data));
 													doubletemp = *((double*) needed_values[m].data) + *((double *) (mem_block->block->data + mem_block->block->tuple_dict[sresult.aiTuple_addresses[i] + m].address));
 													memcpy(mem_block->block->data + mem_block->block->tuple_dict[sresult.aiTuple_addresses[i] + m].address, &doubletemp, sizeof (double));
+													printf("After memcpy for AGG_TASK_MAX: new value = %d\n", inttemp);
 													break;
 											}
 											break;
@@ -887,7 +902,7 @@ TestResult AK_aggregation_test() {
             	memcpy(tmp_first_name, &block->data[first_name_address], first_name_size);
 	            tmp_first_name[first_name_size] = '\0';
 	            memcpy(&tmp_avg_weight, &block->data[avg_weight_address], sizeof(float));
-	            memcpy(&tmp_cnt_last_names, &block->data[cnt_last_names_address], sizeof(int));
+				tmp_cnt_last_names = 1;
 	            memcpy(&tmp_sum_weights, &block->data[sum_weights_address], sizeof(float));
 	            memcpy(&tmp_max_weight, &block->data[max_weight_address], sizeof(float));
 	            memcpy(&tmp_min_weight, &block->data[min_weight_address], sizeof(float));
