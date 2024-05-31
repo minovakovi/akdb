@@ -1,0 +1,5 @@
+make clean
+make
+cd ../bin
+./akdb test
+cd ../src

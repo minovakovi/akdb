@@ -1,0 +1,18 @@
+digraph "transaction_list_head"
+{
+ // LATEX_PDF_SIZE
+  bgcolor="transparent";
+  edge [fontname="Helvetica",fontsize="10",labelfontname="Helvetica",labelfontsize="10"];
+  node [fontname="Helvetica",fontsize="10",shape=record];
+  Node1 [label="transaction_list_head",height=0.2,width=0.4,color="black", fillcolor="grey75", style="filled", fontcolor="black",tooltip="Structure that represents LockTable entry about doubly linked list of collision in Hash table."];
+  Node2 -> Node1 [dir="back",color="darkorchid3",fontsize="10",style="dashed",label=" DLLHead" ,fontname="Helvetica"];
+  Node2 [label="transaction_list_elem",height=0.2,width=0.4,color="black",URL="$structtransaction__list__elem.html",tooltip="Structure that represents LockTable entry about transaction lock holder.Element indexed by Hash table..."];
+  Node2 -> Node2 [dir="back",color="darkorchid3",fontsize="10",style="dashed",label=" prevBucket\nnextBucket" ,fontname="Helvetica"];
+  Node3 -> Node2 [dir="back",color="darkorchid3",fontsize="10",style="dashed",label=" DLLLocksHead" ,fontname="Helvetica"];
+  Node3 [label="transaction_locks_list_elem",height=0.2,width=0.4,color="black",URL="$structtransaction__locks__list__elem.html",tooltip="Structure that represents LockTable entry about transaction resource lock."];
+  Node3 -> Node3 [dir="back",color="darkorchid3",fontsize="10",style="dashed",label=" prevLock\nnextLock" ,fontname="Helvetica"];
+  Node4 -> Node2 [dir="back",color="darkorchid3",fontsize="10",style="dashed",label=" observer_lock" ,fontname="Helvetica"];
+  Node4 [label="observer_lock",height=0.2,width=0.4,color="black",URL="$structobserver__lock.html",tooltip="Structure which defines transaction lock observer type."];
+  Node5 -> Node4 [dir="back",color="darkorchid3",fontsize="10",style="dashed",label=" observer" ,fontname="Helvetica"];
+  Node5 [label="Observer",height=0.2,width=0.4,color="black",URL="$structObserver.html",tooltip="Structure that defines the functions for observer object."];
+}
