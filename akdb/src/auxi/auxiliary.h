@@ -44,7 +44,7 @@
  * (i.e., when you are testing some functionality, which doesn't apply in normal conditions).
  * But don't forget to turn this mode off, after you are done (within test function for example)!
  */
-int testMode;
+extern int testMode;
 
 
 /**

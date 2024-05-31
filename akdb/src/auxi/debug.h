@@ -42,8 +42,8 @@
  */
 typedef enum debug_level {
 	LOW = 1,	//BASIC		low level of details in output
-	MIDDLE = 0,	//NORMAL	normal level of details in output
-	HIGH = 0	//ADVANCED (EXHAUSTIVE)	high level of details in output (details in additional functions, per loop or per condition debugging)
+	MIDDLE = 2,	//NORMAL	normal level of details in output
+	HIGH = 3	//ADVANCED (EXHAUSTIVE)	high level of details in output (details in additional functions, per loop or per condition debugging)
 } DEBUG_LEVEL;
 
 /**
@@ -56,20 +56,70 @@ typedef enum debug_level {
  */
 typedef enum debug_type {
 	GLOBAL = 0,
-	DB_MAN = 0,
-	FILE_MAN = 1,
-	MEMO_MAN = 0,
-	INDICES = 0,
-	TABLES = 0,
-	REL_OP = 0,
-	REL_EQ = 1,
-	CONSTRAINTS = 0,
-	FUNCTIONS = 0,
-	SEQUENCES = 0,
-	TRIGGERS = 0,
-	REDO = 0
+    DB_MAN = 1,
+    FILE_MAN = 2,
+    MEMO_MAN = 3,
+    INDICES = 4,
+    TABLES = 5,
+    REL_OP = 6,
+    REL_EQ = 7,
+    CONSTRAINTS = 8,
+    FUNCTIONS = 9,
+    SEQUENCES = 10,
+    TRIGGERS = 11,
+    REDO = 12
 } DEBUG_TYPE;
 
+// Maximum length of a debug message
+#define MAX_DEBUG_MESSAGE_LENGTH 256
+
+// Function to convert debug level to string
+static const char* debug_level_to_string(DEBUG_LEVEL level) {
+    switch (level) {
+        case LOW:
+            return "LOW";
+        case MIDDLE:
+            return "MIDDLE";
+        case HIGH:
+            return "HIGH";
+        default:
+            return "UNKNOWN";
+    }
+}
+
+// Function to convert debug type to string
+static const char* debug_type_to_string(DEBUG_TYPE type) {
+    switch (type) {
+        case GLOBAL:
+            return "GLOBAL";
+        case DB_MAN:
+            return "DB_MAN";
+        case FILE_MAN:
+            return "FILE_MAN";
+        case MEMO_MAN:
+            return "MEMO_MAN";
+        case INDICES:
+            return "INDICES";
+        case TABLES:
+            return "TABLES";
+        case REL_OP:
+            return "REL_OP";
+        case REL_EQ:
+            return "REL_EQ";
+        case CONSTRAINTS:
+            return "CONSTRAINTS";
+        case FUNCTIONS:
+            return "FUNCTIONS";
+        case SEQUENCES:
+            return "SEQUENCES";
+        case TRIGGERS:
+            return "TRIGGERS";
+        case REDO:
+            return "REDO";
+        default:
+            return "UNKNOWN";
+    }
+}
 
 int AK_dbg_messg(DEBUG_LEVEL level, DEBUG_TYPE type, const char *format, ...);
 

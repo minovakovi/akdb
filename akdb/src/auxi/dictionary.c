@@ -404,10 +404,10 @@ TestResult AK_dictionary_test(){
     dict_to_test = dictionary_new(15);
     if(dict_to_test != NULL){
         succesfulTests++;
-        printf("Success\n\n");
+        printf(SUCCESS_MESSAGE);
     }else{
         failedTests++;
-        printf("Fail\n\n");
+        printf(FAIL_MESSAGE);
     }
 
     // test if adding a value is working
@@ -418,20 +418,20 @@ TestResult AK_dictionary_test(){
     dictionary_set(dict_to_test,"joe","52");
     if(dictionary_get(dict_to_test, "john",NULL) != NULL){
         succesfulTests++;
-        printf("Success\n\n");
+        printf(SUCCESS_MESSAGE);
     }else{
         failedTests++;
-        printf("Fail\n\n");
+        printf(FAIL_MESSAGE);
     }
 
     // check if it is the correct value
     printf("Testing if we can get the correct value from key\n");
     if(strcmp(dictionary_get(dict_to_test, "john",NULL),"22") == 0){
         succesfulTests++;
-        printf("Success\n\n");
+        printf(SUCCESS_MESSAGE);
     }else{
         failedTests++;
-        printf("Fail\n\n");
+        printf(FAIL_MESSAGE);
     }
 
     // check if overwriting a value is working
@@ -439,10 +439,10 @@ TestResult AK_dictionary_test(){
     dictionary_set(dict_to_test,"john","23");
     if(strcmp(dictionary_get(dict_to_test, "john",NULL),"23") == 0){
         succesfulTests++;
-        printf("Success\n\n");
+        printf(SUCCESS_MESSAGE);
     }else{
         failedTests++;
-        printf("Fail\n\n");
+        printf(FAIL_MESSAGE);
     }
 
     // check if unset a key is working
@@ -450,10 +450,10 @@ TestResult AK_dictionary_test(){
     dictionary_unset(dict_to_test, "john");
     if(dictionary_get(dict_to_test, "john",NULL) == NULL){
         succesfulTests++;
-        printf("Success\n\n");
+        printf(SUCCESS_MESSAGE);
     }else{
         failedTests++;
-        printf("Fail\n\n");
+        printf(FAIL_MESSAGE);
     }
 
     //printing all contents of dictionary
@@ -482,7 +482,7 @@ TestResult AK_dictionary_test(){
 
     if(mem_double_test_success == 1){
         succesfulTests++;
-        printf("Success\n\n");
+        printf(SUCCESS_MESSAGE);
     }
     else{
         failedTests++;
@@ -505,7 +505,7 @@ TestResult AK_dictionary_test(){
 
     if(xstrdup_test_success == 1){
         succesfulTests++;
-        printf("Success\n\n");
+        printf(SUCCESS_MESSAGE);
     }
     else{
         failedTests++;
@@ -519,7 +519,7 @@ TestResult AK_dictionary_test(){
 
     if(akdb_actual_hash == akdb_expected_hash){
         succesfulTests++;
-        printf("Success\n\n");
+        printf(SUCCESS_MESSAGE);
     }
     else{
         failedTests++;

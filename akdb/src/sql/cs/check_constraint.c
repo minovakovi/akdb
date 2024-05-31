@@ -64,6 +64,12 @@ int condition_passed(char *condition, int type, void *value, void *row_data) {
             else if (!strcmp(condition, "!=")) {
                 return row_data != value;
             }
+	    else if (!strcmp(condition, "&&")) {
+                return row_data && value;
+            }
+            else if (!strcmp(condition, "||")) {
+                return row_data || value;
+            }
 
             break;
 
@@ -94,6 +100,12 @@ int condition_passed(char *condition, int type, void *value, void *row_data) {
             else if (!strcmp(condition, "!=")) {
                 return float_row_data != float_value;
             }
+	    else if (!strcmp(condition, "&&")) {
+                return float_row_data && float_value;
+            }
+            else if (!strcmp(condition, "||")) {
+                return float_row_data || float_value;
+            }
 
             break;
 
@@ -117,6 +129,12 @@ int condition_passed(char *condition, int type, void *value, void *row_data) {
             }
             else if (!strcmp(condition, "!=")) {
                 return strcmp(value, row_data) != 0;
+            }
+	    else if (!strcmp(condition, "&&")) {
+                return strcmp(value, row_data) && 0;
+            }
+            else if (!strcmp(condition, "||")) {
+                return strcmp(value, row_data) || 0;
             }
 
             break;

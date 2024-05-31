@@ -21,6 +21,9 @@ USE OR PERFORMANCE OF THIS SOFTWARE.
 */
 
 #include "mempro.h"
+
+AK_debmod_state* AK_DEBMOD_STATE = NULL;
+
 /**
 * @author Marin Rukavina, Mislav Bozicevic
 * @param ds debug mode state
@@ -746,7 +749,7 @@ int32_t AK_debmod_func_add(AK_debmod_state* ds, const char *func_name){
 }
 
 /**
-* @author Marin Rukavina, Mislav Bozicevic
+* @author Marin Rukavina, Mislav Bozicevic, updated by Andrej Hrebak Pajk
 * @param ds debug mode state
 * @param func_id function id
 * @brief Push function id on stack [private function]
@@ -754,7 +757,13 @@ int32_t AK_debmod_func_add(AK_debmod_state* ds, const char *func_name){
 */
 void AK_debmod_fstack_push(AK_debmod_state* ds, int32_t func_id){
     assert(ds != NULL && ds->init == 1);
-    assert(ds->fstack_size < AK_DEBMOD_STACKSIZE); /* stack overflow */
+    
+    if (ds->fstack_size >= AK_DEBMOD_STACKSIZE) {
+        // Handle stack overflow gracefully
+        printf("Stack overflow!\n");
+        return;
+    }
+
     ds->fstack_items[ds->fstack_size++] = func_id;
 }
 
@@ -764,11 +773,18 @@ void AK_debmod_fstack_push(AK_debmod_state* ds, int32_t func_id){
 * @brief Pops function id from stack [private function]
 * @return function id popped
 */
-int32_t AK_debmod_fstack_pop(AK_debmod_state* ds){
+int32_t AK_debmod_fstack_pop(AK_debmod_state* ds) {
     assert(ds != NULL && ds->init == 1);
-    assert(ds->fstack_size > 0); /* stack underflow */
-    return ds->fstack_items[--ds->fstack_size];
+
+    if (ds->fstack_size > 0) {
+        return ds->fstack_items[--ds->fstack_size];
+    } else {
+        /* Handle stack underflow error */
+        fprintf(stderr, "Stack underflow error in AK_debmod_fstack_pop\n");
+        exit(EXIT_FAILURE); // or return an appropriate error code
+    }
 }
+
 
 /**
 * @author Marin Rukavina, Mislav Bozicevic

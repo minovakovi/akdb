@@ -897,10 +897,10 @@ TestResult AK_iniparser_test(){
     dict_to_test = dictionary_new(15);
     if(dict_to_test != NULL){
         succesfulTests++;
-        printf("Success\n\n");
+        printf(SUCCESS_MESSAGE);
     }else{
         failedTests++;
-        printf("Fail\n\n");
+        printf(FAIL_MESSAGE);
     }
 
     // test if adding a value is working
@@ -913,20 +913,20 @@ TestResult AK_iniparser_test(){
     iniparser_set(dict_to_test,"cities:London","25");
     if(iniparser_find_entry(dict_to_test, "people:paul") == 1){
         succesfulTests++;
-        printf("Success\n\n");
+        printf(SUCCESS_MESSAGE);
     }else{
         failedTests++;
-        printf("Fail\n\n");
+        printf(FAIL_MESSAGE);
     }
 
     // check if it is the correct value
     printf("Testing if getting a value is working\n");
     if(strcmp(iniparser_getstring(dict_to_test, "people:paul",NULL),"34") == 0){
         succesfulTests++;
-        printf("Success\n\n");
+        printf(SUCCESS_MESSAGE);
     }else{
         failedTests++;
-        printf("Fail\n\n");
+        printf(FAIL_MESSAGE);
     }
 
     // check if overwriting a value is working
@@ -934,10 +934,10 @@ TestResult AK_iniparser_test(){
     iniparser_set(dict_to_test,"people:paul","23");
     if(strcmp(iniparser_getstring(dict_to_test, "people:paul",NULL),"23") == 0){
         succesfulTests++;
-        printf("Success\n\n");
+        printf(SUCCESS_MESSAGE);
     }else{
         failedTests++;
-        printf("Fail\n\n");
+        printf(FAIL_MESSAGE);
     }
 
     // check if unset a key is working
@@ -945,40 +945,40 @@ TestResult AK_iniparser_test(){
     iniparser_unset(dict_to_test, "people:paul");
     if(iniparser_find_entry(dict_to_test, "people:paul") == 0){
         succesfulTests++;
-        printf("Success\n\n");
+        printf(SUCCESS_MESSAGE);
     }else{
         failedTests++;
-        printf("Fail\n\n");
+        printf(FAIL_MESSAGE);
     }
 
     // check if number of sections is correct
     printf("Testing if number of sections is correct when using get sections\n");
     if(iniparser_getnsec(dict_to_test) == 2){
         succesfulTests++;
-        printf("Success\n\n");
+        printf(SUCCESS_MESSAGE);
     }else{
         failedTests++;
-        printf("Fail\n\n");
+        printf(FAIL_MESSAGE);
     }
 
     // check if get name of a section is working properly
     printf("Testing if getting a section name by n is working\n");
     if (strcmp(iniparser_getsecname(dict_to_test,1), "cities") == 0){
         succesfulTests++;
-        printf("Success\n\n");
+        printf(SUCCESS_MESSAGE);
     }else{
         failedTests++;
-        printf("Fail\n\n");
+        printf(FAIL_MESSAGE);
     }
 
     // check if getting number of keys from section is correct
     printf("Testing if number of keys in given section name is correct\n");
     if (iniparser_getsecnkeys(dict_to_test,"people") == 2 && iniparser_getsecnkeys(dict_to_test,"cities") == 1){
         succesfulTests++;
-        printf("Success\n\n");
+        printf(SUCCESS_MESSAGE);
     }else{
         failedTests++;
-        printf("Fail\n\n");
+        printf(FAIL_MESSAGE);
     }
 
     // test iniparser_getseckeys
@@ -997,7 +997,7 @@ TestResult AK_iniparser_test(){
 
     if(getseckeys_test_success == 1){
         succesfulTests++;
-        printf("Success\n\n");
+        printf(SUCCESS_MESSAGE);
     }
     else{
         failedTests++;
@@ -1017,7 +1017,7 @@ TestResult AK_iniparser_test(){
     if(fptr == NULL)
     {  
         failedTests++;
-        printf("Fail\n\n");             
+        printf(FAIL_MESSAGE);             
     }else{
         fprintf(fptr,"%s","[section1]\n");
         fprintf(fptr,"%s","key1 = \"value1\"\n");
@@ -1031,7 +1031,7 @@ TestResult AK_iniparser_test(){
         remove("testFileForIniParser.txt");
         if(dict_to_test2 != NULL){
             succesfulTests++;
-            printf("Success\n\n");
+            printf(SUCCESS_MESSAGE);
             //printing all contents of loaded dictionary
             printf("Printing all contents of loaded dictionary \n");
             iniparser_dump(dict_to_test2, stdout);
@@ -1041,7 +1041,7 @@ TestResult AK_iniparser_test(){
             iniparser_AK_freedict(dict_to_test2);
         }else{
             failedTests++;
-            printf("Fail\n\n");
+            printf(FAIL_MESSAGE);
         }
     }
 
@@ -1054,7 +1054,7 @@ TestResult AK_iniparser_test(){
 
     if(strcmp(akdb_lwc, "akdb") == 0){
         succesfulTests++;
-        printf("Success\n\n");
+        printf(SUCCESS_MESSAGE);
     }
     else{
         failedTests++;
@@ -1069,7 +1069,7 @@ TestResult AK_iniparser_test(){
 
     if(strcmp(akdb_strip, "AKDB") == 0){
         succesfulTests++;
-        printf("Success\n\n");
+        printf(SUCCESS_MESSAGE);
     }
     else{
         failedTests++;
@@ -1084,7 +1084,7 @@ TestResult AK_iniparser_test(){
 
     if(number == 10){
         succesfulTests++;
-        printf("Success\n\n");
+        printf(SUCCESS_MESSAGE);
     }
     else{
         failedTests++;
@@ -1099,7 +1099,7 @@ TestResult AK_iniparser_test(){
     
     if(double_number == 11.239){
         succesfulTests++;
-        printf("Success\n\n");
+        printf(SUCCESS_MESSAGE);
     }
     else{
         failedTests++;
@@ -1114,7 +1114,7 @@ TestResult AK_iniparser_test(){
     
     if(boolean == 1){
         succesfulTests++;
-        printf("Success\n\n");
+        printf(SUCCESS_MESSAGE);
     }
     else{
         failedTests++;
