@@ -1,0 +1,34 @@
+#!/usr/bin/env bash
+
+function createQuickStartFile() {
+    echo -e "Creating file...."
+    
+    SRC_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+    sudo touch /bin/kalashnikovDB_quickrun
+    sudo chmod +x /bin/kalashnikovDB_quickrun
+
+    sudo sh -c "echo -e '#!/usr/bin/env bash\n \
+    CUR_DIR=\$(pwd)\n \
+    if [ "\$1" == "-d" ]; then \n \
+        cd $SRC_DIR && make dev && cd ../bin/ && gdb akdb && cd ../src && cd \$CUR_DIR \n \
+    else \n \
+        cd $SRC_DIR && make dev && cd ../bin/ && ./akdb && cd ../src && cd \$CUR_DIR \n \
+    fi' > /bin/kalashnikovDB_quickrun"
+
+    bold=`tput bold`
+    normal=`tput sgr0`
+    echo -e "File successufully created. You can run it by typing: ${bold}kalashnikovDB_quickrun. ${normal}For debug mode type: ${bold}kalashnikovDB_quickrun -d"
+}
+
+if [ ! -f /bin/kalashnikovDB_quickrun ]; then
+    createQuickStartFile
+else
+    echo "File already exists! Removing file..."
+    sudo rm -rf /bin/kalashnikovDB_quickrun
+    createQuickStartFile
+fi
+
+
+
+
+
