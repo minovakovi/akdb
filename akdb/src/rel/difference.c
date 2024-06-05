@@ -109,8 +109,10 @@ int AK_difference(char *srcTable1, char *srcTable2, char *dstTable) {
 		AK_initialize_new_segment(dstTable, SEGMENT_TYPE_TABLE, header);
 		AK_free(header);
 
-		struct list_node * row_root = (struct list_node *) AK_malloc(sizeof(struct list_node));
-
+		struct list_node *row_root = (struct list_node *) AK_malloc(sizeof(struct list_node));
+		memset(row_root, 0, sizeof(struct list_node));
+		AK_Init_L3(&row_root);
+		
 		//START ADDRESS: for each bit in the address
 		for (i = 0; src_addr1->address_from[i] != 0; i++) {
 		
@@ -202,7 +204,7 @@ int AK_difference(char *srcTable1, char *srcTable2, char *dstTable) {
 		AK_free(tbl1_temp_block);
 		AK_free(tbl2_temp_block);
 		
-		AK_DeleteAll_L3(&row_root);	
+		AK_DeleteAll_L3(&row_root);
 		AK_free(row_root);
 		AK_dbg_messg(LOW, REL_OP, "DIFFERENCE_TEST_SUCCESS\n\n");
 		AK_EPI;

@@ -617,4 +617,33 @@
  */
 #define OBSERVER_DESTROY_FAILURE_INVALID_ARGUMENT 0
 
+#define DEBUG_LEVEL 0
+/**
+ * @def DEBUG_LEVEL
+ * @brief Represents the level of debug information for a given DB module.
+ * Defines various levels such as DEBUG_NONE, DEBUG_ERROR, DEBUG_WARNING, DEBUG_INFO, DEBUG_DEBUG, and DEBUG_ALL.
+ */
+
+#define DEBUG_TYPE 0
+/**
+ * @def DEBUG_TYPE
+ * @brief Represents the type of DB module for which to print debug information.
+ * Defines various module types such as DB_MODULE1, DB_MODULE2, etc.
+ */
+
+#define SUCCESS_MESSAGE "Success\n\n"
+/**
+ * @def SUCCESS_MESSAGE
+ * @brief Message indicating successful operation.
+ * Used to print a success message after certain operations.
+ */
+
+#define FAIL_MESSAGE "Fail\n\n"
+
+/**
+ * @def FAIL_MESSAGE
+ * @brief Message indicating failed operation.
+ * Used to print a failure message after certain operations.
+ */
+
 #endif

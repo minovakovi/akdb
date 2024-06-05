@@ -34,7 +34,7 @@ int AK_dbg_messg(DEBUG_LEVEL level, DEBUG_TYPE type, const char *format, ...) {
 	}*/
 	AK_PRO;
 	
-	if ((level == 0 || type == 0 || format == NULL) && !DEBUG_ALL) {
+	if ((level == DEBUG_LEVEL || type == DEBUG_TYPE || format == NULL) && !DEBUG_ALL) {
 		AK_EPI;
 		return 0;
 	}
