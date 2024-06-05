@@ -277,7 +277,7 @@ int AK_aggregation(AK_agg_input *input, char *source_table, char *agg_table) {
 
 
 										//prepravljeni dio koda
-										*((int)needed_values[m].data) = counter;
+										*((int*)needed_values[m].data) = counter;
 										((char*)needed_values[m].data)[sizeof(int)] = '\0';
 										
 									break;
@@ -422,7 +422,7 @@ int AK_aggregation(AK_agg_input *input, char *source_table, char *agg_table) {
 									 * Good luck, fellow programmer!
 									 */
 									//promijenjeno
-									*((int)needed_values[m].data) = counter;
+									*((int*)needed_values[m].data) = counter;
 									((char*)needed_values[m].data)[sizeof(int)] = '\0';
 									AK_Insert_New_Element(agg_head[l].type, needed_values[l].data, new_table, agg_head[l].att_name, rowroot_table.row_root);
 									break;

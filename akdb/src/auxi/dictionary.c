@@ -20,6 +20,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include "constants.h"
 
 
 /** Maximum value size for integers and doubles. */

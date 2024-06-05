@@ -9,6 +9,7 @@
 /*---------------------------- Includes ------------------------------------*/
 #include <ctype.h>
 #include "iniparser.h"
+#include "constants.h"
 
 /*---------------------------- Defines -------------------------------------*/
 #define ASCIILINESZ         (1024)
