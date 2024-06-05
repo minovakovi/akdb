@@ -952,3 +952,111 @@ TestResult AK_aggregation_test() {
 
     AK_EPI;
 }
+
+int AK_aggregation_having(AK_agg_input *input, char *source_table, char *agg_having_table, struct list_node *having_expr) {
+
+	char *sys_table = "AK_relation";
+    char *temp_agg_table = "temp_agg_table";
+	struct list_node *where_expr;
+    
+    if (AK_if_exist(temp_agg_table, sys_table)) {
+		printf("Table %s already exists!\n", temp_agg_table);
+	} else {
+	    printf("Table %s does not exist!\n", temp_agg_table);
+	
+		// Deconstruct HAVING as AGGREGATION + SELECTION
+	
+	    AK_header *t_header = (AK_header *) AK_get_header(source_table);
+
+		struct list_node *where_expr = (struct list_node *) AK_malloc(sizeof (struct list_node));
+		AK_Init_L3(&where_expr);
+
+    	struct list_node *el = AK_First_L2(having_expr);
+	    while (el) {
+			if (el->type != TYPE_AGGREGATOR) {
+				AK_InsertAtEnd_L3(el->type, el->data, el->size, where_expr);
+				if (el->type == TYPE_ATTRIBS) {
+					struct list_node *aggregator_node = el->next;
+					// Add aggregators form HAVING to input
+					AK_agg_input_add(t_header[AK_get_attr_index(source_table, el->data)], aggregator_node->data, input);
+				}
+			}
+			el = el->next;
+		}
+	    AK_free(t_header);
+
+		// Preform aggregation
+	    int aggregation_result = AK_aggregation(input, source_table, temp_agg_table);
+		if (aggregation_result != EXIT_SUCCESS) {
+			return aggregation_result;
+		}
+    }
+
+    AK_print_table(temp_agg_table);
+
+	// Filter rows based on HAVING requirements (now moved to WHERE)
+	int selection_result = AK_selection(temp_agg_table, agg_having_table, where_expr);
+	if (selection_result != EXIT_SUCCESS) {
+		return selection_result;
+	}
+
+	// Delete aggregator columns used only for HAVING, if ever implemented
+
+	return EXIT_SUCCESS;
+
+}
+TestResult AK_aggregation_having_test() {
+	AK_PRO;
+
+    printf("\n********** AGGREGATION HAVING TEST **********\n");
+ 
+    char *sys_table = "AK_relation";
+    char *dest_table = "agg_having";
+    char *src_table = "student";
+	static int test_run_count = 0;
+    
+    if (AK_if_exist(dest_table, sys_table)) {
+		printf("Table %s already exists!\n", dest_table);
+	} else {
+	    printf("Table %s does not exist!\n", dest_table);
+	    AK_header *t_header = (AK_header *) AK_get_header(src_table);  // header is array of attributes
+
+	    AK_agg_input aggregation;
+	    AK_agg_input_init(&aggregation);
+	    AK_agg_input_add(t_header[1], AGG_TASK_GROUP, &aggregation);  // group by second column (first name)
+	    AK_agg_input_add(t_header[4], AGG_TASK_AVG, &aggregation);  // average by last (5th) column (weight)
+	    AK_agg_input_add(t_header[2], AGG_TASK_COUNT, &aggregation);  // count of last names (for the same first name)
+	    AK_agg_input_add(t_header[4], AGG_TASK_SUM, &aggregation);  // sum of weights by student's first name
+	    AK_agg_input_add(t_header[4], AGG_TASK_MAX, &aggregation);  // max weight grouped by student's first name
+	    AK_agg_input_add(t_header[4], AGG_TASK_MIN, &aggregation);  // min weight grouped by student's first name
+	    AK_free(t_header);
+
+		struct list_node *having_expr = (struct list_node *) AK_malloc(sizeof (struct list_node));
+		AK_Init_L3(&having_expr);
+
+		char destTable[256]; 
+		sprintf(destTable, "selection_test1_%d", test_run_count);
+
+		int avg_weight_threshold_gt = 100;
+		int count_threshold_gt = 1;
+		strcpy(having_expr->table, dest_table);
+		AK_InsertAtEnd_L3(TYPE_ATTRIBS, "weight", sizeof ("weight"), having_expr);
+		AK_InsertAtEnd_L3(TYPE_AGGREGATOR, AGG_TASK_AVG, sizeof (int), having_expr);
+		AK_InsertAtEnd_L3(TYPE_INT, &avg_weight_threshold_gt, sizeof (int), having_expr);
+		AK_InsertAtEnd_L3(TYPE_OPERATOR, ">", sizeof (">"), having_expr);
+		AK_InsertAtEnd_L3(TYPE_ATTRIBS, "id_student", sizeof ("id_student"), having_expr);
+		AK_InsertAtEnd_L3(TYPE_AGGREGATOR, AGG_TASK_COUNT, sizeof (int), having_expr);
+		AK_InsertAtEnd_L3(TYPE_INT, &count_threshold_gt, sizeof (int), having_expr);
+		AK_InsertAtEnd_L3(TYPE_OPERATOR, ">", sizeof (">"), having_expr);
+		AK_InsertAtEnd_L3(TYPE_OPERATOR, "AND", sizeof("AND"), having_expr);
+		printf("\nQUERY: SELECT * FROM student GROUP BY year HAVING AVG(weight) > 100 AND COUNT(id_student) > 1;\n\n");
+
+	    AK_aggregation_having(&aggregation, src_table, "agg_haivng", having_expr);
+    }
+
+    AK_print_table("agg_having");
+
+    printf("\n\n\n");
+
+	return TEST_result(0 , 0);
+}
