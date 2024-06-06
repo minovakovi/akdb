@@ -18,6 +18,7 @@
  */
  
 #include "debug.h"
+#include "constants.h"
 
 /**
  * @author Dino Laktašić
@@ -34,7 +35,7 @@ int AK_dbg_messg(DEBUG_LEVEL level, DEBUG_TYPE type, const char *format, ...) {
 	}*/
 	AK_PRO;
 	
-	if ((level == DEBUG_LEVEL || type == DEBUG_TYPE || format == NULL) && !DEBUG_ALL) {
+	if ((level == DEBUG_LEVEL_0 || type == DEBUG_TYPE_0 || format == NULL) && !DEBUG_ALL) {
 		AK_EPI;
 		return 0;
 	}
