@@ -177,4 +177,7 @@ TestResult AK_aggregation_test();
 void groupBy(Table *table, GroupByAttribute *groupByAttributes, int numGroupByAttributes);
 TestResult test_groupBy();
 
+int AK_aggregation_having(AK_agg_input *input, char *source_table, char *agg_having_table, struct list_node *having_expr);
+TestResult AK_aggregation_having_test();
+
 #endif
