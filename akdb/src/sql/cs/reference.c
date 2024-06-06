@@ -60,6 +60,24 @@ int AK_add_reference(char *childTable, char *childAttNames[], char *parentTable,
 }
 
 /**
+ * @author Zlatko Pracic
+ * @brief Helper funkcija koja vraća pokazivač na n-ti sljedeći čvor.
+ * @param start početni čvor
+ * @param steps broj koraka (next pokazivača) koje treba napraviti
+ * @return pokazivač na n-ti čvor ili NULL ako je dosegnut kraj liste
+ */
+struct list_node* get_next_node(struct list_node* start, int steps) {
+    struct list_node* current = start;
+    for (int i = 0; i < steps; i++) {
+        if (current == NULL) {
+            return NULL; // Ako dosegnemo kraj liste prije nego što napravimo sve korake
+        }
+        current = current->next;
+    }
+    return current;
+}
+
+/**
  * @author Dejan Frankovic
  * @brief Function that reads a reference entry from system table.
  * @param name of the table with reference (with foreign key)
@@ -75,14 +93,20 @@ AK_ref_item AK_get_reference(char *tableName, char *constraintName) {
     reference.attributes_number = 0;
 
     while ((list = AK_get_row(i, "AK_reference")) != NULL) {
-        if (strcmp(list->next->data, tableName) == 0 &&
-                strcmp(list->next->next->data, constraintName) == 0) {
-            strcpy(reference.table, tableName);
-            strcpy(reference.constraint, constraintName);
-            strcpy(reference.attributes[reference.attributes_number], list->next->next->next->data);
-            strcpy(reference.parent, list->next->next->next->next->data);
-            strcpy(reference.parent_attributes[reference.attributes_number], list->next->next->next->next->next->data);
-            memcpy(&reference.type, list->next->next->next->next->next->next->data, sizeof (int));
+        struct list_node* node1 = get_next_node(list, 1);
+        struct list_node* node2 = get_next_node(list, 2);
+        struct list_node* node3 = get_next_node(list, 3);
+        struct list_node* node4 = get_next_node(list, 4);
+        struct list_node* node5 = get_next_node(list, 5);
+        struct list_node* node6 = get_next_node(list, 6);
+        if (strncmp(node1->data, tableName, MAX_VARCHAR_LENGTH) == 0 &&
+                strncmp(node2->data, constraintName, MAX_VARCHAR_LENGTH) == 0) {
+            strncpy(reference.table, tableName, MAX_VARCHAR_LENGTH);
+            strncpy(reference.constraint, constraintName, MAX_VARCHAR_LENGTH);
+            strncpy(reference.attributes[reference.attributes_number], node3->data, MAX_ATT_NAME);
+            strncpy(reference.parent, node4->data, MAX_VARCHAR_LENGTH);
+            strncpy(reference.parent_attributes[reference.attributes_number], node5->data, MAX_ATT_NAME);
+            memmove(&reference.type, node6->data, sizeof(int));
             reference.attributes_number++;
         }
         i++;
@@ -106,11 +130,15 @@ int AK_reference_check_attribute(char *tableName, char *attribute, char *value) 
     struct list_node *list_row, *list_col;
     AK_PRO;
     while ((list_row = AK_get_row(i, "AK_reference")) != NULL) {
-        if (strcmp(list_row->next->data, tableName) == 0 &&
-                strcmp(list_row->next->next->next->data, attribute) == 0) {
-            att_index = AK_get_attr_index(list_row->next->next->next->next->data, list_row->next->next->next->next->next->data);
-            list_col = AK_get_column(att_index, list_row->next->next->next->next->data);
-            while (strcmp(list_col->data, value) != 0) {
+        struct list_node* node1 = get_next_node(list_row, 1);
+        struct list_node* node3 = get_next_node(list_row, 3);
+        struct list_node* node4 = get_next_node(list_row, 4);
+        struct list_node* node5 = get_next_node(list_row, 5);
+        if (strncmp(node1->data, tableName, MAX_VARCHAR_LENGTH) == 0 &&
+                strncmp(node3->data, attribute, MAX_VARCHAR_LENGTH) == 0) {
+            att_index = AK_get_attr_index(node4->data, node5->data);
+            list_col = AK_get_column(att_index, node4->data);
+            while (strncmp(list_col->data, value, MAX_VARCHAR_LENGTH) != 0) {
                 list_col = list_col->next;
                 if (list_col == NULL){
 		    AK_EPI;
@@ -140,14 +168,16 @@ int AK_reference_check_if_update_needed(struct list_node *lista, int action) {
     struct list_node *row;
     AK_PRO;
     while ((row = AK_get_row(i, "AK_reference")) != NULL) {
-        if (strcmp(row->next->next->next->next->data, lista->next->table) == 0) {
+        struct list_node* node4 = get_next_node(row, 4);
+        struct list_node* node5 = get_next_node(row, 5);
+        if (strncmp(node4->data, lista->next->table, MAX_VARCHAR_LENGTH) == 0) {
 	    temp = AK_First_L2(lista);
             while (temp != NULL) {
-                if (action == UPDATE && temp->constraint == 0 && strcmp(row->next->next->next->next->next->data, temp->attribute_name) == 0){
+                if (action == UPDATE && temp->constraint == 0 && strncmp(node5->data, temp->attribute_name, MAX_VARCHAR_LENGTH) == 0){
 		    AK_EPI;
                     return EXIT_SUCCESS;
 		}
-                else if (action == DELETE && strcmp(row->next->next->next->next->next->data, temp->attribute_name) == 0){
+                else if (action == DELETE && strncmp(node5->data, temp->attribute_name, MAX_VARCHAR_LENGTH) == 0){
 		    AK_EPI;
                     return EXIT_SUCCESS;
 		}
@@ -175,15 +205,18 @@ int AK_reference_check_restricion(struct list_node *lista, int action) {
     struct list_node *row;
     AK_PRO;
     while ((row = AK_get_row(i, "AK_reference")) != NULL) {
-        if (strcmp(row->next->next->next->next->data, lista->next->table) == 0) {
+        struct list_node* node4 = get_next_node(row, 4);
+        struct list_node* node5 = get_next_node(row, 5);
+        struct list_node* node6 = get_next_node(row, 6);
+        if (strncmp(node4->data, lista->next->table, MAX_VARCHAR_LENGTH) == 0) {
 
 	    temp = AK_First_L2(lista);
             while (temp != NULL) {
-                if (action == UPDATE && temp->constraint == 0 && memcmp(row->next->next->next->next->next->data, temp->attribute_name, row->next->next->next->next->next->size) == 0 && (int) * row->next->next->next->next->next->next->data == REF_TYPE_RESTRICT){
+                if (action == UPDATE && temp->constraint == 0 && memcmp(node5->data, temp->attribute_name, node5->size) == 0 && (int) * node6->data == REF_TYPE_RESTRICT){
 		    AK_EPI;
                     return EXIT_ERROR;
 		}
-                else if (action == DELETE && memcmp(row->next->next->next->next->next->data, temp->attribute_name, row->next->next->next->next->next->size) == 0 && (int) * row->next->next->next->next->next->next->data == REF_TYPE_RESTRICT){
+                else if (action == DELETE && memcmp(node5->data, temp->attribute_name, node5->size) == 0 && (int) * node6->data == REF_TYPE_RESTRICT){
 		    AK_EPI;
                     return EXIT_ERROR;
 		}
@@ -223,15 +256,19 @@ int AK_reference_update(struct list_node *lista, int action) {
     AK_Init_L3(&row_root);
 
     while ((ref_row = AK_get_row(ref_i, "AK_reference")) != NULL) {
-        if (strcmp(ref_row->next->next->next->next->data, lista->next->table) == 0) { // we're searching for PARENT table here
+        struct list_node* node1 = get_next_node(ref_row, 1);
+        struct list_node* node2 = get_next_node(ref_row, 2);
+        struct list_node* node4 = get_next_node(ref_row, 4);
+        struct list_node* node5 = get_next_node(ref_row, 5);
+        if (strncmp(node4->data, lista->next->table, MAX_VARCHAR_LENGTH) == 0) { // we're searching for PARENT table here
             for (j = 0; j < con_num; j++) {
-                if (strcmp(constraints[j], ref_row->next->next->data) == 0 && strcmp(child_tables[j], ref_row->next->data) == 0) {
+                if (strncmp(constraints[j], node2->data, MAX_VARCHAR_LENGTH) == 0 && strncmp(child_tables[j], node1->data, MAX_VARCHAR_LENGTH) == 0) {
                     break;
                 }
             }
             if (j == con_num) {
-                strcpy(constraints[con_num], ref_row->next->next->data);
-                strcpy(child_tables[con_num], ref_row->next->data);
+                strncpy(constraints[con_num], node2->data, MAX_VARCHAR_LENGTH);
+                strncpy(child_tables[con_num], node1->data, MAX_VARCHAR_LENGTH);
                 con_num++;
             }
         }
@@ -279,7 +316,7 @@ int AK_reference_update(struct list_node *lista, int action) {
             for (j = 0; j < reference.attributes_number; j++) {
 		 tempcell = AK_GetNth_L2(AK_get_attr_index(reference.parent, reference.parent_attributes[j]), parent_row); // from the row of parent table, take the value of attribute with name from parent_attribute
 	      
-                memcpy(tempData, tempcell->data, tempcell->size);
+                memmove(tempData, tempcell->data, tempcell->size);
                 tempData[tempcell->size] = '\0';
 
                 AK_Update_Existing_Element(tempcell->type, tempData, reference.table, reference.attributes[j], row_root);
@@ -290,8 +327,8 @@ int AK_reference_update(struct list_node *lista, int action) {
                             
 			    temp = AK_First_L2(lista);
                             while (temp != NULL) {
-                                if (strcmp(temp->attribute_name, reference.parent_attributes[j]) == 0 && temp->constraint == 0) {
-                                    memcpy(tempData, tempcell->data, tempcell->size);
+                                if (strncmp(temp->attribute_name, reference.parent_attributes[j], MAX_VARCHAR_LENGTH) == 0 && temp->constraint == 0) {
+                                    memmove(tempData, tempcell->data, tempcell->size);
                                     //tempData[tempcell->size] == '\0';
                                     AK_Insert_New_Element(tempcell->type, tempData, reference.table, reference.attributes[j], row_root);
                                     break;
@@ -313,7 +350,7 @@ int AK_reference_update(struct list_node *lista, int action) {
 
 			  temp = AK_First_L2(lista);
                             while (temp != NULL) {
-                                if (strcmp(temp->attribute_name, reference.parent_attributes[j]) == 0 && temp->constraint == 0) {
+                                if (strncmp(temp->attribute_name, reference.parent_attributes[j], MAX_VARCHAR_LENGTH) == 0 && temp->constraint == 0) {
                                     AK_Insert_New_Element(0, "", reference.table, reference.attributes[j], row_root);
                                     break;
                                 }
@@ -369,20 +406,21 @@ int AK_reference_check_entry(struct list_node *lista) {
 	temp = AK_Next_L2(temp);
     }
 
-    while ((row = AK_get_row(i, "AK_reference")) != NULL) 
-	{
-        if (strcmp(row->next->data, lista->next->table) == 0) 
+    while ((row = AK_get_row(i, "AK_reference")) != NULL) {
+        struct list_node* node1 = get_next_node(row, 1);
+        struct list_node* node2 = get_next_node(row, 2);
+        if (strncmp(node1->data, lista->next->table, MAX_VARCHAR_LENGTH) == 0) 
 		{
             for (j = 0; j < con_num; j++) 
 			{
-                if (strcmp(constraints[j], row->next->next->data) == 0) 
+                if (strncmp(constraints[j], node2->data, MAX_VARCHAR_LENGTH) == 0) 
 				{
                     break;
                 }
             }
             if (j == con_num) 
 			{
-                strcpy(constraints[con_num], row->next->next->data);
+                strncpy(constraints[con_num], node2->data, MAX_VARCHAR_LENGTH);
                 con_num++;
             }
         }
@@ -404,9 +442,9 @@ int AK_reference_check_entry(struct list_node *lista) {
             temp = lista->next;
             while (temp != NULL) {
 
-                if (temp->constraint == 0 && strcmp(temp->attribute_name, reference.attributes[j]) == 0) {
-                    strcpy(attributes[j], temp->data);
-                    if (reference.type == REF_TYPE_SET_NULL && strcmp(temp->data, "\0") == 0) //if type is 0, the value is PROBABLY null
+                if (temp->constraint == 0 && strncmp(temp->attribute_name, reference.attributes[j], MAX_VARCHAR_LENGTH) == 0) {
+                    strncpy(attributes[j], temp->data, MAX_ATT_NAME);
+                    if (reference.type == REF_TYPE_SET_NULL && strncmp(temp->data, "\0", MAX_VARCHAR_LENGTH) == 0) //if type is 0, the value is PROBABLY null
                         is_att_null[j] = 1;
                     else
                         is_att_null[j] = 0;
@@ -431,7 +469,7 @@ int AK_reference_check_entry(struct list_node *lista) {
             for (k = 0; k < reference.attributes_number; k++) { // attributes in reference
 		temp1 = AK_GetNth_L2(AK_get_attr_index(reference.parent, reference.parent_attributes[k]), row);
                 if (temp1 != 0x0) {
-                  if (is_att_null[k] || strcmp(temp1->data, attributes[k]) != 0) {
+                  if (is_att_null[k] || strncmp(temp1->data, attributes[k], MAX_VARCHAR_LENGTH) != 0) {
                       success = 0;
                       break;
                   }
@@ -473,16 +511,19 @@ TestResult AK_reference_test() {
 
     char *att[2];
     att[0] = AK_malloc(sizeof (char) *20);
-    strcpy(att[0], "FK");
+    strncpy(att[0], "FK", 20);
+    att[0][19] = '\0'; // Osigurava da je niz završen null karakterom
     att[1] = AK_malloc(sizeof (char) *20);
-    strcpy(att[1], "Value");
-
+    strncpy(att[1], "Value", 20);
+    att[1][19] = '\0'; // Osigurava da je niz završen null karakterom
 
     char *patt[2];
     patt[0] = AK_malloc(sizeof (char) *20);
-    strcpy(patt[0], "mbr");
+    strncpy(patt[0], "mbr", 20);
+    patt[0][19] = '\0'; // Osigurava da je niz završen null karakterom
     patt[1] = AK_malloc(sizeof (char) *20);
-    strcpy(patt[1], "firstname");
+    strncpy(patt[1], "firstname", 20);
+    patt[1][19] = '\0'; // Osigurava da je niz završen null karakterom
 
     AK_add_reference("ref_test", att, "student", patt, 2, "constraint", REF_TYPE_SET_NULL);
     AK_print_table("AK_reference");
