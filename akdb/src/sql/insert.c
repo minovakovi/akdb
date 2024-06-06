@@ -87,49 +87,60 @@ AK_header *AK_get_insert_header(int *size, char *tblName, struct list_node *colu
 }
 
 /**
- * @author Filip Žmuk
+ * @author Filip Žmuk, Mateo Besednik
  * @brief Function that implements SQL insert command
  * @param tableName table in which rows will be inserted
  * @param columns list of columns
  * @param values values to be inserted
  * @return EXIT_SUCCESS or EXIT_ERROR
  */
+
 int AK_insert(char* tblName, struct list_node *columns, struct list_node *values) 
 {
     AK_PRO;
-    if(!AK_table_exist(tblName)) {
+
+    // Check if the table exists
+    if (!AK_table_exist(tblName)) {
         AK_EPI;
         return EXIT_ERROR;
     }
 
+    // Get the number of values
     int num_values = AK_Size_L2(values);
     int num_columns = 0;
 
+    // Retrieve the header for the insert operation
     AK_header *header = AK_get_insert_header(&num_columns, tblName, columns);
 
-    if(header == EXIT_ERROR) {
+    if (header == EXIT_ERROR) {
         AK_EPI;
         return EXIT_ERROR;
     }
 
-    if(num_values % num_columns) {
+    // Ensure the number of values is a multiple of the number of columns
+    if (num_values % num_columns != 0) {
         AK_free(header);
         AK_EPI;
         return EXIT_ERROR;
     }
 
-    struct list_node *row;
-    int i = 0; // index of values
-    struct list_node *value = AK_First_L2(values);
+    struct list_node *row = NULL;
+    int value_index = 0; // Index for the values
+    struct list_node *current_value = AK_First_L2(values);
 
-    while(value)
-    {
-        if(i == 0) {
-            row = (struct list_node *) AK_malloc(sizeof (struct list_node));
+    while (current_value) {
+        if (value_index == 0) {
+            row = (struct list_node *) AK_malloc(sizeof(struct list_node));
+            if (!row) {
+                AK_free(header);
+                AK_EPI;
+                return EXIT_ERROR;
+            }
             AK_Init_L3(&row);
         }
 
-        if(header[i].type != value->type) {
+        // Check if the value type matches the column type
+        if (header[value_index].type != current_value->type) {
             AK_DeleteAll_L3(&row);
             AK_free(row);
             AK_free(header);
@@ -137,23 +148,27 @@ int AK_insert(char* tblName, struct list_node *columns, struct list_node *values
             return EXIT_ERROR;
         }
 
-        AK_Insert_New_Element(value->type, value->data, tblName, header[i].att_name, row);
+        // Insert the new element into the row
+        AK_Insert_New_Element(current_value->type, current_value->data, tblName, header[value_index].att_name, row);
 
-        i++;
+        value_index++;
 
-        if(i >= num_columns) {
-            i = 0;
-            int result = AK_insert_row(row);
+        // If the row is complete, insert it into the table
+        if (value_index >= num_columns) {
+            value_index = 0;
+            int insert_result = AK_insert_row(row);
             AK_DeleteAll_L3(&row);
             AK_free(row);
-            if(result != EXIT_SUCCESS) {
+
+            if (insert_result != EXIT_SUCCESS) {
                 AK_free(header);
                 AK_EPI;
                 return EXIT_ERROR;
             }
         }
 
-        value = AK_Next_L2(value);
+        // Move to the next value
+        current_value = AK_Next_L2(current_value);
     }
 
     AK_free(header);
@@ -161,9 +176,10 @@ int AK_insert(char* tblName, struct list_node *columns, struct list_node *values
     return EXIT_SUCCESS;
 }
 
+
 TestResult AK_insert_test() {
-    struct list_node *row_root;
-    struct list_node *col_root;
+    struct list_node *row_root = NULL;
+    struct list_node *col_root = NULL;
     int id_field;
     float size_field;
     int result;
@@ -174,13 +190,13 @@ TestResult AK_insert_test() {
     char *testTable = "insertTestTable";
 
     AK_header header[4] = {
-    {TYPE_INT, "id", {0}, {{'\0'}}, {{'\0'}}},
-    {TYPE_VARCHAR, "name", {0}, {{'\0'}}, {{'\0'}}},
-    {TYPE_FLOAT, "size", {0}, {{'\0'}}, {{'\0'}}},
-    {0, {'\0'}, {0}, {{'\0'}}, {{'\0'}}}
+        {TYPE_INT, "id", {0}, {{'\0'}}, {{'\0'}}},
+        {TYPE_VARCHAR, "name", {0}, {{'\0'}}, {{'\0'}}},
+        {TYPE_FLOAT, "size", {0}, {{'\0'}}, {{'\0'}}},
+        {0, {'\0'}, {0}, {{'\0'}}, {{'\0'}}}
     };
 
-    if(AK_initialize_new_segment(testTable, SEGMENT_TYPE_TABLE, header) == EXIT_ERROR) {
+    if (AK_initialize_new_segment(testTable, SEGMENT_TYPE_TABLE, header) == EXIT_ERROR) {
         printf("\nCouldn't create test table\n");
         AK_EPI;
         return TEST_result(0, 1);
@@ -191,16 +207,27 @@ TestResult AK_insert_test() {
     printf("\nStarting table for test:\n");
     AK_print_table(testTable);
 
-    row_root = (struct list_node *) AK_malloc(sizeof (struct list_node));
+    row_root = (struct list_node *) AK_malloc(sizeof(struct list_node));
+    if (!row_root) {
+        printf("\nMemory allocation failed\n");
+        AK_EPI;
+        return TEST_result(0, 1);
+    }
     AK_Init_L3(&row_root);
-    col_root = (struct list_node *) AK_malloc(sizeof (struct list_node));
+
+    col_root = (struct list_node *) AK_malloc(sizeof(struct list_node));
+    if (!col_root) {
+        printf("\nMemory allocation failed\n");
+        AK_free(row_root);
+        AK_EPI;
+        return TEST_result(0, 1);
+    }
     AK_Init_L3(&col_root);
 
-    // Test 1
-    printf("\nInsert two rows without specifing table columns\n");
+    // Test 1: Insert two rows without specifying table columns
+    printf("\nTest 1: Insert two rows without specifying table columns\n");
     AK_DeleteAll_L3(&row_root);
 
-    // Elements are in reverse order because AK_Insert_New_Element puts element on first place in list
     id_field = 2;
     size_field = 6.2;
     AK_Insert_New_Element(TYPE_FLOAT, &size_field, testTable, "", row_root); // size
@@ -222,36 +249,35 @@ TestResult AK_insert_test() {
         && ((float*)(AK_get_tuple(num_table_rows, 2, testTable)->data))[0] > 3.495
         && ((float*)(AK_get_tuple(num_table_rows, 2, testTable)->data))[0] < 3.505
         && strcmp(AK_get_tuple(num_table_rows, 1, testTable)->data, "Petrica") == 0 
-        && ( num_table_rows + 2 == AK_get_num_records(testTable) )
+        && (num_table_rows + 2 == AK_get_num_records(testTable))
     ) {
         passed_tests++;
-        printf("Test pased!\n");
+        printf("Test 1 passed!\n");
     } else {
         failed_tests++;
-        printf("Test failed!\n");
+        printf("Test 1 failed!\n");
     }
 
-    // Test 2
-    printf("\nInsert should fail if data types don't match\n");
+    // Test 2: Insert should fail if data types don't match
+    printf("\nTest 2: Insert should fail if data types don't match\n");
     num_table_rows = AK_get_num_records(testTable);
 
     AK_DeleteAll_L3(&row_root);
-    // Elements are in reverse order because AK_Insert_New_Element puts element on first place in list
     AK_Insert_New_Element(TYPE_VARCHAR, "Test", testTable, "", row_root); // size
     AK_Insert_New_Element(TYPE_VARCHAR, "Test", testTable, "", row_root); // name
     AK_Insert_New_Element(TYPE_INT, &id_field, testTable, "", row_root); // id
 
     result = AK_insert(testTable, NULL, row_root);
     if (result == EXIT_ERROR && num_table_rows == AK_get_num_records(testTable)) {
-        printf("Test pased!\n");
         passed_tests++;
+        printf("Test 2 passed!\n");
     } else {
         failed_tests++;
-        printf("Test failed!\n");
+        printf("Test 2 failed!\n");
     }
 
-    // Test 3
-    printf("\nInsert with random column order\n"); 
+    // Test 3: Insert with random column order
+    printf("\nTest 3: Insert with random column order\n"); 
     num_table_rows = AK_get_num_records(testTable);
 
     id_field = 3;
@@ -273,17 +299,17 @@ TestResult AK_insert_test() {
         result == EXIT_SUCCESS
         && ((int*)(AK_get_tuple(num_table_rows, 0, testTable)->data))[0] == 3
         && strcmp(AK_get_tuple(num_table_rows, 1, testTable)->data, "Ariana") == 0 
-        && ( num_table_rows + 1 == AK_get_num_records(testTable) )
+        && (num_table_rows + 1 == AK_get_num_records(testTable))
     ) {
         passed_tests++;
-        printf("Test pased!\n");
+        printf("Test 3 passed!\n");
     } else {
         failed_tests++;
-        printf("Test failed!\n");
+        printf("Test 3 failed!\n");
     }
 
-    // Test 4 
-    printf("\nInsert should fail if attribute doesn't exist\n");
+    // Test 4: Insert should fail if attribute doesn't exist
+    printf("\nTest 4: Insert should fail if attribute doesn't exist\n");
     num_table_rows = AK_get_num_records(testTable);
 
     AK_DeleteAll_L3(&row_root);
@@ -299,15 +325,15 @@ TestResult AK_insert_test() {
     result = AK_insert(testTable, col_root, row_root);
 
     if (result == EXIT_ERROR && num_table_rows == AK_get_num_records(testTable)) {
-        printf("Test pased!\n");
         passed_tests++;
+        printf("Test 4 passed!\n");
     } else {
         failed_tests++;
-        printf("Test failed!\n");
+        printf("Test 4 failed!\n");
     }
 
-    // Test 5
-    printf("\nInsert should fail for duplicate attributes\n");
+    // Test 5: Insert should fail for duplicate attributes
+    printf("\nTest 5: Insert should fail for duplicate attributes\n");
     num_table_rows = AK_get_num_records(testTable);
 
     AK_DeleteAll_L3(&row_root);
@@ -323,11 +349,11 @@ TestResult AK_insert_test() {
     result = AK_insert(testTable, col_root, row_root);
 
     if (result == EXIT_ERROR && num_table_rows == AK_get_num_records(testTable)) {
-        printf("Test pased!\n");
         passed_tests++;
+        printf("Test 5 passed!\n");
     } else {
         failed_tests++;
-        printf("Test failed!\n");
+        printf("Test 5 failed!\n");
     }
 
     printf("\nTable after tests:\n");
