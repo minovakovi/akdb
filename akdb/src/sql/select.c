@@ -136,6 +136,47 @@ int AK_apply_select(char *srcTable, char *selection_table, struct list_node *con
     return EXIT_SUCCESS;
 }
 
+
+//kreiranje funkcije select_as
+int AK_select_as(char *src_table, char *dest_table, struct list_node *attributes, struct list_node *new_column_names, struct list_node *condition, struct list_node *ordering)
+{
+    char selection_table[MAX_ATT_NAME] = "";
+    char sorted_table[MAX_ATT_NAME] = "";
+    struct list_node *projectionAttributes = (struct list_node *)AK_malloc(sizeof(struct list_node));
+    int status = EXIT_SUCCESS;
+
+    if (projectionAttributes == NULL) {
+        return EXIT_ERROR;
+    }
+
+    if (AK_apply_select(src_table, selection_table, condition, attributes, projectionAttributes, sorted_table, ordering) != EXIT_SUCCESS) {
+        status = EXIT_ERROR;
+    } else if (AK_projection(sorted_table, dest_table, projectionAttributes, new_column_names) != EXIT_SUCCESS) {
+        status = EXIT_ERROR;
+    } else {
+        AK_apply_select_free_temp_tables(src_table, selection_table, sorted_table);
+    }
+
+    AK_clear_projection_attributes(projectionAttributes);
+    AK_free(projectionAttributes);
+
+    return status;
+}
+
+//kreiranje funkcije select_into
+
+int AK_select_into(char *src_table, char *new_table, struct list_node *attributes, struct list_node *condition, struct list_node *ordering)
+{
+    
+    if (AK_create_table(new_table) != EXIT_SUCCESS) {
+        return EXIT_ERROR;
+    }
+
+    return AK_select_as(src_table, new_table, attributes, NULL, condition, ordering);
+}
+
+
+
 /**
  * @author Filip Žmuk, Edited by: Marko Belusic
  * @brief Function that implements SELECT relational operator
@@ -146,35 +187,39 @@ int AK_apply_select(char *srcTable, char *selection_table, struct list_node *con
  * @param ordering - atributes for result sorting
  * @return EXIT_SUCCESS if cache result in memory and print table else break 
  */
-int AK_select(char *src_table, char *dest_table, struct list_node *attributes, struct list_node *condition, struct list_node *ordering)
+
+int AK_select(char *src_table, char *dest_table, struct list_node *attributes, struct list_node *condition, struct list_node *ordering, struct list_node *new_column_names, bool into_new_table)
 {
-    AK_PRO;
-    //create help table name for selection
-    char selection_table[MAX_ATT_NAME] = "";
-    struct list_node *projectionAttributes = (struct list_node *)AK_malloc(sizeof(struct list_node));
-    char sorted_table[ MAX_ATT_NAME ] = "";
+    if (into_new_table) {
+        return AK_select_into(src_table, dest_table, attributes, condition, ordering);
+    } else if (new_column_names != NULL) {
+        return AK_select_as(src_table, dest_table, attributes, new_column_names, condition, ordering);
+    } else {
+        
+        char selection_table[MAX_ATT_NAME] = "";
+        struct list_node *projectionAttributes = (struct list_node *)AK_malloc(sizeof(struct list_node));
+        char sorted_table[MAX_ATT_NAME] = "";
+        int status = EXIT_SUCCESS;
 
-    if(AK_apply_select(src_table, selection_table, condition, attributes, projectionAttributes, sorted_table, ordering) != EXIT_SUCCESS){
+        if (projectionAttributes == NULL) {
+            return EXIT_ERROR;
+        }
+
+        if (AK_apply_select(src_table, selection_table, condition, attributes, projectionAttributes, sorted_table, ordering) != EXIT_SUCCESS) {
+            status = EXIT_ERROR;
+        } else if (AK_projection(sorted_table, dest_table, projectionAttributes, NULL) != EXIT_SUCCESS) {
+            status = EXIT_ERROR;
+        } else {
+            AK_apply_select_free_temp_tables(src_table, selection_table, sorted_table);
+        }
+
         AK_clear_projection_attributes(projectionAttributes);
-        AK_EPI;
-        return EXIT_ERROR;
+        AK_free(projectionAttributes);
+
+        return status;
     }
-
-    //project required rows
-    if (AK_projection(sorted_table, dest_table, projectionAttributes, NULL) != EXIT_SUCCESS)
-    {
-        AK_clear_projection_attributes(projectionAttributes);
-        AK_EPI;
-        return EXIT_ERROR;
-    }
-
-    // free temp tables
-    AK_apply_select_free_temp_tables(src_table, &selection_table, &sorted_table);
-
-    AK_clear_projection_attributes(projectionAttributes);
-    AK_EPI;
-    return EXIT_SUCCESS;
 }
+
 
 /**
  * @author Renata Mesaros, updated by Filip Žmuk and Josip Susnjara
