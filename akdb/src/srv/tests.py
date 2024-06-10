@@ -4,6 +4,10 @@ import sys
 import time
 from colors import bcolors
 import datetime
+from tabulate import tabulate
+import requests
+
+
 
 
 
@@ -146,6 +150,7 @@ def Help():
     print(f"    {bcolors.RED}testme{bcolors.ENDC}  - Executes all tests                         {bcolors.OKGREEN}Radi{bcolors.ENDC} |")
     print(f"    {bcolors.RED}quiz{bcolors.ENDC}    - Play the quiz                              {bcolors.OKGREEN}Radi{bcolors.ENDC} |")
     print(f"    {bcolors.RED}time{bcolors.ENDC}    - Look at the time                           {bcolors.OKGREEN}Radi{bcolors.ENDC} |")
+    print(f"    {bcolors.RED}weather{bcolors.ENDC} - Check the weather                          {bcolors.OKGREEN}Radi{bcolors.ENDC} |")
     print(f"    {bcolors.RED}\p{bcolors.ENDC}      - print table command                             |")
     print(f"    {bcolors.RED}\ps{bcolors.ENDC}     - print system table command                      |")
     print(f"    {bcolors.RED}\d{bcolors.ENDC}      - table details command                           |")
@@ -199,3 +204,81 @@ def start_quiz():
 
     print("Kviz je završen. Osvojili ste", score, "bodova.")
     quiz_manager.close_connection()
+
+
+def kelvin_to_celsius(kelvin):
+    return kelvin - 273.15
+
+def display_weather_info(weather_data):
+    if weather_data:
+        print("\nWeather information:")
+        table = [
+            ["City", weather_data['name']],
+            ["Description", weather_data['weather'][0]['description'].capitalize()],
+            ["Temperature (°C)", f"{kelvin_to_celsius(weather_data['main']['temp']):.2f}"],
+            ["Min temperature (°C)", f"{kelvin_to_celsius(weather_data['main']['temp_min']):.2f}"],
+            ["Max temperature (°C)", f"{kelvin_to_celsius(weather_data['main']['temp_max']):.2f}"],
+            ["Feels like (°C)", f"{kelvin_to_celsius(weather_data['main']['feels_like']):.2f}"],
+            ["Humidity (%)", weather_data['main']['humidity']],
+            ["Pressure (hPa)", weather_data['main']['pressure']],
+            ["Wind speed (m/s)", weather_data['wind']['speed']],
+            ["Cloudiness (%)", weather_data['clouds']['all']]
+        ]
+        print(tabulate(table, headers=["Parameter", "Value"], tablefmt="grid"))
+        
+        sunrise_time = datetime.datetime.fromtimestamp(weather_data['sys']['sunrise']).strftime('%Y-%m-%d %H:%M:%S')
+        sunset_time = datetime.datetime.fromtimestamp(weather_data['sys']['sunset']).strftime('%Y-%m-%d %H:%M:%S')
+        print(f"Sunrise: {sunrise_time}")
+        print(f"Sunset: {sunset_time}")
+
+        choice = input("Do you want to see the weekly forecast? (yes/no): ").lower()
+        if choice == 'yes':
+            city_name = weather_data['name']
+            get_weekly_forecast(city_name)
+
+    else:
+        print("No weather data available.")
+
+def get_weekly_forecast(city_name):
+    api_key = "6bdf2e13b2b84663960111621240806"
+    url = f"https://api.weatherapi.com/v1/forecast.json?key={api_key}&q={city_name}&days=7"
+    response = requests.get(url)
+    
+    if response.status_code == 200:
+        data = response.json()
+        display_weekly_forecast(data)
+    else:
+        print("Failed to fetch weekly forecast.")
+
+def display_weekly_forecast(weekly_data):
+    if weekly_data:
+        print("\nWeekly Forecast:")
+        table = []
+        headers = ["Day", "Date", "Description", "Min Temp (°C)", "Max Temp (°C)"]
+        table.append(headers)
+        
+        for day in weekly_data['forecast']['forecastday']:
+            date = datetime.datetime.strptime(day['date'], '%Y-%m-%d')
+            day_of_week = date.strftime('%A')
+            description = day['day']['condition']['text']
+            max_temp = day['day']['maxtemp_c']
+            min_temp = day['day']['mintemp_c']
+            row = [day_of_week, date.strftime('%Y-%m-%d'), description, min_temp, max_temp]
+            table.append(row)
+        
+        print(tabulate(table, headers="firstrow", tablefmt="grid"))
+    else:
+        print("No weekly forecast data available.")
+
+
+def check_weather():
+    city_name = input("Enter the city name: ")
+    api_key = "c4c1ba61fc29b03abc8c4620ff58dcee"
+    url = f"https://api.openweathermap.org/data/2.5/weather?q={city_name}&appid={api_key}"
+    response = requests.get(url)
+    
+    if response.status_code == 200:
+        data = response.json()
+        display_weather_info(data)
+    else:
+        print("Failed to fetch weather data.")

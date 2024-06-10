@@ -6,7 +6,7 @@ import json
 import configparser
 import sqlite3
 import hashlib
-
+import getpass  
 import sqlite3
 import hashlib
 
@@ -28,8 +28,8 @@ cursor.execute("INSERT OR IGNORE INTO example VALUES (2, 'user', ?)", (hashlib.s
 #cursor.execute("SELECT * FROM example")
 rows = cursor.fetchall()
 
-for row in rows:
-    print(row)
+#for row in rows:
+#    print(row)
 
 
 cursor.execute("CREATE TABLE IF NOT EXISTS quiz_questions (id INTEGER PRIMARY KEY, question TEXT UNIQUE, answer TEXT)")
@@ -44,8 +44,8 @@ cursor.executemany("INSERT OR IGNORE INTO quiz_questions (question, answer) VALU
 cursor.execute("SELECT * FROM quiz_questions")
 rows = cursor.fetchall()
 
-for row in rows:
-    print(row)
+#for row in rows:
+#    print(row)
 
 #cursor.execute("PRAGMA table_info(quiz_questions)")
 #columns = cursor.fetchall()
@@ -57,7 +57,6 @@ for row in rows:
 # Potvrda promjena i zatvaranje veze s bazom podataka
 connection.commit()
 connection.close()
-
 
 
 
