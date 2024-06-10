@@ -13,10 +13,10 @@ def print_box(text):
 def main():
     print_box("Testing username: testingUser")
     username = input("Please enter your username: ")
-    
+
     print_box("Testing password: testingPass")
     password = getpass.getpass(prompt="Please enter your password: ")
-    
+
     c = Client(username=username, password=password)
     c.start()
 

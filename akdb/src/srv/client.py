@@ -49,14 +49,13 @@ class Client:
             except paramiko.ssh_exception.AuthenticationException:
                 print(bcolors.YELLOW + "Invalid credentials. Please try again." + bcolors.ENDC)
                 self.username = input(bcolors.YELLOW + "Username: " + bcolors.ENDC)
-                self.password = password_input(prompt=bcolors.YELLOW + "Password: " + bcolors.ENDC)
-                if self.username and self.password:
-                    self.username = ""
-                    self.password = ""
-            except BadHostKeyException as e:  # Change here
+                self.password = getpass.getpass(prompt=bcolors.YELLOW + "Password: " + bcolors.ENDC)
+            except BadHostKeyException as e:
                 print(bcolors.YELLOW + "Host key verification failed." + bcolors.ENDC)
                 accept_key = input(bcolors.YELLOW + "Do you want to accept the new key? (yes/no): " + bcolors.ENDC).lower()
-                if accept_key.lower() == "yes":
+                if accept_key == "yes":
+                    # Remove the old key
+                    self.sock.get_host_keys().clear()
                     self.sock.set_missing_host_key_policy(paramiko.AutoAddPolicy())
                     try:
                         self.sock.connect(
@@ -70,16 +69,21 @@ class Client:
                         print("[*] Connection established.")
                     except paramiko.ssh_exception.AuthenticationException:
                         print(bcolors.YELLOW + "Invalid credentials. Please try again." + bcolors.ENDC)
-                        self.username = input(bcolors.YELLOW + "Username: " + bcolors.ENDC)
-                        self.password = password_input(prompt=bcolors.YELLOW + "Password: " + bcolors.ENDC)
+                        self.username = input("Username: ")
+                        self.password = getpass.getpass(prompt="Password: ")
                     except Exception as e:
-                        print(bcolors.FAIL + "[ERROR] Connection failed: " + str(e) + bcolors.ENDC)
+                        print("[ERROR] Connection failed: " + str(e))
                         time.sleep(2)
                 else:
+                    print("Host key not accepted. Connection aborted.")
                     break
+            except Exception as e:
+                print("[ERROR] Connection failed: " + str(e))
+                time.sleep(2)
 
-        self.session = self.sock.get_transport().open_session()
-        print("[+] Successfully connected to server")
+        if connected:
+            self.session = self.sock.get_transport().open_session()
+            print("[+] Successfully connected to server")
 
         while self.working:
             try:
@@ -409,6 +413,9 @@ class Client:
                     tests.Help()
                 if cmd == "quiz":
                     tests.start_quiz()
+                if cmd == "weather":
+                    tests.check_weather()
+            
 
                # if cmd == "time":
                 #    print(tests.TimeTest())
