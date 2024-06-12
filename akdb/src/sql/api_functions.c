@@ -20,47 +20,6 @@ float sql_multiply_float(float a, float b) { return a * b; }
 float sql_divide_float(float a, float b) { return b != 0.0f ? a / b : 0.0f; } // Avoid division by zero
 float sql_power_float(float a, float b) { return powf(a, b); }
 
-/* Standard functions */
-char* sql_now() {
-    time_t t = time(NULL);
-    struct tm *tm_info = localtime(&t);
-    static char buffer[25];
-    strftime(buffer, 25, "%Y-%m-%d %H:%M:%S", tm_info);
-    return buffer;
-}
-
-int sql_len(const char *str) {
-    return strlen(str);
-}
-
-char* sql_left(const char *str, int n) {
-    if (n <= 0) return "";
-    char *result = (char*)malloc(n + 1);
-    if (!result) return NULL; // Check for malloc failure
-    strncpy(result, str, n);
-    result[n] = '\0';
-    return result;
-}
-
-char* sql_lower(char *str) {
-    for (char *p = str; *p; ++p) *p = tolower(*p);
-    return str;
-}
-
-char* sql_upper(char *str) {
-    for (char *p = str; *p; ++p) *p = toupper(*p);
-    return str;
-}
-
-char* sql_replace(char *str, char old_char, char new_char) {
-    char *result = strdup(str);
-    if (!result) return NULL; // Check for strdup failure
-    for (char *p = result; *p; ++p) {
-        if (*p == old_char) *p = new_char;
-    }
-    return result;
-}
-
 TestResult AK_api_functions_test() {
     int successful = 0, failed = 0;
 
@@ -86,18 +45,7 @@ TestResult AK_api_functions_test() {
         failed++;
     }
 
-    // Testiranje standardnih funkcija
-    if (strcmp(sql_now(), "") != 0 && sql_len("hello") == 5 &&
-        strcmp(sql_left("hello", 3), "hel") == 0 && strcmp(sql_lower("HELLO"), "hello") == 0 &&
-        strcmp(sql_upper("hello"), "HELLO") == 0 && strcmp(sql_replace("hello", 'l', 'r'), "herro") == 0) {
-        printf("\n\nStandard functions test passed.\n\n");  
-        successful++;
-        
-    } else {
-        failed++;
-        printf("\n\nStandard functions test failed.\n\n");  
-    }
-
+    
     if (failed == 0)
     {
         printf("\n\nAll tests has successfully completed!!\n\n");
