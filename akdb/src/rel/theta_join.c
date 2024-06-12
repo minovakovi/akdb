@@ -158,11 +158,12 @@ void AK_check_constraints(AK_block *tbl1_temp_block, AK_block *tbl2_temp_block, 
     char data[MAX_VARCHAR_LENGTH];
 
     struct list_node *row_root_init = (struct list_node *) AK_malloc(sizeof (struct list_node));
-    struct list_node *row_root_full;
+    struct list_node *row_root_full = (struct list_node *) AK_malloc(sizeof (struct list_node));
 
     AK_header *t_header = (AK_header *) AK_get_header(new_table);
 
     AK_Init_L3(&row_root_init);
+    AK_Init_L3(&row_root_full);
 
     for (tbl1_row = 0; tbl1_row < DATA_BLOCK_SIZE; tbl1_row += tbl1_num_att){
 
@@ -184,6 +185,7 @@ void AK_check_constraints(AK_block *tbl1_temp_block, AK_block *tbl2_temp_block, 
     		if (tbl2_temp_block->tuple_dict[tbl2_row].type == FREE_INT)
 				break;
 
+    	AK_DeleteAll_L3(&row_root_full);
     		row_root_full = row_root_init;
 
     		for (tbl2_att = 0; tbl2_att < tbl2_num_att; tbl2_att++){
@@ -201,7 +203,6 @@ void AK_check_constraints(AK_block *tbl1_temp_block, AK_block *tbl2_temp_block, 
     	}
 
     	
-    	AK_DeleteAll_L3(&row_root_init);
     }
 
     AK_free(row_root_init);
@@ -312,6 +313,9 @@ int AK_theta_join(char *srcTable1, char * srcTable2, char * dstTable, struct lis
 TestResult AK_op_theta_join_test() {
     AK_PRO;
     printf("\n********** THETA JOIN TEST **********\n\n");
+    int test_theta;
+    int success = 0;
+    int failed = 0;
 
     struct list_node *constraints = (struct list_node *) AK_malloc(sizeof (struct list_node));
     AK_Init_L3(&constraints);
@@ -322,47 +326,117 @@ TestResult AK_op_theta_join_test() {
     AK_InsertAtEnd_L3(TYPE_ATTRIBS, "lastname", sizeof ("lastname"), constraints);
     AK_InsertAtEnd_L3(TYPE_OPERATOR, "=", sizeof ("="), constraints);
     
-    AK_theta_join("department", "professor", "theta_join_test", constraints);
+    test_theta = AK_theta_join("department", "professor", "theta_join_test", constraints);
     AK_print_table("theta_join_test");
 
     AK_DeleteAll_L3(&constraints);
-    
-    printf("SELECT * FROM student, professor2 WHERE id_prof=mbr;\n");
+ 
+    if(test_theta == EXIT_SUCCESS){
+	
+	printf("\n\nTest succeeded!\n");
+	success++;
+
+    }else{
+    	printf("\n\nTest failed!\n");
+	failed++;
+    }
+
+
+    printf("\nSELECT * FROM student, professor2 WHERE id_prof!=mbr;\n");
 
     AK_InsertAtEnd_L3(TYPE_ATTRIBS, "id_prof", sizeof ("id_prof"), constraints);
     AK_InsertAtEnd_L3(TYPE_ATTRIBS, "mbr", sizeof ("mbr"), constraints);
-    AK_InsertAtEnd_L3(TYPE_OPERATOR, "=", sizeof ("="), constraints);
+    AK_InsertAtEnd_L3(TYPE_OPERATOR, "!=", sizeof ("!="), constraints);
  
    
     
-    AK_theta_join("student", "professor2", "theta_join_test2", constraints);
+    test_theta = AK_theta_join("student", "professor2", "theta_join_test2", constraints);
     AK_print_table("theta_join_test2");
     AK_DeleteAll_L3(&constraints);
-    
+
+     if(test_theta == EXIT_SUCCESS){
+	
+	printf("\n\nTest succeeded!\n");
+	success++;
+
+    }else{
+    	printf("\n\nTest failed!\n");
+	failed++;
+    }
+   
     //test where overlaping columns are a part of the constraints
-    printf("SELECT * FROM employee, department WHERE employee.id_department = department.id_department;\n");   
+    printf("\nSELECT * FROM employee, department WHERE employee.id_department = department.id_department;\n");   
     AK_InsertAtEnd_L3(TYPE_ATTRIBS, "employee.id_department", sizeof ("employee.id_department"), constraints);
     AK_InsertAtEnd_L3(TYPE_ATTRIBS, "department.id_department", sizeof ("department.id_department"), constraints);
     AK_InsertAtEnd_L3(TYPE_OPERATOR, "=", sizeof ("="), constraints);
 
-    AK_theta_join("employee", "department", "theta_join_test3", constraints);
+    test_theta = AK_theta_join("employee", "department", "theta_join_test3", constraints);
     AK_print_table("theta_join_test3");
     AK_DeleteAll_L3(&constraints);
+
+        if(test_theta == EXIT_SUCCESS){
+	
+	printf("\n\nTest succeeded!\n");
+	success++;
+
+    }else{
+    	printf("\n\nTest failed!\n");
+	failed++;
+    }
+
+
     char num = 102;
-    printf("SELECT * FROM student, professor2 WHERE year + id_prof > 37895;\n");
+    printf("\nSELECT * FROM student, professor2 WHERE year + id_prof > 37895;\n");
     AK_InsertAtEnd_L3(TYPE_ATTRIBS, "year", sizeof ("year"), constraints);
     AK_InsertAtEnd_L3(TYPE_ATTRIBS, "id_prof", sizeof ("id_prof"), constraints);
     AK_InsertAtEnd_L3(TYPE_OPERATOR, "+", sizeof ("+"), constraints);
     AK_InsertAtEnd_L3(TYPE_INT, &num, sizeof (int), constraints);
     AK_InsertAtEnd_L3(TYPE_OPERATOR, ">", sizeof (">"), constraints);
 
-    AK_theta_join("student", "professor2", "theta_join_test4", constraints);
+    test_theta = AK_theta_join("student", "professor2", "theta_join_test4", constraints);
     AK_print_table("theta_join_test4");
     printf("Test is successful :) \n");
     AK_DeleteAll_L3(&constraints);
     
+        if(test_theta == EXIT_SUCCESS){
+	
+	printf("\n\nTest succeeded!\n");
+	success++;
+
+    }else{
+    	printf("\n\nTest failed!\n");
+	failed++;
+    }
+
+
+    num = 102;
+    printf("\nSELECT * FROM student, professor2 WHERE year + id_prof < 37895;\n");
+    AK_InsertAtEnd_L3(TYPE_ATTRIBS, "year", sizeof ("year"), constraints);
+    AK_InsertAtEnd_L3(TYPE_ATTRIBS, "id_prof", sizeof ("id_prof"), constraints);
+    AK_InsertAtEnd_L3(TYPE_OPERATOR, "+", sizeof ("+"), constraints);
+    AK_InsertAtEnd_L3(TYPE_INT, &num, sizeof (int), constraints);
+    AK_InsertAtEnd_L3(TYPE_OPERATOR, "<", sizeof ("<"), constraints);
+
+    test_theta = AK_theta_join("student", "professor2", "theta_join_test4", constraints);
+    AK_print_table("theta_join_test4");
+    printf("Test is successful :) \n");
+    AK_DeleteAll_L3(&constraints);
+    
+        if(test_theta == EXIT_SUCCESS){
+	
+	printf("\n\nTest succeeded!\n");
+	success++;
+
+    }else{
+    	printf("\n\nTest failed!\n");
+	failed++;
+    }
+
+
+
     AK_free(constraints);
+
     AK_EPI;
-    return TEST_result(0,0);
+    return TEST_result(success,failed);
 }
 
