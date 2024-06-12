@@ -7,6 +7,10 @@
 #define API_FUNCTIONS_H
 
 #include "../auxi/test.h"
+#include "../file/table.h"
+#include "../file/fileio.h"
+#include "../rel/selection.h"
+#include "../auxi/mempro.h"
 
 /* Arithmetic operations for integers */
 int sql_add_int(int a, int b);

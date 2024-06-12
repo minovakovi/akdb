@@ -9,7 +9,7 @@ FILETARGETS = file/files.o file/fileio.o file/filesearch.o file/filesort.o file/
 RELOPTARGETS = rel/difference.o rel/intersect.o rel/nat_join.o rel/projection.o rel/selection.o rel/union.o rel/aggregation.o rel/product.o rel/theta_join.o trans/transaction.o
 OPTITARGETS = opti/rel_eq_projection.o opti/rel_eq_selection.o opti/rel_eq_assoc.o opti/rel_eq_comut.o opti/query_optimization.o
 CONSTRAINTTARGETS = sql/cs/constraint_names.o sql/cs/reference.o sql/cs/between.o sql/cs/nnull.o file/id.o rel/expression_check.o sql/cs/check_constraint.o sql/cs/unique.o
-OTHERTARGETS = auxi/test.o auxi/mempro.o sql/trigger.o file/test.o auxi/debug.o rec/archive_log.o sql/command.o auxi/dictionary.o auxi/auxiliary.o auxi/iniparser.o sql/privileges.o sql/function.o file/sequence.o rec/redo_log.o sql/insert.o sql/drop.o sql/view.o auxi/observable.o sql/select.o rec/recovery.o
+OTHERTARGETS = auxi/test.o auxi/mempro.o sql/trigger.o file/test.o auxi/debug.o rec/archive_log.o sql/command.o auxi/dictionary.o auxi/auxiliary.o auxi/iniparser.o sql/privileges.o sql/function.o file/sequence.o rec/redo_log.o sql/insert.o sql/drop.o sql/view.o auxi/observable.o sql/select.o rec/recovery.o path/to/api_functions.o
 
 OBJS = $(OTHERTARGETS) $(CONSTRAINTTARGETS) $(OPTITARGETS) $(RELOPTARGETS) $(DISKTARGETS) $(MEMORYTARGETS) $(FILETARGETS) tests.o main.o
 OUTDIR = ../bin

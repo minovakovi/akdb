@@ -142,7 +142,7 @@ Test tests[] = {
 {"sql: AK_check_constraint", &AK_check_constraint_test}, //sql/cs/check_constraint.c //old 49, new 51
 {"sql: AK_constraint_names", &AK_constraint_names_test}, //sql/cs/constraint_names.c
 {"sql: AK_insert", &AK_insert_test}, //sql/insert.c
-{"sql: AK_api_functions", &AK_api_functions_test},
+{"sql: AK_api_functions", &AK_api_functions_test}, //sql/api_functions.c
 //14+39=53 total
 //trans:
 //----------
