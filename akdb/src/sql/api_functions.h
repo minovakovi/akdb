@@ -6,7 +6,7 @@
 #ifndef API_FUNCTIONS_H
 #define API_FUNCTIONS_H
 
-#include "../../auxi/test.h"
+#include "../auxi/test.h"
 
 /* Arithmetic operations for integers */
 int sql_add_int(int a, int b);
