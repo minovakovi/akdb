@@ -49,6 +49,7 @@
 #include "rel/expression_check.h"
 #include "sql/drop.h"
 #include "sql/cs/check_constraint.h"
+#include "sql/cs/api_functions.h"
 //Other
 #include "auxi/observable.h"
 #include "auxi/iniparser.h"
@@ -141,6 +142,7 @@ Test tests[] = {
 {"sql: AK_check_constraint", &AK_check_constraint_test}, //sql/cs/check_constraint.c //old 49, new 51
 {"sql: AK_constraint_names", &AK_constraint_names_test}, //sql/cs/constraint_names.c
 {"sql: AK_insert", &AK_insert_test}, //sql/insert.c
+{"sql: AK_api_functions", &AK_api_functions_test},
 //14+39=53 total
 //trans:
 //----------

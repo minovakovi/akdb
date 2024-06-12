@@ -61,7 +61,7 @@ char* sql_replace(char *str, char old_char, char new_char) {
     return result;
 }
 
-TestResult test_api_functions() {
+TestResult AK_api_functions_test() {
     int successful = 0, failed = 0;
 
     // Testiranje aritmetičkih operacija za cjelobrojne vrijednosti
