@@ -39,6 +39,7 @@
 #include "../sql/command.c"
 #include "../sql/drop.c"
 #include "../sql/select.c"
+#include "../sql/api_functions.c"
 #include "../sql/cs/unique.c"
 #include "../sql/cs/check_constraint.c"
 #include "../sql/cs/between.c"

@@ -108,7 +108,8 @@ AK_constraint_between_test,
 AK_check_constraint_test,
 AK_constraint_names_test,
 AK_test_Transaction,
-AK_recovery_test
+AK_recovery_test,
+AK_api_functions_test
 ]
 
 listTestsStrings=[
@@ -164,7 +165,8 @@ listTestsStrings=[
 ["sql:","AK_check_constraint_test"],
 ["sql:","AK_constraint_names_test"],
 ["trans:","AK_test_Transaction"],
-["rec:","AK_recovery_test"]
+["rec:","AK_recovery_test"],
+["sql:","AK_api_functions_test"]
 ]
 
 loop=True

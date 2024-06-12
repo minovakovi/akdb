@@ -49,7 +49,7 @@
 #include "rel/expression_check.h"
 #include "sql/drop.h"
 #include "sql/cs/check_constraint.h"
-#include "sql/cs/api_functions.h"
+#include "sql/api_functions.h"
 //Other
 #include "auxi/observable.h"
 #include "auxi/iniparser.h"
