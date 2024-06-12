@@ -19,7 +19,11 @@
 
 #include "./observable.h"
 
-
+#define OBSERVER_REGISTER_FAILURE_NULL_PARAMETER -3
+#define OBSERVER_UNREGISTER_FAILURE_NULL_PARAMETER -4
+#define OBSERVER_NOTIFY_FAILURE_NULL_PARAMETER -5
+#define OBSERVER_GET_BA_ID_FAILURE_NULL_PARAMETER -6
+#define OBSERVER_INIT_FAILURE_NULL_PARAMETER -7
 /******************** OBSERVABLE IMPLEMENTATION ********************/
 
 /** 
@@ -34,6 +38,11 @@ static inline int AK_register_observer(AK_observable *self, AK_observer *observe
 {
     int i;
     AK_PRO;
+    if (self==NULL || observer==NULL){
+        AK_dbg_messg(LOW, GLOBAL, "NULL PARAMETER IN AK_register_observer");
+        AK_EPI;
+        return OBSERVER_REGISTER_FAILURE_NULL_PARAMETER;
+    }
     for (i = 0; i < MAX_OBSERVABLE_OBSERVERS; ++i) {
         if(self->observers[i] == 0) {
             // Assigning unique ID to new observer
@@ -61,6 +70,11 @@ static inline int AK_unregister_observer(AK_observable *self, AK_observer *obser
 {
     int i;
     AK_PRO;
+     if (self==NULL || observer==NULL){
+        AK_dbg_messg(LOW, GLOBAL, "NULL PARAMETER IN AK_unregister_observer");
+        AK_EPI;
+        return OBSERVER_UNREGISTER_FAILURE_NULL_PARAMETER;
+    }
     for(i = 0; i < MAX_OBSERVABLE_OBSERVERS; ++i) {
         if(observer == self->observers[i]) {
             AK_free(self->observers[i]);
@@ -88,6 +102,11 @@ static inline int AK_notify_observer(AK_observable *self, AK_observer *observer)
 {
     int i;
     AK_PRO;
+    if (self==NULL || observer==NULL){
+        AK_dbg_messg(LOW, GLOBAL, "NULL PARAMETER IN AK_notify_observer");
+        AK_EPI;
+        return OBSERVER_NOTIFY_FAILURE_NULL_PARAMETER;
+    }
     for(i = 0; i < MAX_OBSERVABLE_OBSERVERS; ++i) {
         if(self->observers[i] != 0 && self->observers[i] == observer) {
             observer->AK_notify(observer, self->AK_observable_type, self->AK_ObservableType_Def);
@@ -113,6 +132,11 @@ static inline int AK_notify_observers(AK_observable *self)
 {
     int i;
     AK_PRO;
+    if (self==NULL){
+        AK_dbg_messg(LOW, GLOBAL, "NULL PARAMETER IN AK_notify_observers");
+        AK_EPI;
+        return OBSERVER_NOTIFY_FAILURE_NULL_PARAMETER;
+    }
     for(i = 0; i < MAX_OBSERVABLE_OBSERVERS; ++i) {
         if(self->observers[i] != 0 ) {
             // Call AK_notify and pass AK_observer observer and custom observable instances
@@ -137,6 +161,11 @@ static inline AK_observer *AK_get_observer_by_id(AK_observable *self, int id)
 {
     int i;
     AK_PRO;
+    if (self==NULL){
+        AK_dbg_messg(LOW, GLOBAL, "NULL PARAMETER IN AK_get_observer_by_id");
+        AK_EPI;
+        return NULL;
+    }
     for(i = 0; i < MAX_OBSERVABLE_OBSERVERS; ++i) {
         if(self->observers[i] != 0  && self->observers[i]->observer_id == id) {
             AK_dbg_messg(LOW, GLOBAL, "REQUESTED OBSERVER FOUND. RETURNING OBSERVER BY ID");
@@ -159,6 +188,11 @@ AK_observable * AK_init_observable(void *AK_observable_type, AK_ObservableType_E
 {
     AK_observable *self;
     AK_PRO;
+    if (AK_observable_type == NULL || AK_custom_action == NULL) {   // Added NULL parameter check
+        AK_dbg_messg(LOW, GLOBAL, "NULL PARAMETER IN AK_init_observable");
+        AK_EPI;
+        return NULL;
+    }
     self = (AK_observable*) AK_calloc(1, sizeof(*self));
     self->AK_register_observer = &AK_register_observer;
     self->AK_unregister_observer = &AK_unregister_observer;
@@ -213,6 +247,11 @@ static inline int AK_destroy_observer(AK_observer *self)
 static inline int AK_notify(AK_observer *observer, void *observable_type, AK_ObservableType_Enum type)
 {
     AK_PRO;
+    if (observer == NULL || observable_type == NULL) {    // Added NULL parameter check
+        AK_dbg_messg(LOW, GLOBAL, "NULL PARAMETER IN AK_notify");
+        AK_EPI;
+        return OBSERVER_NOTIFY_FAILURE_NULL_PARAMETER;
+    }
     observer->AK_observer_type_event_handler(observer->AK_observer_type, observable_type, type);
     AK_EPI;
     return OK;
@@ -228,6 +267,11 @@ AK_observer *AK_init_observer(void *observer_type, void (*observer_type_event_ha
 {
     AK_observer *self;
     AK_PRO;
+    if (observer_type == NULL || observer_type_event_handler == NULL) { // Added NULL parameter check
+        AK_dbg_messg(LOW, GLOBAL, "NULL PARAMETER IN AK_init_observer");
+        AK_EPI;
+        return NULL;
+    }
     self = AK_calloc(1, sizeof(*self));
     self->AK_destroy_observer = &AK_destroy_observer;
     self->AK_observer_type = observer_type;
