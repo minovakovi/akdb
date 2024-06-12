@@ -19,6 +19,10 @@
  
 #include "debug.h"
 #include "constants.h"
+#include <stdarg.h>
+#include <stdio.h>
+
+#define DEFAULT_FORMAT "[%s][%s]: %s\n"
 
 /**
  * @author Dino Laktašić
@@ -42,12 +46,37 @@ int AK_dbg_messg(DEBUG_LEVEL level, DEBUG_TYPE type, const char *format, ...) {
 	
 	va_list args;
 	va_start(args, format);
-	char buffer[MAX_DEBUG_MESSAGE_LENGTH];
-	vsnprintf(buffer, MAX_DEBUG_MESSAGE_LENGTH, format, args);
+	char message_buffer[MAX_DEBUG_MESSAGE_LENGTH];
+	vsnprintf(message_buffer, MAX_DEBUG_MESSAGE_LENGTH, format, args);
 	va_end(args);
+
+	char final_buffer[MAX_DEBUG_MESSAGE_LENGTH];
+	sprintf(final_buffer, MAX_DEBUG_MESSAGE_LENGTH, DEFAULT_FORMAT, debug_level_to_string(level), debug_type_to_string(type), message_buffer);
+	printf("%s", final_buffer);
 	//Dodana opcionalna logika za ispis razine i tipa debuga.
 	//printf("[%s][%s]: %s\n", debug_level_to_string(level), debug_type_to_string(type), buffer);
 
-	    AK_EPI;
+	AK_EPI;
 	return 1;
+}
+
+
+// Helper function to convert debug level to string
+const char* debug_level_to_string(DEBUG_LEVEL level){
+	switch (level)
+	{
+		case DEBUG_LEVEL_0: return "DEBUG_LEVEL_0";
+		default: return "UNKNOWN_DEBUG_LEVEL";
+		break;
+	}
+}
+
+// Helper function to convert debug type to string
+const char* debug_type_to_string(DEBUG_TYPE type){
+	switch (type)
+	{
+		case DEBUG_TYPE_0: return "DEBUG_TYPE_0";
+		default: return "UNKNOWN_DEBUG_TYPE";
+		break;
+	}
 }
