@@ -35,7 +35,7 @@ dev: $(OBJS)
 
 kalashnikov-db: CFLAGS += -w
 kalashnikov-db: $(OBJS)
-	$(CC) $(OBJS) -o $(OUTDIR)/akdb
+	$(CC) $(OBJS) -o $(OUTDIR)/akdb -lm
 
 clean-d:
 	rm -rf *.d auxi/*.d dm/*.d mm/*.d file/*.d trans/*.d file/idx/*.d rec/*.d sql/cs/*.d sql/*.d opti/*.d rel/*.d
