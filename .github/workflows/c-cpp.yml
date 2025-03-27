@@ -42,6 +42,12 @@ jobs:
         run: |
           make
 
+      - name: Set execute permission for updateVersion.sh
+        run: chmod +x ./tools/updateVersion.sh
+
+      - name: Run updateVersion.sh
+        run: ./tools/updateVersion.sh
+
       # Run make doc command to generate the documentation
       - name: Generate documentation
         working-directory: ./akdb/src
