@@ -287,6 +287,11 @@
  */
 #define TYPE_CONDITION 15
 /**
+ * @def TYPE_AGGREGATOR
+ * @brief Constant indicating aggregator (for HAVING) in AK_list
+ */
+#define TYPE_AGGREGATOR 16
+/**
  * @def BLOCK_CLEAN
  * @brief Constant indicating block cleaning (not changed since read from disk)
  */
