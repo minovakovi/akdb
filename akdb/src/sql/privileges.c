@@ -60,8 +60,8 @@ int AK_user_add(char *username, char *password, int set_id) {
         return check;
     }
 
-    char hashed_password[SHA256_DIGEST_LENGTH * 2 + 1] = {0}; //DODANO
-    hash_password(password, hashed_password); //DODANO
+    char hashed_password[SHA256_DIGEST_LENGTH * 2 + 1] = {0};
+    hash_password(password, hashed_password);
 
     struct list_node *row_root = (struct list_node *) AK_malloc(sizeof(struct list_node));
     AK_Init_L3(&row_root);
@@ -71,11 +71,11 @@ int AK_user_add(char *username, char *password, int set_id) {
 
     AK_Insert_New_Element(TYPE_INT, &user_id, tblName, "obj_id", row_root);
     AK_Insert_New_Element(TYPE_VARCHAR, username, tblName, "username", row_root);
-    AK_Insert_New_Element(TYPE_VARCHAR, hashed_password, tblName, "password", row_root); //IZMIJENJENO
+    AK_Insert_New_Element(TYPE_VARCHAR, hashed_password, tblName, "password", row_root);
 
     AK_insert_row(row_root);
 
-    printf("\nAdded user '%s' under ID %d!\n\n", username, user_id); //DODANO
+    printf("\nAdded user '%s' under ID %d!\n\n", username, user_id);
 
     AK_free(row_root);
     AK_EPI;
@@ -114,16 +114,16 @@ int AK_user_get_id(char *username) {
  */
 int AK_user_check_pass(char *username, char *password) {
     AK_PRO;
-    int user_id = AK_user_get_id(username); //DODANO
-    if (user_id == EXIT_ERROR) { //DODANO
+    int user_id = AK_user_get_id(username);
+    if (user_id == EXIT_ERROR) {
         printf("User '%s' does not exist!\n", username);
         AK_EPI;
         return 0;
     }
     
-    struct list_node *row = NULL; //IZMIJENJENO
+    struct list_node *row = NULL;
     int i = 0;
-    while ((row = (struct list_node *) AK_get_row(i, "AK_user")) != NULL) { //DODANO
+    while ((row = (struct list_node *) AK_get_row(i, "AK_user")) != NULL) {
         int current_id = *(int *)AK_GetNth_L2(1, row)->data;
         if (current_id == user_id) {
             break;
@@ -133,31 +133,31 @@ int AK_user_check_pass(char *username, char *password) {
         row = NULL;
         i++;
     }
-    if (row == NULL) { //DODANO
+    if (row == NULL) {
         printf("Error fetching user data for user_id: %d!\n", user_id);
         AK_EPI;
         return 0;
     }
 
-    char hashed_input[SHA256_DIGEST_LENGTH * 2 + 1] = {0}; //DODANO
-    hash_password(password, hashed_input); //DODANO
+    char hashed_input[SHA256_DIGEST_LENGTH * 2 + 1] = {0};
+    hash_password(password, hashed_input);
 
-    char *stored_password = (char *) AK_GetNth_L2(3, row)->data; //DODANO
-    stored_password[strcspn(stored_password, "\n")] = '\0'; //DODANO
+    char *stored_password = (char *) AK_GetNth_L2(3, row)->data;
+    stored_password[strcspn(stored_password, "\n")] = '\0';
     
-    while (isspace((unsigned char)*stored_password)) stored_password++; //DODANO
-    char *end = stored_password + strlen(stored_password) - 1; //DODANO
-    while (end > stored_password && isspace((unsigned char)*end)) end--; //DODANO
-    *(end + 1) = '\0'; //DODANO
+    while (isspace((unsigned char)*stored_password)) stored_password++;
+    char *end = stored_password + strlen(stored_password) - 1;
+    while (end > stored_password && isspace((unsigned char)*end)) end--;
+    *(end + 1) = '\0';
 
-    printf("Stored hash: '%s'\n", stored_password); //DODANO
-    printf("Input hash: '%s'\n", hashed_input); //DODANO
+    printf("Stored hash: '%s'\n", stored_password);
+    printf("Input hash: '%s'\n", hashed_input);
 
-    if (strcmp(stored_password, hashed_input) == 0) { //DODANO
+    if (strcmp(stored_password, hashed_input) == 0) {
         printf("Login successful!\n");
         AK_EPI;
         return 1;
-    } else { //DODANO
+    } else {
         printf("Incorrect password!\n");
         AK_EPI;
         return 0;
@@ -200,14 +200,14 @@ int AK_user_rename(char *old_name, char *new_name, char *password) {
     int user_id = AK_user_get_id(old_name);
 
     result = AK_user_remove_by_name(old_name);
-    if (result == EXIT_ERROR) { //DODANO
+    if (result == EXIT_ERROR) {
         printf("Failed to remove old user '%s'.\n", old_name);
         AK_EPI;
         return result;
     }
 
     result = AK_user_add(new_name, password, user_id);
-    if (result == EXIT_ERROR) { //DODANO
+    if (result == EXIT_ERROR) {
         printf("Failed to add new user '%s'.\n", new_name);
         AK_EPI;
         return result;
