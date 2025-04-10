@@ -9,4 +9,6 @@ kalasnjikov.workspace
 src/swig/kalashnikovDB_wrap.c
 src/swig/_kalashnikovDB.so
 src/swig/kalashnikovDB.py
+src/swig/build
 .DS_Store
+/bin/archivelog
