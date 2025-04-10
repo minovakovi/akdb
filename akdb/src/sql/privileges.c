@@ -18,6 +18,7 @@
  */
 #include "privileges.h"
 #include <unistd.h>
+#include "../auxi/constants.h"
 
 /**
  * @author Kristina Takač, edited by Borna Romić
@@ -980,7 +981,7 @@ int AK_check_user_privilege(char *user) {
     while ((row = (struct list_node *) AK_get_row(i, "AK_user_right")) != NULL) {
         struct list_node *user_elem = AK_GetNth_L2(2, row);
         if ((int) *user_elem->data == user_id) {
-            privilege = 1;
+            privilege = PRIVILEGE_GRANTED;
             printf("User '%s' under ID %d has some privileges!", user, user_id);
             AK_EPI;
             return EXIT_SUCCESS;

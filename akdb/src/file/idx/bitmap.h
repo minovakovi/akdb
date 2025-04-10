@@ -27,6 +27,8 @@
 #include "../../file/fileio.h"
 #include "../../file/files.h"
 #include "../../auxi/mempro.h"
+#include "../../auxi/constants.h"
+
 
 /**
   @author Saša Vukšić
