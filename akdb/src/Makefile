@@ -2,6 +2,7 @@
 CC = gcc -pthread -w
 DEBUG = -g
 CFLAGS = $(DEBUG) -c
+LDFLAGS = -lssl -lcrypto
 
 DISKTARGETS = dm/dbman.o
 MEMORYTARGETS = mm/memoman.o
@@ -31,11 +32,11 @@ all: kalashnikov-db
 
 dev: CFLAGS += -Wall
 dev: $(OBJS)
-	$(CC) $(OBJS) -o $(OUTDIR)/akdb
+	$(CC) $(OBJS) -o $(OUTDIR)/akdb $(LDFLAGS)
 
 kalashnikov-db: CFLAGS += -w
 kalashnikov-db: $(OBJS)
-	$(CC) $(OBJS) -o $(OUTDIR)/akdb
+	$(CC) $(OBJS) -o $(OUTDIR)/akdb $(LDFLAGS)
 
 clean-d:
 	rm -rf *.d auxi/*.d dm/*.d mm/*.d file/*.d trans/*.d file/idx/*.d rec/*.d sql/cs/*.d sql/*.d opti/*.d rel/*.d

@@ -35,7 +35,7 @@
  * @param set_id obj_id of the new user
  * @return user_id
  */
-int AK_user_add(char *username, int *password, int set_id);
+int AK_user_add(char *username, char *password, int set_id);
 
 /**
  * @author Kristina Takač.
@@ -51,7 +51,7 @@ int AK_user_get_id(char *username);
 * @param *password password of given username whom we will check
 * @return check 0 if false or 1 if true
 */
-int AK_user_check_pass(char *username, int *password);
+int AK_user_check_pass(char *username, char *password);
 /**
  * @author Kristina Takač, edited by Ljubo Barać
  * @brief Function that adds a new group
@@ -177,7 +177,7 @@ int AK_group_remove_by_name(char *name);
  * @param password Password of the user to be renamed (should be provided)
  * @return EXIT_SUCCESS or EXIT_ERROR
  */
-int AK_user_rename(char *old_name, char *new_name, int *password);
+int AK_user_rename(char *old_name, char *new_name, char *password);
 /**
  * @author Ljubo Barać, update by Lidija Lastavec
  * @brief Function that renames the given group
