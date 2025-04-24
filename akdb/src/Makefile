@@ -61,7 +61,11 @@ swig-tests:
 	export CFLAGS="-Wno-error"; cd swig&& python -m doctest -v tablePropertiesTests.py && python -m doctest -v selectionTests.py && python -m doctest -v relAlgebraTests.py && cd ..
 docker-install:
 	$(MAKE) -C .. docker-install
-
+	echo "KalashnikovDB installed in docker container you need to run make docker-run"
+	
+docker-run:
+	$(MAKE) -C .. docker-run
+	
 docker-mac:
 	$(MAKE) -C .. docker-mac
 
