@@ -324,259 +324,96 @@ int AK_delete_check_constraint(char* tableName, char* constraintName){
  * @brief Test function for "check" constraint.
  * @return void
  */
-TestResult AK_check_constraint_test() {
-
-    char constraintYearName[50] = "check_student_year";
-    char constraintWeightName[50] = "check_student_weight";
-    char constraintLastnameName[50] = "check_student_lastname";
-
-	int success = 0;
-    int failed = 0;
-    // Test 3 data
-    float weight_one = 105.5, weight_three = 106.0;
-    float *p_weight_one = &weight_one;
-    float *p_weight_three = &weight_three;
-
-    // Test 4 data
-    float weight_two = 85.5;
-    float *p_weight_two = &weight_two;
-
-    int result;
-
-    AK_PRO;
-    
-    AK_print_table("student");
-
-    AK_print_table(AK_CONSTRAINTS_CHECK_CONSTRAINT);
-
-    printf("\n\n");
-	printf("-------------------------------------------------------------------------------------");
-	printf("\n\n");
-
-    printf("*** TEST 1 (INT) trying to set a 'year > 2005' constraint***\n");
-    result = AK_set_check_constraint("student", constraintYearName, "year", ">", TYPE_INT, 2005);
-    //Expecting EXIT_ERROR because there are values in student table for attribute year less than 2005
-    if (result == EXIT_ERROR) {
-        printf("*** TEST 1 Successful! ***\n");
-
-        success++;
-    } else {
-        printf("*** TEST 1 Failed! ***\n");
-        failed++;
-    }
-	printf("\n\n");
-	printf("-------------------------------------------------------------------------------------");
-	printf("\n\n");
-
-    AK_print_table(AK_CONSTRAINTS_CHECK_CONSTRAINT);
-    printf("\n\n*** TEST 2 (INT) trying to set a 'year > 1900' constraint ***\n");
-    result = AK_set_check_constraint("student", constraintYearName, "year", ">", TYPE_INT, 1900);
-    AK_print_table(AK_CONSTRAINTS_CHECK_CONSTRAINT);
-    //Expecting EXIT_SUCCESS because there are only values in table "student" bigger than 1900
-    if (result == EXIT_SUCCESS) {
-        printf("*** TEST 2 Successful! ***\n");
-        success++;
-    } 
-    else {
-        printf("*** TEST 2 Failed! ***\n");
-        failed++;
-    }
-
-    printf("\n\n");
-	printf("-------------------------------------------------------------------------------------");
-	printf("\n\n");
-
-    printf("*** TEST 2.1 checking if the value 1901 we want to insert for attribute 'year' satisfies the check constraint. ***\n");
-    result = AK_check_constraint("student", "year", 1901);
-    //Expecting EXIT_SUCCESS because set up constraint checks if the value we want (1901) to insert is bigger than 1900
-    if (result == EXIT_SUCCESS) {
-        printf("*** TEST 2.1 Successful! ***\n");
-        printf("*** Value 1901 for attribute 'year' can be inserted ***\n");
-        success++;
-    } else {
-        printf("*** TEST 2.1 Failed! ***\n");
-        failed++;
-    }
-
-    printf("\n\n");
-	printf("-------------------------------------------------------------------------------------");
-	printf("\n\n");
-
-    printf("*** TEST 2.2 checking if the value 1899 we want to insert for attribute 'year' satisfies the check constraint. ***\n");
-    result = AK_check_constraint("student", "year", 1899);
-    //Expecting EXIT_ERROR because set up constraint checks if the value (1899) we want to insert is bigger than 1900
-    if (result == EXIT_ERROR) {
-        printf("*** TEST 2.2 Successful! ***\n");
-        printf("*** Value 1899 for attribute 'year' can NOT be inserted ***\n");
-	    success++;	
-    } else {
-        printf("*** TEST 2.2 Failed! ***\n");
-        failed++;
-    }
-
-    printf("\n\n");
-	printf("-------------------------------------------------------------------------------------");
-	printf("\n\n");
-
-    printf("\n\n*** TEST 3 (FLOAT) trying to set a 'weight <= 105.500' constraint ***\n");
-    result = AK_set_check_constraint("student", constraintWeightName, "weight", "<=", TYPE_FLOAT, p_weight_one);
-    AK_print_table(AK_CONSTRAINTS_CHECK_CONSTRAINT);
-    //Expecting EXIT_SUCCESS because there are only values in table "student" for attribute weight less than 1900
-    if (result == EXIT_SUCCESS) {
-        printf("*** TEST 3 Successful! ***\n");
-        success++;
-    } else {
-        printf("*** TEST 3 Failed! ***\n");
-        failed++;;
-    }
-
-    printf("\n\n");
-	printf("-------------------------------------------------------------------------------------");
-	printf("\n\n");
-
-    printf("*** TEST 3.1 checking if the value 105.5 we want to insert for attribute 'weight' satisfies the check constraint. ***\n");
-    result = AK_check_constraint("student", "weight", p_weight_one);
-    //Expecting EXIT_SUCCESS because 105.5 IS <= 105.5
-    if (result == EXIT_SUCCESS) {
-        printf("*** TEST 3.1 Successful! ***\n");
-        printf("*** Value 105.5 for attribute 'weight' can be inserted ***\n");
-        success++;
-    } else {
-        printf("*** TEST 3.1 Failed! ***\n");
-        failed++;
-    }
-
-    printf("\n\n");
-	printf("-------------------------------------------------------------------------------------");
-	printf("\n\n");
-
-    printf("*** TEST 3.2 checking if the value 106.0 we want to insert for attribute 'weight' satisfies the check constraint.***\n");
-    result = AK_check_constraint("student", "weight", p_weight_three);
-    //Expecting EXIT_ERROR because 106 IS NOT <= 105.5
-    if (result == EXIT_ERROR) {
-        printf("*** TEST 3.2 Successful! ***\n");
-        printf("*** Value 106.0 for attribute 'weight' can NOT be inserted ***\n");
-        success++;
-    } else {
-        failed++;
-        printf("*** TEST 3.2 Failed! ***\n");
-    }
-
-	printf("\n\n");
-	printf("-------------------------------------------------------------------------------------");
-	printf("\n\n");
-
-    printf("\n\n*** TEST 4 (FLOAT) trying to set a 'weight > 85.5' constraint  ***\n");
-    result = AK_set_check_constraint("student", constraintWeightName, "weight", ">", TYPE_FLOAT, p_weight_two);
-    //Expecting EXIT_ERROR because there are values in the table student for attribute weight less than 85.5
-    AK_print_table(AK_CONSTRAINTS_CHECK_CONSTRAINT);
-    if (result == EXIT_ERROR) {
-        printf("*** TEST 4 Successful! ***\n");
-        success++;
-    } else {
-        printf("*** TEST 4 Failed! ***\n");
-        failed++;
-    }
-	printf("\n\n");
-	printf("-------------------------------------------------------------------------------------");
-	printf("\n\n");
 
 
-    printf("\n\n*** TEST 5 (VARCHAR) *** trying to set a 'lastname > Anic' constraint \n");
-    result = AK_set_check_constraint("student", constraintLastnameName, "lastname", ">", TYPE_VARCHAR, "Anic");
-    //Expecting EXIT_SUCCESS because there are only values in table "student" for attribute lastname bigger than "Anic"
-    AK_print_table(AK_CONSTRAINTS_CHECK_CONSTRAINT);
-    if (result == EXIT_SUCCESS) {
-        printf("*** TEST 5 Successful! ***\n");
-        success++;
-    } else {
-        printf("*** TEST 5 Failed! ***\n");
-        failed++;
-    }
-
-    printf("\n\n");
-	printf("-------------------------------------------------------------------------------------");
-	printf("\n\n");
-
-    printf("*** TEST 5.1 *** checking if the value 'Baric' we want to insert for attribute 'lastname' satisfies the check constraint.\n");
-    //Expecting EXIT_SUCCESS because Anic IS < Baric
-    result = AK_check_constraint("student", "lastname", "Baric");
-    if (result == EXIT_SUCCESS) {
-        printf("*** TEST 5.1 Successful! ***\n");
-        printf("*** Value 'Baric' can be inserted ***\n");
-        success++;
-    } else {
-        printf("*** TEST 5.1 Failed! ***\n");
-        failed++;
-    }
-
-    printf("\n\n");
-	printf("-------------------------------------------------------------------------------------");
-	printf("\n\n");
-
-    printf("*** TEST 5.2 *** checking if the value 'Abdullah' we want to insert for attribute 'lastname' satisfies the check constraint. \n");
-    //Expecting EXIT_ERROR because Anic IS NOT < Abdullah
-    result = AK_check_constraint("student", "lastname", "Abdullah");
-    if (result == EXIT_ERROR) {
-        printf("*** TEST 5.2 Successful! ***\n");
-        printf("Value 'Abdullah' can NOT be inserted\n");
-        success++;
-    } else {
-        printf("*** TEST 5.2 Failed! ***\n");
-        failed++;
-    }
-	printf("\n\n");
-	printf("-------------------------------------------------------------------------------------");
-	printf("\n\n");
-
-    printf("\n\n*** TEST 6 (VARCHAR) *** trying to set a 'lastname < Yeager' constraint \n");
-    result = AK_set_check_constraint("student", constraintLastnameName, "lastname", "<", TYPE_VARCHAR, "Yeager");
-    //Expecting EXIT_ERROR because constraint 'check_student_lastname' already exists
-    AK_print_table(AK_CONSTRAINTS_CHECK_CONSTRAINT);
-    if (result == EXIT_ERROR) {
-        printf("*** TEST 6 Successful! ***\n");
-	    success++;
-    } else {
-        printf("*** TEST 6 Failed! ***\n");
-        failed++;
-    }
-
-    printf("\n\n");
-	printf("-------------------------------------------------------------------------------------");
-	printf("\n\n");
-
-    // Should fail
-    printf("\n\n*** TEST 7 (VARCHAR) *** trying to set a 'lastname > Yeager' constraint \n");
-    result = AK_set_check_constraint("student", "check_student_lastname_fail", "lastname", ">", TYPE_VARCHAR, "Yeager");
-    //Expecting EXIT_ERROR because there are values in the table student for attribute 'lastname' less than 'Yeager'
-    AK_print_table(AK_CONSTRAINTS_CHECK_CONSTRAINT);
-    if (result == EXIT_ERROR) {
-        printf("*** TEST 7 Successful! ***\n");
-	    success++;
-    } else {
-        printf("*** TEST 7 Failed! ***\n");
-        failed++;
-    }
-
-
-        AK_print_table(AK_CONSTRAINTS_CHECK_CONSTRAINT);
-
-    printf("\n\n*** TEST 8 *** trying to delete all existing CHECK constraints \n");
-    int delete1 =AK_delete_check_constraint(AK_CONSTRAINTS_CHECK_CONSTRAINT, constraintYearName);
-    int delete2 =AK_delete_check_constraint(AK_CONSTRAINTS_CHECK_CONSTRAINT, constraintWeightName);
-    int delete3 =AK_delete_check_constraint(AK_CONSTRAINTS_CHECK_CONSTRAINT, constraintLastnameName);
-    AK_print_table(AK_CONSTRAINTS_CHECK_CONSTRAINT);
-    if (delete1 == EXIT_SUCCESS && delete2 == EXIT_SUCCESS && delete3 == EXIT_SUCCESS)
-	{
-		success++;
-        printf("*** TEST 8 Successful! ***\n");
-	}
-	else{
-		failed++;
-        printf("*** TEST 8 Failed! ***\n");
-	}
-
-    AK_EPI;
-
-    return TEST_result(success,failed);
-}
+ TestResult AK_check_constraint_test(void) {
+     AK_PRO;
+     int passed = 0, failed = 0;
+ 
+     // Constraint names
+     char cn_year[]     = "check_student_year";
+     char cn_weight[]   = "check_student_weight";
+     char cn_lastname[] = "check_student_lastname";
+ 
+     // Test values
+     int   i1 = 2005, i2 = 1900, iv1 = 1901, iv2 = 1899;
+     float w1 = 105.5f, w2 = 85.5f, w3 = 106.0f;
+ 
+     typedef enum { OP_SET, OP_READ, OP_DELETE_ALL } Op;
+     typedef union { int i; float *f; const char *s; } Val;
+     typedef struct { Op op; const char *cn; const char *tbl; const char *at; const char *opstr; int type; Val val; int exp; } T;
+ 
+     T tests[] = {
+         {OP_SET,     cn_year,   "student", "year",     ">", TYPE_INT,     {.i = i1},  0},
+         {OP_SET,     cn_year,   "student", "year",     ">", TYPE_INT,     {.i = i2},  1},
+         {OP_READ,    NULL,      "student", "year",     NULL,  TYPE_INT,     {.i = iv1}, 1},
+         {OP_READ,    NULL,      "student", "year",     NULL,  TYPE_INT,     {.i = iv2}, 0},
+         {OP_SET,     cn_weight, "student", "weight",   "<=", TYPE_FLOAT,   {.f = &w1}, 1},
+         {OP_READ,    NULL,      "student", "weight",   NULL,  TYPE_FLOAT,   {.f = &w1}, 1},
+         {OP_READ,    NULL,      "student", "weight",   NULL,  TYPE_FLOAT,   {.f = &w3}, 0},
+         {OP_SET,     cn_weight, "student", "weight",   ">", TYPE_FLOAT,   {.f = &w2}, 0},
+         {OP_SET,     cn_lastname,"student","lastname",">", TYPE_VARCHAR, {.s = "Anic"},    1},
+         {OP_READ,    NULL,      "student", "lastname", NULL, TYPE_VARCHAR, {.s = "Baric"},  1},
+         {OP_READ,    NULL,      "student", "lastname", NULL, TYPE_VARCHAR, {.s = "Abdullah"},0},
+         {OP_SET,     cn_lastname,"student","lastname","<", TYPE_VARCHAR, {.s = "Yeager"}, 0},
+         {OP_SET,     "check_student_lastname_fail","student","lastname",">", TYPE_VARCHAR, {.s = "Yeager"}, 0},
+         {OP_DELETE_ALL,NULL,    NULL,       NULL,       NULL, TYPE_VARCHAR, {.i = 0},      1}
+     };
+     size_t n = sizeof tests / sizeof *tests;
+ 
+     for (size_t i = 0; i < n; ++i) {
+         T *t = &tests[i];
+         printf("\n---- TEST %zu ----\n", i + 1);
+         int res = EXIT_ERROR;
+ 
+         if (t->op == OP_SET) {
+             // Perform SET operation
+             if (t->type == TYPE_INT) {
+                 res = AK_set_check_constraint((char*)t->tbl, (char*)t->cn, (char*)t->at,
+                                               (char*)t->opstr, t->type,
+                                               t->val.i);
+             } else if (t->type == TYPE_FLOAT) {
+                 res = AK_set_check_constraint((char*)t->tbl, (char*)t->cn, (char*)t->at,
+                                               (char*)t->opstr, t->type,
+                                               t->val.f);
+             } else {
+                 res = AK_set_check_constraint((char*)t->tbl, (char*)t->cn, (char*)t->at,
+                                               (char*)t->opstr, t->type,
+                                               (void*)t->val.s);
+             }
+             AK_print_table(AK_CONSTRAINTS_CHECK_CONSTRAINT);
+         } else if (t->op == OP_READ) {
+             // Perform READ operation
+             if (t->type == TYPE_INT) {
+                 res = AK_check_constraint((char*)t->tbl, (char*)t->at,
+                                           t->val.i);
+             } else if (t->type == TYPE_FLOAT) {
+                 res = AK_check_constraint((char*)t->tbl, (char*)t->at,
+                                           t->val.f);
+             } else {
+                 res = AK_check_constraint((char*)t->tbl, (char*)t->at,
+                                           (void*)t->val.s);
+             }
+         } else {
+             // Delete all constraints
+             int d1 = AK_delete_check_constraint(AK_CONSTRAINTS_CHECK_CONSTRAINT, cn_year);
+             int d2 = AK_delete_check_constraint(AK_CONSTRAINTS_CHECK_CONSTRAINT, cn_weight);
+             int d3 = AK_delete_check_constraint(AK_CONSTRAINTS_CHECK_CONSTRAINT, cn_lastname);
+             AK_print_table(AK_CONSTRAINTS_CHECK_CONSTRAINT);
+             res = (d1 == EXIT_SUCCESS && d2 == EXIT_SUCCESS && d3 == EXIT_SUCCESS) ? EXIT_SUCCESS : EXIT_ERROR;
+         }
+ 
+         // Evaluate result
+         if ((res == EXIT_SUCCESS) == t->exp) {
+             passed++;
+             printf("Test passed!\n");
+         } else {
+             failed++;
+             printf("Test FAILED!\n");
+         }
+     }
+ 
+     AK_EPI;
+     return TEST_result(passed, failed);
+ }
+ 
