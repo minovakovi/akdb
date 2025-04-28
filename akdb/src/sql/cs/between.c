@@ -160,22 +160,20 @@ void AK_set_constraint_between(char* tableName, char* constraintName, char* attN
  * @return EXIT_SUCCESS or EXIT_ERROR
  **/
 int AK_read_constraint_between(char* tableName, char* newValue, char* attNamePar) {
-
     int systemTableAddress = AK_find_table_address(AK_CONSTRAINTS_BEWTEEN);
     int num_rows = AK_get_num_records(AK_CONSTRAINTS_BEWTEEN);
     int loop_count;
-    AK_block *tempBlock;
     struct list_node *row;
     struct list_node *constraint_table;
     struct list_node *constraint_attribute;
     struct list_node *start_value;
     struct list_node *end_value;
+    int result = EXIT_SUCCESS;
 
     AK_PRO;
 
     if (systemTableAddress == -1) {
         printf("\nERROR: Table for between_constraints not found.\n");
-
         AK_EPI;
         return EXIT_ERROR;
     }
@@ -185,41 +183,30 @@ int AK_read_constraint_between(char* tableName, char* newValue, char* attNamePar
             row = AK_get_row(loop_count, AK_CONSTRAINTS_BEWTEEN);
             constraint_table = AK_GetNth_L2(2, row);
             
-            if(strcmp(constraint_table->data, tableName) == 0){
-
+            if(strcmp(constraint_table->data, tableName) == 0) {
                 constraint_attribute = AK_GetNth_L2(4, row);
-                if(strcmp(constraint_attribute->data, attNamePar) == 0){
-
+                if(strcmp(constraint_attribute->data, attNamePar) == 0) {
                     start_value = AK_GetNth_L2(5, row);
                     end_value = AK_GetNth_L2(6, row);
 
-                    if(strcmp(start_value->data,newValue) > 0){
+                    if(strcmp(start_value->data, newValue) > 0) {
                         printf("\nFAILURE: Value '%s' is smaller than minimal allowed value: '%s' \n",newValue,start_value->data);
-
-                        AK_EPI;
-                        return EXIT_FAILURE;
+                        result = EXIT_FAILURE;
                     }
-
-                    if(strcmp(end_value->data,newValue) < 0){
-
+                    else if(strcmp(end_value->data, newValue) < 0) {
                         printf("\nFAILURE: Value '%s' is bigger than maximum allowed value: '%s' \n",newValue,end_value->data);
-
-                        AK_EPI;
-                        return EXIT_FAILURE;
+                        result = EXIT_FAILURE;
                     }
                 }
             }
+            
+            AK_DeleteAll_L3(&row); // Properly free the row structure
+            AK_free(row);
         }
     }
 
-    AK_free(tempBlock);
-    AK_free(constraint_table);
-    AK_free(constraint_attribute);
-    AK_free(start_value);
-    AK_free(end_value);
     AK_EPI;
-
-    return EXIT_SUCCESS;
+    return result;
 }
 
 /**
@@ -324,121 +311,73 @@ int AK_delete_constraint_between(char* tableName, char* constraintNamePar){
 }
 
 /**
-  * @author Saša Vukšić, updated by Mislav Jurinić, updated by Blaž Rajič
+  * @author Saša Vukšić, updated by Mislav Jurinić, updated by Blaž Rajič, updated by Vilim Trakoštanec
   * @brief Function that tests the functionality of implemented between constraint.
   * @return No return value
   */
-TestResult AK_constraint_between_test() {
-    // TEST #1
-    char* tableName_1 = "department";
-    char* attName_1 = "dep_name";
-    char* constraintName_1 = "dep_name_between";
-    char* newValue_1 = "Department of Zoo";
-    char* startValue_1 = "Department of Economy";
-    char* endValue_1 = "Department of Organization";
-    int failed=0;
-    int passed=0;
+ TestResult AK_constraint_between_test(void) {
     AK_PRO;
+    int passed=0,failed=0;
 
-    printf("============= Running Test #1 =============\n");
+    /* Names & values */
+    const char*tbl="department";
+    const char*c1="dep_name_between";
+    const char*a1="dep_name";
+    const char*s1="Department of Economy";
+    const char*e1="Department of Organization";
+    const char*v1="Department of Zoo";
 
-    printf("\nTrying to insert constraint %s and then testing values.\n\n",constraintName_1);
-    AK_print_table(tableName_1);
-    AK_set_constraint_between(tableName_1, constraintName_1, attName_1, startValue_1, endValue_1);
-    AK_print_table(AK_CONSTRAINTS_BEWTEEN);
-    printf("\nTrying to set '%s' as attribute '%s' in table '%s' which should fail.\n",newValue_1,attName_1,tableName_1);
-    if (AK_read_constraint_between(tableName_1, newValue_1, attName_1) == EXIT_FAILURE) {
-        printf("\nSUCCESS\n\n");
-        passed++;
-    } 
-    else {
-        printf("\nFAILED\n\n");
-        failed++;
-    }
-    
-    // TEST #2
-    char* tableName_2 = "department";
-    char* attName_2 = "manager";
-    char* constraintName_2 = "manager_surname_between";
-    char* newValue_2 = "Kero";
-    char* startValue_2 = "Hutinski";    
-    char* endValue_2 = "Redep";
-    AK_PRO;
+    const char*c2="manager_surname_between";
+    const char*a2="manager";
+    const char*s2="Hutinski";
+    const char*e2="Redep";
+    const char*v2="Kero";
 
-    printf("\n============== Running Test #2 ==============\n");
+    const char*c3="id_department_between";
+    const char*a3="id_department";
+    const char*s3="1";
+    const char*e3="5";
+    const char*v3="3";
 
-    printf("\nTrying to insert constraint %s and then testing values.\n\n",constraintName_2);
+    const char*v4="-1.2";
 
-    AK_set_constraint_between(tableName_2, constraintName_2, attName_2, startValue_2, endValue_2);
-    AK_print_table(AK_CONSTRAINTS_BEWTEEN);
-    printf("\nTrying to set '%s' as attribute '%s' in table '%s' which should pass.\n",newValue_2,attName_2,tableName_2);
-    if (AK_read_constraint_between(tableName_2, newValue_2, attName_2) == EXIT_SUCCESS) {
-        printf("\nSUCCESS\n\n");
-        passed++;
-    } 
-    else {
-        printf("\nFAILED\n\n");
-        failed++;
-    }
+    typedef enum{OP_SET_READ,OP_READ,OP_DELETE_ALL}Op;
+    typedef struct{Op op;const char*cn;const char*tbl;const char*at;const char*start;const char*end;const char*val;int exp;}T;
 
-    //INTEGER TEST
-    char* tableName_3 = "department";
-    char* attName_3 = "id_department";
-    char* constraintName_3 = "id_department_between";
-    char* newValue_3 = "3";
-    char* startValue_3 = "1";    
-    char* endValue_3 = "5";
+    T tests[]={
+        {OP_SET_READ,c1,tbl,a1,s1,e1,v1,0},
+        {OP_SET_READ,c2,tbl,a2,s2,e2,v2,1},
+        {OP_SET_READ,c3,tbl,a3,s3,e3,v3,1},
+        {OP_READ,NULL,tbl,a3,NULL,NULL,v4,0},
+        {OP_DELETE_ALL,NULL,NULL,NULL,NULL,NULL,NULL,1}
+    };
+    size_t n=sizeof tests/sizeof *tests;
 
-    AK_PRO;
-
-    printf("\n============== Running Test #3 ==============\n");
-
-    printf("\nTrying to insert constraint %s and then testing values.\n\n",constraintName_3);
-
-    AK_set_constraint_between(tableName_3, constraintName_3, attName_3, startValue_3, endValue_3);
-    AK_print_table(AK_CONSTRAINTS_BEWTEEN);
-    printf("\nTrying to set '%s' as attribute '%s' in table '%s' which should pass.\n",newValue_3,attName_3,tableName_3);
-    if (AK_read_constraint_between(tableName_3, newValue_3, attName_3) == EXIT_SUCCESS) {
-        printf("\nSUCCESS\n\n");
-        passed++;
-    } 
-    else {
-        printf("\nFAILED\n\n");
-        failed++;
+    for(size_t i=0;i<n;i++){
+        T*t=&tests[i];
+        printf("\n==== Running Test #%zu ====""\n",i+1);
+        int r=EXIT_ERROR;
+        if(t->op==OP_SET_READ){
+            printf("Setting BETWEEN %s on %s.%s [%s..%s]...\n",t->cn,t->tbl,t->at,t->start,t->end);
+            AK_set_constraint_between((char*)t->tbl,(char*)t->cn,(char*)t->at,(char*)t->start,(char*)t->end);
+            AK_print_table(AK_CONSTRAINTS_BEWTEEN);
+            printf("Testing %s on %s.%s expected %s...\n",t->val,t->tbl,t->at,t->exp?"pass":"fail");
+            r=AK_read_constraint_between((char*)t->tbl,(char*)t->val,(char*)t->at);
+            if((r==EXIT_SUCCESS)==t->exp){passed++;printf("SUCCESS\n");}else{failed++;printf("FAILED\n");}
+        } else if(t->op==OP_READ){
+            printf("Testing %s on %s.%s expected %s...\n",t->val,t->tbl,t->at,t->exp?"pass":"fail");
+            r=AK_read_constraint_between((char*)t->tbl,(char*)t->val,(char*)t->at);
+            if((r==EXIT_SUCCESS)==t->exp){passed++;printf("SUCCESS\n");}else{failed++;printf("FAILED\n");}
+        } else {
+            printf("Deleting all BETWEEN constraints...\n");
+            const char*arr[]={c1,c2,c3};
+            int ok=1;
+            for(int j=0;j<3;j++)if(AK_delete_constraint_between(AK_CONSTRAINTS_BEWTEEN,(char*)arr[j])!=EXIT_SUCCESS)ok=0;
+            AK_print_table(AK_CONSTRAINTS_BEWTEEN);
+            if(ok){passed++;printf("SUCCESS\n");}else{failed++;printf("FAILED\n");}
+        }
     }
 
-    //FLOAT TEST
-    char* newValue_4 = "-1.2";
-    printf("\n============== Running Test #4 ==============\n");
-
-    printf("\nTrying to set '%s' as attribute '%s' in table '%s' which should fail.\n",newValue_4,attName_3,tableName_3);
-    if (AK_read_constraint_between(tableName_3, newValue_4, attName_3) == EXIT_FAILURE) {
-        printf("\nSUCCESS\n");
-        passed++;
-    } 
-    else {
-        printf("\nFAILED\n\n");
-        failed++;
-    }
-
-    
-    // DELETE TEST
-    printf("\n============== Running Test #5 ==============\n");
-
-    printf("\nTrying to delete constraint %s and %s from database.\n\n",constraintName_1,constraintName_2);
-
-    if(AK_delete_constraint_between(AK_CONSTRAINTS_BEWTEEN, constraintName_2) == EXIT_SUCCESS && AK_delete_constraint_between(AK_CONSTRAINTS_BEWTEEN, constraintName_1)== EXIT_SUCCESS && AK_delete_constraint_between(AK_CONSTRAINTS_BEWTEEN, constraintName_3)== EXIT_SUCCESS) {
-        AK_print_table(AK_CONSTRAINTS_BEWTEEN);
-        printf("\nSUCCESS\n\n");
-        passed++;
-    } 
-    else {
-        AK_print_table(AK_CONSTRAINTS_BEWTEEN);
-        printf("\nFAILED\n\n");
-        failed++;
-    }
     AK_EPI;
     return TEST_result(passed,failed);
 }
-
-
