@@ -29,7 +29,7 @@
 
 
 /**
- * @author Mislav Jurinić
+ * @author Mislav Jurinić, updated by Vilim Trakoštanec
  * @brief Function that for a given value, checks if it satisfies the "check" constraint.
  * @param condition logical operator ['<', '>', '!=', ...]
  * @param type data type [int, float, varchar, datetime, ...]
