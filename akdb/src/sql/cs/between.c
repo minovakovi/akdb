@@ -289,24 +289,47 @@ void AK_print_constraints(char* tableName) {  //currently not used, maybe delete
 int AK_delete_constraint_between(char* tableName, char* constraintNamePar){
     AK_PRO;
 
-    char* constraint_attr = "constraintName";
+    if (tableName == NULL || constraintNamePar == NULL) {
+        printf("ERROR: Invalid parameters passed to AK_delete_constraint_between\n");
+        AK_EPI;
+        return EXIT_ERROR;
+    }
+
+    if (strcmp(tableName, AK_CONSTRAINTS_BEWTEEN) != 0) {
+        printf("ERROR: Invalid table name. Expected %s\n", AK_CONSTRAINTS_BEWTEEN);
+        AK_EPI;
+        return EXIT_ERROR;
+    }
 
     if(AK_check_constraint_name(constraintNamePar, AK_CONSTRAINTS_BEWTEEN) == EXIT_SUCCESS){
-        printf("FAILURE! -- CONSTRAINT with name %s doesn't exist in TABLE %s", constraintNamePar, tableName);
+        printf("ERROR: Constraint with name %s doesn't exist in table %s\n", constraintNamePar, tableName);
         AK_EPI;
         return EXIT_ERROR;
     }
 
     struct list_node *row_root = (struct list_node *) AK_malloc(sizeof (struct list_node));
+    if (row_root == NULL) {
+        printf("ERROR: Memory allocation failed\n");
+        AK_EPI;
+        return EXIT_ERROR;
+    }
+
     AK_Init_L3(&row_root);
     
-    AK_Update_Existing_Element(TYPE_VARCHAR, constraintNamePar, tableName, constraint_attr, row_root);
+    // Delete constraint by its name
+    AK_Update_Existing_Element(TYPE_VARCHAR, constraintNamePar, tableName, "constraintName", row_root);
     int result = AK_delete_row(row_root);
+
     AK_DeleteAll_L3(&row_root);
-	AK_free(row_root);    
+    AK_free(row_root);    
+
+    if (result == EXIT_SUCCESS) {
+        printf("SUCCESS: Constraint %s successfully deleted\n", constraintNamePar);
+    } else {
+        printf("ERROR: Failed to delete constraint %s\n", constraintNamePar);
+    }
 
     AK_EPI;
-
     return result;
 }
 

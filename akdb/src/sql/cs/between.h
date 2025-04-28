@@ -58,12 +58,17 @@ int AK_read_constraint_between(char* tableName, char* newValue, char* attNamePar
 /**
  * @author Maja Vračan, updated by Blaž Rajič
  * @brief Function for deleting specific between constraint
- * @param tableName name of table on which constraint refers
- * @param attName name of attribute on which constraint is declared
- * @param constraintName name of constraint 
+ * @param tableName name of system table (AK_CONSTRAINTS_BEWTEEN)
+ * @param constraintName name of constraint to delete
  * @return EXIT_SUCCESS when constraint is deleted, else EXIT_ERROR
  */
 int AK_delete_constraint_between(char* tableName, char* constraintName);
+
+/**
+  * @author Saša Vukšić, updated by Mislav Jurinić, updated by Blaž Rajič, updated by Vilim Trakoštanec
+  * @brief Function that tests the functionality of implemented between constraint.
+  * @return TestResult structure containing number of passed and failed tests
+  */
 TestResult AK_constraint_between_test();
 
 #endif
