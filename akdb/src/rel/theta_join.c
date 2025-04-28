@@ -18,6 +18,7 @@
  */
 
 #include "theta_join.h"
+#include "../auxi/constants.h"
 
 /**
  * @author Tomislav Mikulček
@@ -78,7 +79,7 @@ int AK_create_theta_join_header(char *srcTable1, char * srcTable2, char *new_tab
     	while (strcmp(temp_block_tbl1->header[head1].att_name, "") != 0) {
 
 			if (strcmp(temp_block_tbl1->header[head1].att_name, temp_block_tbl2->header[head2].att_name) == 0){
-				rename = 1;
+				rename = RENAME_FLAG;
 				break;
 			}
 
