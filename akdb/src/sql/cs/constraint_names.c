@@ -133,9 +133,12 @@ TestResult AK_constraint_names_test() {
 		printf("\nFAILED\n\n");
 	}
 
-	printf("\nDeleting the UNIQUE constraint on atribute year in table student\n");
-	AK_delete_constraint_unique("AK_constraints_unique", constraintYear);
-	result = AK_check_constraint_name(constraintYear, AK_CONSTRAINTS_UNIQUE);
+	printf("\nSetting sequence.name to UNIQUE to create nameUnique constraint\n");
+	AK_set_constraint_unique("AK_sequence", "name", "nameUnique");
+	
+	printf("\nDeleting the UNIQUE constraint nameUnique\n");
+	AK_delete_constraint_unique("AK_constraints_unique", "nameUnique");
+	result = AK_check_constraint_name("nameUnique", AK_CONSTRAINTS_UNIQUE);
 	if(result==EXIT_SUCCESS){
 		success++;
 		printf("\nSUCCESS\n\n");
@@ -146,4 +149,5 @@ TestResult AK_constraint_names_test() {
 
 	AK_EPI;
 	return TEST_result(success,failed);
+
 }
