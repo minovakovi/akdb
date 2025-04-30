@@ -1,0 +1,11 @@
+services:
+  akdb:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - .:/usr/akdb
+    privileged: true
+    stdin_open: true
+    tty: true
+ 

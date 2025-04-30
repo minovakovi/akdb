@@ -1,12 +1,23 @@
+# Virtual environments
 venv/
+
+# Project files
 kalasnjikov.project
 kalasnjikov.workspace
+
+# Compiled files
 *.o
 *.obj
 *.d
 *.db
+
+# Binaries
 /bin/akdb
+
+# SWIG generated files
 src/swig/kalashnikovDB_wrap.c
 src/swig/_kalashnikovDB.so
 src/swig/kalashnikovDB.py
+
+# System files
 .DS_Store

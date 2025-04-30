@@ -141,19 +141,21 @@ To do that: open docker settings -> shared drives -> check the drive on which ak
 
 #### Commands
 
-Install docker container. This will take some time because all prerequisites above will be downloaded and setup automatically.
+Position into akdb where Make is Located nad follow the commands.
 For more informations check Dockerfile.
+PREFERED: Install and Run akdb in docker compose 
+``` 
+make docker-compose
+```
+OR
 ``` 
 make docker-install 
 ```
-
-Run akdb in docker container - Windows OS
+AND
+Run akdb in docker container 
 ``` 
-make docker-win 
+make docker-run 
 ```
 
-Run akdb in docker container - Mac
-``` 
-make docker-mac
-```
+
 
