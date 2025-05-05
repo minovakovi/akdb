@@ -19,24 +19,64 @@
 #include "privileges.h"
 #include <unistd.h>
 #include "../auxi/constants.h"
+#include <openssl/sha.h>
+#include <openssl/evp.h>
+#include <openssl/rand.h>
+#include <string.h>
+#include <stdio.h>
+
+#define SALT_LEN 16
+#define SALT_HEX_LEN (SALT_LEN * 2)
+#define HASH_HEX_LEN (EVP_MAX_MD_SIZE * 2)
 
 /**
  * @author Luka Balažinec
- * @brief Hashes a plain text password using SHA-256.
- * Generates a SHA-256 hash from the given password and stores the result
- * as a hexadecimal string in the provided buffer.
- * @param password Plain text password to hash.
- * @param hashed Buffer to store the resulting hash (at least 65 bytes).
+ * @brief Reads len bytes from /dev/urandom into salt.
+ * @param salt Buffer to receive len random bytes.
+ * @param len Number of bytes to read.
+ * @return 0 on success, -1 on error.
  */
-#include <openssl/sha.h>
-#include <string.h>
-#include <stdio.h>
-void hash_password(const char *password, char *hashed) {
-    unsigned char hash[SHA256_DIGEST_LENGTH];
-    SHA256((unsigned char *)password, strlen(password), hash);
-    for (int i = 0; i < SHA256_DIGEST_LENGTH; i++) {
-        sprintf(hashed + (i * 2), "%02x", hash[i]);
+static int generate_salt(unsigned char *salt, size_t len) {
+    FILE *f = fopen("/dev/urandom", "rb");
+    if (!f) return -1;
+    if (fread(salt, 1, len, f) != len) {
+        fclose(f);
+        return -1;
     }
+    fclose(f);
+    return 0;
+}
+
+/**
+ * @author Luka Balažinec
+ * @brief Converts a binary buffer to a hex string.
+ * @param in Input buffer of in_len bytes.
+ * @param in_len Number of bytes in the input buffer.
+ * @param out Buffer to receive the hex string.
+ */
+static void to_hex(const unsigned char *in, size_t in_len, char *out) {
+    for (size_t i = 0; i < in_len; i++)
+        sprintf(out + i*2, "%02x", in[i]);
+    out[in_len*2] = '\0';
+}
+
+/**
+ * @author Luka Balažinec
+ * @brief Hashes a password with a hex-encoded salt using SHA-256.
+ * @param password Plain-text password.
+ * @param salt_hex Hex string of the salt (length SALT_HEX_LEN).
+ * @param out_hash_hex Buffer to receive the resulting hash as a hex string.
+ */
+static void hash_password_with_salt(const char *password, const char *salt_hex, char *out_hash_hex) {
+    unsigned char hash[SHA256_DIGEST_LENGTH];
+    SHA256_CTX ctx;
+
+    SHA256_Init(&ctx);
+    SHA256_Update(&ctx, (unsigned char*)salt_hex, strlen(salt_hex));
+    SHA256_Update(&ctx, (unsigned char*)password,  strlen(password));
+    SHA256_Final(hash, &ctx);
+
+    to_hex(hash, SHA256_DIGEST_LENGTH, out_hash_hex);
 }
 
 /**
@@ -50,19 +90,22 @@ void hash_password(const char *password, char *hashed) {
 int AK_user_add(char *username, char *password, int set_id) {
     char *tblName = "AK_user";
     int usernameCheck;
-    char check = "";
     AK_PRO;
 
     usernameCheck = AK_user_get_id(username);
     if (usernameCheck != EXIT_ERROR) {
         printf("Username '%s' is not available!\n", username);
-        check = "taken";
         AK_EPI;
-        return check;
+        return EXIT_ERROR;
     }
 
-    char hashed_password[SHA256_DIGEST_LENGTH * 2 + 1] = {0};
-    hash_password(password, hashed_password);
+    unsigned char salt_bin[SALT_LEN];
+    char salt_hex[SALT_HEX_LEN + 1] = {0};
+    char hash_hex [HASH_HEX_LEN + 1] = {0};
+
+    if (generate_salt(salt_bin, SALT_LEN) != 0) return EXIT_ERROR;
+    to_hex(salt_bin, SALT_LEN, salt_hex);
+    hash_password_with_salt(password, salt_hex, hash_hex);
 
     struct list_node *row_root = (struct list_node *) AK_malloc(sizeof(struct list_node));
     AK_Init_L3(&row_root);
@@ -70,10 +113,10 @@ int AK_user_add(char *username, char *password, int set_id) {
     int user_id = AK_get_id();
     if (set_id != 0) user_id = set_id;
 
-    AK_Insert_New_Element(TYPE_INT, &user_id, tblName, "obj_id", row_root);
-    AK_Insert_New_Element(TYPE_VARCHAR, username, tblName, "username", row_root);
-    AK_Insert_New_Element(TYPE_VARCHAR, hashed_password, tblName, "password", row_root);
-
+    AK_Insert_New_Element(TYPE_INT,     &user_id, tblName, "obj_id", row_root);
+    AK_Insert_New_Element(TYPE_VARCHAR, username,  tblName, "username", row_root);
+    AK_Insert_New_Element(TYPE_VARCHAR, hash_hex,  tblName, "password_hash", row_root);
+    AK_Insert_New_Element(TYPE_VARCHAR, salt_hex,  tblName, "salt", row_root);
     AK_insert_row(row_root);
 
     printf("\nAdded user '%s' under ID %d!\n\n", username, user_id);
@@ -115,54 +158,96 @@ int AK_user_get_id(char *username) {
  */
 int AK_user_check_pass(char *username, char *password) {
     AK_PRO;
+
     int user_id = AK_user_get_id(username);
     if (user_id == EXIT_ERROR) {
         printf("User '%s' does not exist!\n", username);
         AK_EPI;
         return 0;
     }
-    
+
     struct list_node *row = NULL;
     int i = 0;
     while ((row = (struct list_node *) AK_get_row(i, "AK_user")) != NULL) {
         int current_id = *(int *)AK_GetNth_L2(1, row)->data;
-        if (current_id == user_id) {
-            break;
-        }
+        if (current_id == user_id) break;
         AK_DeleteAll_L3(&row);
         AK_free(row);
         row = NULL;
         i++;
     }
-    if (row == NULL) {
+    if (!row) {
         printf("Error fetching user data for user_id: %d!\n", user_id);
         AK_EPI;
         return 0;
     }
 
-    char hashed_input[SHA256_DIGEST_LENGTH * 2 + 1] = {0};
-    hash_password(password, hashed_input);
+    char *stored_hash = (char *)AK_GetNth_L2(3, row)->data;
+    char *salt_hex = (char *)AK_GetNth_L2(4, row)->data;
+    stored_hash[strcspn(stored_hash, "\n")] = '\0';
+    salt_hex   [strcspn(salt_hex, "\n")] = '\0';
 
-    char *stored_password = (char *) AK_GetNth_L2(3, row)->data;
-    stored_password[strcspn(stored_password, "\n")] = '\0';
-    
-    while (isspace((unsigned char)*stored_password)) stored_password++;
-    char *end = stored_password + strlen(stored_password) - 1;
-    while (end > stored_password && isspace((unsigned char)*end)) end--;
-    *(end + 1) = '\0';
+    char hashed_input[HASH_HEX_LEN + 1] = {0};
+    hash_password_with_salt(password, salt_hex, hashed_input);
 
-    printf("Stored hash: '%s'\n", stored_password);
-    printf("Input hash: '%s'\n", hashed_input);
-
-    if (strcmp(stored_password, hashed_input) == 0) {
+    int result = (strcmp(stored_hash, hashed_input) == 0) ? 1 : 0;
+    if (result)
         printf("Login successful!\n");
-        AK_EPI;
-        return 1;
-    } else {
+    else
         printf("Incorrect password!\n");
+
+    AK_DeleteAll_L3(&row);
+    AK_free(row);
+    AK_EPI;
+    return result;
+}
+
+/**
+ * @author Luka Balažinec
+ * @brief  Changes the password and salt for an existing user.
+ * @param  username Username whose password is to be updated.
+ * @param  new_password New plain-text password.
+ * @return EXIT_SUCCESS on success, EXIT_ERROR on failure.
+ */
+int AK_user_change_password(char *username, char *new_password) {
+    AK_PRO;
+
+    int user_id = AK_user_get_id(username);
+    if (user_id == EXIT_ERROR) {
+        printf("User '%s' does not exist!\n", username);
         AK_EPI;
-        return 0;
+        return EXIT_ERROR;
     }
+
+    unsigned char salt_bin[SALT_LEN];
+    char salt_hex[SALT_HEX_LEN + 1] = {0};
+    char hash_hex [HASH_HEX_LEN + 1] = {0};
+
+    if (generate_salt(salt_bin, SALT_LEN) != 0) {
+        AK_EPI;
+        return EXIT_ERROR;
+    }
+    to_hex(salt_bin, SALT_LEN, salt_hex);
+    hash_password_with_salt(new_password, salt_hex, hash_hex);
+
+    struct list_node *row_root = (struct list_node *) AK_malloc(sizeof(struct list_node));
+    AK_Init_L3(&row_root);
+
+    AK_Update_Existing_Element(TYPE_VARCHAR, username, "AK_user", "username", row_root);
+    AK_Insert_New_Element(TYPE_VARCHAR, hash_hex, "AK_user", "password_hash", row_root);
+    AK_Insert_New_Element(TYPE_VARCHAR, salt_hex, "AK_user", "salt", row_root);
+
+    if (AK_update_row(row_root) == EXIT_ERROR) {
+        AK_DeleteAll_L3(&row_root);
+        AK_free(row_root);
+        AK_EPI;
+        return EXIT_ERROR;
+    }
+
+    AK_DeleteAll_L3(&row_root);
+    AK_free(row_root);
+    AK_EPI;
+    return EXIT_SUCCESS;
 }
 
 /**
@@ -1595,12 +1680,32 @@ TestResult AK_privileges_test() {
     printf("\n\n||====================================================================|| \n");
 
 
+    /**************************************/
+    /* 20. AK_user_change_password        */
+    /**************************************/
+    printf("\n20. Test - AK_user_change_password function - Changes the users password\n");
+    printf("Original AK_user table:\n\n");
+    AK_print_table("AK_user");
+
+    printf("\nChanging password for 'user3' from '3333' to '1234'...\n");
+    if (AK_user_change_password("user3", "1234") != EXIT_SUCCESS) {
+        printf("\n\nTest 20. - Fail!\n");
+    } else {
+        printf("\nPassword changed successfully.\n\n");
+        printf("Updated AK_user table:\n\n");
+        AK_print_table("AK_user");
+        printf("\n\nTest 20. - Pass!\n");
+        successful[19] = 1;
+    }
+    
+    printf("\n\n||====================================================================|| \n");
+
     /* END SUMMARY*/
 
     printf("\nSummary: \n");
     int num = 0;
     int numFail = 0;
-    for (num = 0; num < 19; num++) {
+    for (num = 0; num < 20; num++) {
         printf("%i. Test: %s \n", (num + 1), (successful[num] == 1 ? "Pass" : "Fail"));
         if (successful[num] == 0) numFail++;
     }
