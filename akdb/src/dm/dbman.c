@@ -2220,12 +2220,12 @@ AK_init_system_catalog()
       { 0, '\0', 0, '\0', '\0' }
     };
 
-
-  AK_header hUser[4] =
+    AK_header hUser[5] =
     {
       { TYPE_INT, "obj_id", { 0 }, { { '\0' } }, { { '\0' } } },
       { TYPE_VARCHAR, "username", 0, '\0', '\0', },
-      { TYPE_INT, "password", 0, '\0', '\0', },
+      { TYPE_INT, "password_hash", 0, '\0', '\0', },
+      { TYPE_INT, "salt", 0, '\0', '\0', },
       { 0, '\0', 0, '\0', '\0' }
     };
 
