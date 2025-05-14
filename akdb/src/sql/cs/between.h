@@ -56,7 +56,7 @@ void AK_set_constraint_between(char* tableName, char* constraintName, char* attN
 int AK_read_constraint_between(char* tableName, char* newValue, char* attNamePar);
 
 /**
- * @author Maja Vračan, updated by Blaž Rajič
+ * @author Maja Vračan, updated by Blaž Rajič, Vilim Trakoštanec
  * @brief Function for deleting specific between constraint
  * @param tableName name of system table (AK_CONSTRAINTS_BEWTEEN)
  * @param constraintName name of constraint to delete

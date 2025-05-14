@@ -447,7 +447,6 @@ int AK_delete_constraint_unique(char* tableName, char* constraintName){
   */
 
 
-  #include "unique.h"
 
 TestResult AK_unique_test(void) {
     AK_PRO;
@@ -496,21 +495,21 @@ TestResult AK_unique_test(void) {
     typedef struct { Op op; const char *tbl; const char *at; const char *cn; int exp; } T;
 
     T tests[] = {
-        { SET,    table1, attr1,  cons1, 1 },
-        { DEL,    "AK_constraints_unique", NULL, cons1, 1 },
-        { SET,    table1, attr1,  cons1, 1 },
-        { SET,    table1, attr2,  cons2, 0 },
-        { SET,    table1, names1, c1,    1 },
-        { SET,    table1, names2, c2,    1 },
-        { SET,    table1, names2, c2,    0 },
-        { SET,    table1, names3, cons3, 1 },
-        { SET,    table2, names4, cons4, 1 },
-        { SET,    table3, names5, cons5, 1 },
-        { SET,    table4, names6, cons6, 1 },
-        { SET,    table5, names7, cons7, 1 },
-        { SET,    table5, names8, cons8, 1 },
-        { SET,    table6, names9, cons9, 1 },
-        { DEL_ALL, NULL, NULL, NULL,     1 }
+        { SET, table1, attr1,  cons1, 1 },
+        { DEL, "AK_constraints_unique", NULL, cons1, 1 },
+        { SET, table1, attr1,  cons1, 1 },
+        { SET, table1, attr2,  cons2, 0 },
+        { SET, table1, names1, c1, 1 },
+        { SET, table1, names2, c2, 1 },
+        { SET, table1, names2, c2, 0 },
+        { SET, table1, names3, cons3, 1 },
+        { SET, table2, names4, cons4, 1 },
+        { SET, table3, names5, cons5, 1 },
+        { SET, table4, names6, cons6, 1 },
+        { SET, table5, names7, cons7, 1 },
+        { SET, table5, names8, cons8, 1 },
+        { SET, table6, names9, cons9, 1 },
+        { DEL_ALL, NULL, NULL, NULL, 1 }
     };
     size_t n = sizeof tests / sizeof *tests;
 

@@ -167,12 +167,12 @@
      int type_param  = type;
      int value_param;
  
-     AK_Insert_New_Element(TYPE_INT,     &obj_id,      AK_CONSTRAINTS_CHECK_CONSTRAINT, "obj_id",              constraint_row);
-     AK_Insert_New_Element(TYPE_VARCHAR, table_name,   AK_CONSTRAINTS_CHECK_CONSTRAINT, "table_name",          constraint_row);
-     AK_Insert_New_Element(TYPE_VARCHAR, constraint_name, AK_CONSTRAINTS_CHECK_CONSTRAINT, "constraint_name",    constraint_row);
-     AK_Insert_New_Element(TYPE_VARCHAR, attribute_name,  AK_CONSTRAINTS_CHECK_CONSTRAINT, "attribute_name",     constraint_row);
-     AK_Insert_New_Element(TYPE_INT,     &type_param,  AK_CONSTRAINTS_CHECK_CONSTRAINT, "constraint_value_type", constraint_row);
-     AK_Insert_New_Element(TYPE_VARCHAR, condition,     AK_CONSTRAINTS_CHECK_CONSTRAINT, "constraint_condition", constraint_row);
+     AK_Insert_New_Element(TYPE_INT, &obj_id, AK_CONSTRAINTS_CHECK_CONSTRAINT, "obj_id", constraint_row);
+     AK_Insert_New_Element(TYPE_VARCHAR, table_name,  AK_CONSTRAINTS_CHECK_CONSTRAINT, "table_name", constraint_row);
+     AK_Insert_New_Element(TYPE_VARCHAR, constraint_name, AK_CONSTRAINTS_CHECK_CONSTRAINT, "constraint_name", constraint_row);
+     AK_Insert_New_Element(TYPE_VARCHAR, attribute_name, AK_CONSTRAINTS_CHECK_CONSTRAINT, "attribute_name", constraint_row);
+     AK_Insert_New_Element(TYPE_INT, &type_param, AK_CONSTRAINTS_CHECK_CONSTRAINT, "constraint_value_type", constraint_row);
+     AK_Insert_New_Element(TYPE_VARCHAR, condition, AK_CONSTRAINTS_CHECK_CONSTRAINT, "constraint_condition", constraint_row);
  
      if (type == TYPE_INT) {
          value_param = *(int *) value;
@@ -286,8 +286,8 @@
      int passed = 0, failed = 0;
  
      // Constraint names
-     char cn_year[]     = "check_student_year";
-     char cn_weight[]   = "check_student_weight";
+     char cn_year[] = "check_student_year";
+     char cn_weight[] = "check_student_weight";
      char cn_lastname[] = "check_student_lastname";
  
      // Test values
@@ -299,20 +299,20 @@
      typedef struct { Op op; const char *cn; const char *tbl; const char *at; const char *opstr; int type; Val val; int exp; } T;
  
      T tests[] = {
-         {OP_SET,     cn_year,   "student", "year",     ">", TYPE_INT,     {.i = i1},  0},
-         {OP_SET,     cn_year,   "student", "year",     ">", TYPE_INT,     {.i = i2},  1},
-         {OP_READ,    NULL,      "student", "year",     NULL,  TYPE_INT,     {.i = iv1}, 1},
-         {OP_READ,    NULL,      "student", "year",     NULL,  TYPE_INT,     {.i = iv2}, 0},
-         {OP_SET,     cn_weight, "student", "weight",   "<=", TYPE_FLOAT,   {.f = &w1}, 1},
-         {OP_READ,    NULL,      "student", "weight",   NULL,  TYPE_FLOAT,   {.f = &w1}, 1},
-         {OP_READ,    NULL,      "student", "weight",   NULL,  TYPE_FLOAT,   {.f = &w3}, 0},
-         {OP_SET,     cn_weight, "student", "weight",   ">", TYPE_FLOAT,   {.f = &w2}, 0},
-         {OP_SET,     cn_lastname,"student","lastname", ">", TYPE_VARCHAR, {.s = "Anic"},    1},
-         {OP_READ,    NULL,      "student", "lastname", NULL, TYPE_VARCHAR, {.s = "Baric"},  1},
-         {OP_READ,    NULL,      "student", "lastname", NULL, TYPE_VARCHAR, {.s = "Abdullah"},0},
-         {OP_SET,     cn_lastname,"student","lastname","<", TYPE_VARCHAR, {.s = "Yeager"}, 0},
-         {OP_SET,     "check_student_lastname_fail","student","lastname", ">", TYPE_VARCHAR, {.s = "Yeager"}, 0},
-         {OP_DELETE_ALL,NULL,    NULL,       NULL,       NULL, TYPE_VARCHAR, {.i = 0},      1}
+         {OP_SET, cn_year, "student", "year", ">", TYPE_INT, {.i = i1}, 0},
+         {OP_SET, cn_year, "student", "year", ">", TYPE_INT, {.i = i2}, 1},
+         {OP_READ, NULL, "student", "year", NULL, TYPE_INT, {.i = iv1}, 1},
+         {OP_READ, NULL, "student", "year", NULL, TYPE_INT, {.i = iv2}, 0},
+         {OP_SET, cn_weight, "student", "weight", "<=", TYPE_FLOAT, {.f = &w1}, 1},
+         {OP_READ, NULL, "student", "weight", NULL, TYPE_FLOAT, {.f = &w1}, 1},
+         {OP_READ, NULL, "student", "weight", NULL, TYPE_FLOAT, {.f = &w3}, 0},
+         {OP_SET, cn_weight, "student", "weight", ">", TYPE_FLOAT, {.f = &w2}, 0},
+         {OP_SET, cn_lastname,"student","lastname", ">", TYPE_VARCHAR, {.s = "Anic"},    1},
+         {OP_READ, NULL, "student", "lastname", NULL, TYPE_VARCHAR, {.s = "Baric"},  1},
+         {OP_READ, NULL, "student", "lastname", NULL, TYPE_VARCHAR, {.s = "Abdullah"},0},
+         {OP_SET, cn_lastname,"student","lastname","<", TYPE_VARCHAR, {.s = "Yeager"}, 0},
+         {OP_SET, "check_student_lastname_fail","student","lastname", ">", TYPE_VARCHAR, {.s = "Yeager"}, 0},
+         {OP_DELETE_ALL,NULL, NULL, NULL, NULL, TYPE_VARCHAR, {.i = 0}, 1}
      };
      size_t n = sizeof tests / sizeof *tests;
  
