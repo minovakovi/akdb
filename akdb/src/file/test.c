@@ -280,6 +280,8 @@ int get_column_test(int num, char* tbl){
  * @brief Function that calls all functions for creating test tables in this file
  * @return No return value
  */
+
+
 void AK_create_test_tables() {
     AK_create_test_table_student();
     AK_create_test_table_professor();

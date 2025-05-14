@@ -151,14 +151,14 @@ void AK_product_procedure(char *srcTable1, char *srcTable2, char *dstTable, AK_h
 	struct list_node *row_root = (struct list_node *)AK_malloc(sizeof(struct list_node));
 	AK_Init_L3(&row_root);
 	
-	register j, k, l, m, n, o, u;
+	register int j, k, l, m, n, o, u;
 	
 	/**
 	* Product procedure
 	* Going through one table, and for each row in it, going through another table,
 	* and joining rows that way!
 	*/
-	register i = 0;	
+	register int i = 0;	
 	/* for each extent in first table */
 	while (src_addr1->address_from[i] != 0)
 	{

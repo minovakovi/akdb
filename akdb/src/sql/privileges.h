@@ -26,10 +26,9 @@
 #include "../rec/archive_log.h"
 #include "../auxi/mempro.h"
 
-
 /**
  * @author Kristina Takač.
- * @brief  Inserts a new user in the AK_user table 
+ * @brief  Inserts a new user in the AK_user table
  * @param *username username of user to be added
  * @param *password password of user to be added
  * @param set_id obj_id of the new user
@@ -45,26 +44,26 @@ int AK_user_add(char *username, char *password, int set_id);
  */
 int AK_user_get_id(char *username);
 /**
-* @author Fran MIkolić.
-* @brief  Function that checks if there is user with given password
-* @param *username username of user whose password we are checking
-* @param *password password of given username whom we will check
-* @return check 0 if false or 1 if true
-*/
+ * @author Fran MIkolić.
+ * @brief  Function that checks if there is user with given password
+ * @param *username username of user whose password we are checking
+ * @param *password password of given username whom we will check
+ * @return check 0 if false or 1 if true
+ */
 int AK_user_check_pass(char *username, char *password);
 /**
  * @author Kristina Takač, edited by Ljubo Barać
  * @brief Function that adds a new group
  * @param *name name of group to be added
  * @param set_id non default id to be passed
- * @return id of group                                                      
+ * @return id of group
  */
 int AK_group_add(char *name, int set_id);
 /**
  * @author Kristina Takač.
  * @brief Function that returns the ID  from the given group name
  * @param *name name of group whose id we are looking for
- * @return id of group, otherwise EXIT_ERROR                                                      
+ * @return id of group, otherwise EXIT_ERROR
  */
 int AK_group_get_id(char *name);
 /**
@@ -103,7 +102,7 @@ int AK_revoke_all_privileges_user(char *username);
 int AK_grant_privilege_group(char *groupname, char *table, char *right);
 /**
  * @author Kristina Takač, updated by Mario Peroković - added comparing by table id
- * @brief Function that revokes a groups privilege on the given table 
+ * @brief Function that revokes a groups privilege on the given table
  * @param *grounamep name of group which user belongs to
  * @param *table name of table on which privilege will be granted to group
  * @param *right type of privilege which will be granted to group on a given table
@@ -118,7 +117,7 @@ int AK_revoke_privilege_group(char *groupname, char *table, char *right);
  */
 int AK_revoke_all_privileges_group(char *groupname);
 /**
- * @author Kristina Takač, updated by Mario Peroković, added verifying the existence of user in the group, updated by Maja Vračan 
+ * @author Kristina Takač, updated by Mario Peroković, added verifying the existence of user in the group, updated by Maja Vračan
  * @brief Function that puts the desired user in the given group
  * @param *user username of user which will be put in group
  * @param *group name of group in which user will be put
@@ -138,6 +137,9 @@ int AK_remove_user_from_all_groups(char *user);
  * @param group name of group
  * @return EXIT_SUCCESS or EXIT_ERROR
  */
+
+int AK_user_remove_by_name(char *name);
+
 int AK_remove_all_users_from_group(char *group);
 /**
  * @author Kristina Takač, updated by Marko Flajšek

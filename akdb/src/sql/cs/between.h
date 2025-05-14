@@ -35,7 +35,7 @@ int AK_find_table_address(char *_systemTableName);
 
 /**
  * @author Saša Vukšić, updated by Mislav Jurinić
- * @brief Function that sets between constraints on particular attribute, string constraint should be writen in lowercase.      
+ * @brief Function that sets between constraints on particular attribute, string constraint should be writen in lowercase.
  * @param tableName table name
  * @param constraintName name of constraint
  * @param attName name of attribute
@@ -43,7 +43,7 @@ int AK_find_table_address(char *_systemTableName);
  * @param endValue final constraint
  * @return No return value
  **/
-void AK_set_constraint_between(char* tableName, char* constraintName, char* attName, char* startValue, char* endValue);
+int AK_set_constraint_between(char *tableName, char *constraintName, char *attName, char *startValue, char *endValue);
 
 /**
  * @author Saša Vukšić, updated by Mislav Jurinić
@@ -53,17 +53,17 @@ void AK_set_constraint_between(char* tableName, char* constraintName, char* attN
  * @param attNamePar attribute name
  * @return EXIT_SUCCESS or EXIT_ERROR
  **/
-int AK_read_constraint_between(char* tableName, char* newValue, char* attNamePar);
+int AK_read_constraint_between(char *tableName, char *newValue, char *attNamePar);
 
 /**
  * @author Maja Vračan, updated by Blaž Rajič
  * @brief Function for deleting specific between constraint
  * @param tableName name of table on which constraint refers
  * @param attName name of attribute on which constraint is declared
- * @param constraintName name of constraint 
+ * @param constraintName name of constraint
  * @return EXIT_SUCCESS when constraint is deleted, else EXIT_ERROR
  */
-int AK_delete_constraint_between(char* tableName, char* constraintName);
+int AK_delete_constraint_between(char *tableName, char *constraintName);
 TestResult AK_constraint_between_test();
 
 #endif

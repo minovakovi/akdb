@@ -137,7 +137,7 @@ char *AK_get_relation_expression(char *name)
 
 /**
  * @author Kresimir Ivkovic
- * @brief Function that adds a new view to the view table with the corresponding name and value (view query); 
+ * @brief Function that adds a new view to the view table with the corresponding name and value (view query);
  * set_id is optional, if it's not set, the system will determine the new id automatically
  * @param name name og the view
  * @param query query of the view
@@ -226,7 +226,7 @@ int AK_view_rename(char *name, char *new_name)
             rel_exp = query_rel_exp_elem->data;
         }
     }
-   
+
     result = AK_view_remove_by_name(name);
     result = AK_view_add(new_name, query, rel_exp, view_id);
     AK_EPI;
@@ -235,9 +235,9 @@ int AK_view_rename(char *name, char *new_name)
 
 /**
  * @author Kresimir Ivkovic
- * @brief Function that removes the view by its name by identifying the 
+ * @brief Function that removes the view by its name by identifying the
  * view's id and passing id to AK_view_remove_by_object_id
- * 
+ *
  * @param name name of the view
  * @return Result of AK_view_remove_by_object_id
  *  or EXIT_ERROR if no id is found
@@ -479,7 +479,7 @@ TestResult AK_view_test()
 
     printf("\n **** TEST 7 - CHECK VIEW NAME ****\n");
     printf("\n Checks if the name of the view already exist in AK_view table. \n");
-    int checkName = AK_check_view_name("view5");
+    char *checkName = AK_check_view_name("view5");
 
     if (checkName == EXIT_ERROR)
     {
@@ -493,10 +493,9 @@ TestResult AK_view_test()
         printf("\n Test 7 failed!\n\n");
     }
 
-
     printf("\n *** TEST 8 - GET RELATION EXPRESSION ***\n");
     printf("\n Gets a relation expression by its name. \n ");
-    int getRelationExpression = AK_get_relation_expression("view5");
+    char *getRelationExpression = AK_get_relation_expression("view5");
 
     if (getRelationExpression != EXIT_ERROR)
     {
@@ -510,8 +509,6 @@ TestResult AK_view_test()
         printf("\n View doesn't exist! \n");
         printf("\n Test 8 failed!\n\n");
     }
-
-
 
     AK_print_table("AK_view");
     AK_EPI;

@@ -28,7 +28,7 @@
 
 #include <errno.h>
 #include <fcntl.h>
-
+#include "file/blobs.h"
 #ifdef _WIN32
 #include <direct.h>
 #endif
@@ -40,7 +40,8 @@
 int success = 0;
 int failed = 0;
 
-AK_File_Metadata AK_File_Metadata_malloc() {
+AK_File_Metadata AK_File_Metadata_malloc()
+{
 
   AK_File_Metadata meta = (AK_File_Metadata)AK_malloc(sizeof(AK_Metadata));
   meta->new_path = (char *)AK_malloc(sizeof(char) * 512);
@@ -56,7 +57,8 @@ AK_File_Metadata AK_File_Metadata_malloc() {
  * @brief Function that generates GUID
  * @return returns globaly universal identifier based on kernel implementation
  */
-char *AK_GUID() {
+char *AK_GUID()
+{
   srand(clock());
   char *GUID = (char *)AK_malloc(sizeof(char) * 40);
   int t = 0;
@@ -64,23 +66,33 @@ char *AK_GUID() {
   char *szHex = "0123456789ABCDEF-";
   int nLen = strlen(szTemp);
 
-  for (t = 0; t < nLen + 1; t++) {
+  for (t = 0; t < nLen + 1; t++)
+  {
     int r = rand() % 16;
     char c = ' ';
 
-    switch (szTemp[t]) {
-    case 'x': {
+    switch (szTemp[t])
+    {
+    case 'x':
+    {
       c = szHex[r];
-    } break;
-    case 'y': {
+    }
+    break;
+    case 'y':
+    {
       c = szHex[r & 0x03 | 0x08];
-    } break;
-    case '-': {
+    }
+    break;
+    case '-':
+    {
       c = '-';
-    } break;
-    case '4': {
+    }
+    break;
+    case '4':
+    {
       c = '4';
-    } break;
+    }
+    break;
     }
 
     GUID[t] = (t < nLen) ? c : 0x00;
@@ -94,14 +106,18 @@ char *AK_GUID() {
  * @brief Function that checks if folder blobs already exists
  * @return returns 0 for true and 1 for false
  */
-int AK_folder_exists(char *foldername) {
+int AK_folder_exists(char *foldername)
+{
 
   DIR *dir = opendir(foldername);
 
-  if (dir) {
+  if (dir)
+  {
     closedir(dir);
     return 0;
-  } else {
+  }
+  else
+  {
     return 1;
   }
 }
@@ -111,7 +127,8 @@ int AK_folder_exists(char *foldername) {
  * @brief Function that creates new folder
  * @return returns 0 for true and 1 for false
  */
-int AK_mkdir(const char *path) {
+int AK_mkdir(const char *path)
+{
 #ifdef _WIN32 // not tested
   return _mkdir(path);
 #else
@@ -123,7 +140,8 @@ int AK_mkdir(const char *path) {
 #endif
 }
 
-int AK_copy(const char *from, const char *to) {
+int AK_copy(const char *from, const char *to)
+{
   // printf("Copying %s\n to %s\n", from, to);
   FILE *ptr_old, *ptr_new;
   char ch;
@@ -132,13 +150,15 @@ int AK_copy(const char *from, const char *to) {
 
   printf("[INFO] Copying file from %s to %s\n", from, to);
   // printf("ptr_old %s\n", ptr_old);
-  if (ptr_old == NULL) {
+  if (ptr_old == NULL)
+  {
     perror("[ERROR]");
     return -1;
   }
 
   ptr_new = fopen(to, "wb");
-  if (ptr_new == NULL) {
+  if (ptr_new == NULL)
+  {
     perror("[ERROR]");
     return -1;
   }
@@ -157,18 +177,22 @@ int AK_copy(const char *from, const char *to) {
  * @brief Function for AK_concatinating 2 strings
  * @return returns new string
  */
-char *AK_concat(char *s1, char *s2) {
+char *AK_concat(char *s1, char *s2)
+{
   char *result =
       AK_malloc(strlen(s1) + strlen(s2) + 1); // +1 for the zero-terminator
-  if (result != NULL) {
+  if (result != NULL)
+  {
     strcpy(result, s1);
     strcat(result, s2);
     return result;
-  } else
+  }
+  else
     return NULL;
 }
 
-char *AK_clear_all_newline(char *s) {
+char *AK_clear_all_newline(char *s)
+{
 
   char *n = malloc(strlen(s ? s : "\n"));
   if (s)
@@ -182,24 +206,34 @@ char *AK_clear_all_newline(char *s) {
  * @brief Function that checks if folder blobs exists
  * @return OID (object ID)
  */
-int AK_check_folder_blobs() {
+int AK_check_folder_blobs()
+{
   struct stat s;
   int err = stat(AK_BLOBS_PATH, &s);
-  if (-1 == err) {
-    if (ENOENT == errno) {
+  if (-1 == err)
+  {
+    if (ENOENT == errno)
+    {
       printf("[INFO] There is no folder for blobs. Trying to create folder at: "
              "%s\n",
              AK_BLOBS_PATH);
       AK_mkdir(AK_BLOBS_PATH);
       // AK_create_blobs_table();
-    } else {
+    }
+    else
+    {
       perror("stat");
       exit(1);
     }
-  } else {
-    if (S_ISDIR(s.st_mode)) {
+  }
+  else
+  {
+    if (S_ISDIR(s.st_mode))
+    {
       printf("[INFO] Folder blobs already exists\n");
-    } else {
+    }
+    else
+    {
       /* exists but is no folder */
     }
   }
@@ -211,21 +245,26 @@ int AK_check_folder_blobs() {
  * @brief Function that splits a path from filename
  * @return void
  */
-void AK_split_path_file(char **p, char **f, char *pf) {
+void AK_split_path_file(char **p, char **f, char *pf)
+{
   /* Find last delimiter. */
   char *z;
-  for (z = pf + strlen(pf); z >= pf; z--) {
+  for (z = pf + strlen(pf); z >= pf; z--)
+  {
     if (*z == '/' || *z == '\\')
       break;
   }
 
-  if (z >= pf) {
+  if (z >= pf)
+  {
     *p = malloc(z - pf + 1);
     strncpy(*p, pf, z - pf);
     (*p)[z - pf] = '\0';
     *f = malloc(strlen(z));
     strcpy(*f, z + 1);
-  } else {
+  }
+  else
+  {
     *p = NULL;
     *f = malloc(strlen(pf) + 1);
     strcpy(*f, pf);
@@ -238,11 +277,13 @@ void AK_split_path_file(char **p, char **f, char *pf) {
  * formatted output in it.
  * @return If the given file name doesn't exist, it returns -1, else 0.
  */
-int AK_write_metadata(char *oid, AK_File_Metadata meta) {
+int AK_write_metadata(char *oid, AK_File_Metadata meta)
+{
 
   FILE *f = fopen(AK_concat(meta->new_path, ".meta"), "w");
 
-  if (f == NULL) {
+  if (f == NULL)
+  {
     return -1;
   }
 
@@ -263,10 +304,11 @@ int AK_write_metadata(char *oid, AK_File_Metadata meta) {
  * @return If the given file can't be open it returns -1, else it returns
  * fetched metadata.
  */
-AK_File_Metadata AK_read_metadata(char *oid) {
+AK_File_Metadata AK_read_metadata(char *oid)
+{
 
   if (oid == 0x0)
-    return -1;
+    return NULL;
 
   AK_File_Metadata meta = AK_File_Metadata_malloc();
 
@@ -282,10 +324,13 @@ AK_File_Metadata AK_read_metadata(char *oid) {
   printf("[INFO] Opening file at %s\n", metadata);
   FILE *fp = fopen(metadata, "r");
 
-  if (fp == NULL) {
+  if (fp == NULL)
+  {
     printf("\t[+] Cannot open file.\n");
-    return -1;
-  } else {
+    return NULL;
+  }
+  else
+  {
     printf("\t[+] File opened.\n");
   }
 
@@ -329,7 +374,8 @@ AK_File_Metadata AK_read_metadata(char *oid) {
  * @brief Function that imports  large objects to database
  * @return OID (object ID)
  */
-char *AK_lo_import(char *filepath) {
+char *AK_lo_import(char *filepath)
+{
 
   printf("-----------------------------------------------------------------\n");
   printf("[INFO] IMPORTING\n");
@@ -339,8 +385,8 @@ char *AK_lo_import(char *filepath) {
   char *oid = AK_GUID();
   meta->checksum = "";
 
-  char *old_name = (char)AK_malloc(sizeof(char) * 128); // filename
-  char *old_path = (char)AK_malloc(
+  char *old_name = (char *)AK_malloc(sizeof(char) * 128); // filename
+  char *old_path = (char *)AK_malloc(
       sizeof(char) *
       512); // filepath from where file is imported (without trailing slash)
 
@@ -352,20 +398,26 @@ char *AK_lo_import(char *filepath) {
 
   meta->new_path = AK_concat(AK_concat(AK_BLOBS_PATH, "/"), oid);
 
-  if (AK_copy(filepath, meta->new_path) == 0) {
+  if (AK_copy(filepath, meta->new_path) == 0)
+  {
     printf(
         "[INFO] Large object imported successfully.\n\t[+] Object is at %s\n",
         meta->new_path);
     printf("[INFO] Importing metadata to catalog\n");
 
-    if (AK_write_metadata(oid, meta) == 0) {
+    if (AK_write_metadata(oid, meta) == 0)
+    {
       printf("[INFO] Success\n");
       success++;
-    } else {
+    }
+    else
+    {
       failed++;
       printf("[INFO] There was an error writing metadata\n");
     }
-  } else {
+  }
+  else
+  {
     failed++;
     printf("[ERROR] There was an error while importing large object.\n");
   }
@@ -378,7 +430,8 @@ char *AK_lo_import(char *filepath) {
  * @brief Function that retrieves large objects
  * @return returns 0 for true and 1 for false
  */
-int AK_lo_export(char *oid, char *filepath) {
+int AK_lo_export(char *oid, char *filepath)
+{
 
   printf("-----------------------------------------------------------------\n");
   printf("[INFO] EXPORTING\n");
@@ -386,19 +439,25 @@ int AK_lo_export(char *oid, char *filepath) {
 
   AK_File_Metadata metadata = AK_read_metadata(oid);
 
-  char *destination_name = (char)AK_malloc(sizeof(char) * 128);
-  char *destination_path = (char)AK_malloc(sizeof(char) * 512);
+  char *destination_name = (char *)AK_malloc(sizeof(char) * 128);
+  char *destination_path = (char *)AK_malloc(sizeof(char) * 512);
   AK_split_path_file(&destination_path, &destination_name, filepath);
 
-  if (metadata != 0x0) {
-    if (AK_copy(metadata->new_path, filepath) == 0) {
+  if (metadata != 0x0)
+  {
+    if (AK_copy(metadata->new_path, filepath) == 0)
+    {
       printf("[INFO] File exported successfully.\n");
       success++;
-    } else {
+    }
+    else
+    {
       failed++;
       printf("[INFO] There was an error exporting a file.\n");
     }
-  } else {
+  }
+  else
+  {
     failed++;
     return -1;
   }
@@ -411,7 +470,8 @@ int AK_lo_export(char *oid, char *filepath) {
  * @brief Function that deletes large objects
  * @return OID (object ID)
  */
-int AK_lo_unlink(char *oid) {
+int AK_lo_unlink(char *oid)
+{
 
   printf("-----------------------------------------------------------------\n");
   printf("[INFO] UNLINKING\n");
@@ -419,12 +479,15 @@ int AK_lo_unlink(char *oid) {
 
   AK_File_Metadata metadata = AK_read_metadata(oid);
 
-  if (metadata != 0x0) {
+  if (metadata != 0x0)
+  {
     remove(metadata->new_path);
     remove(AK_concat(metadata->new_path, ".meta"));
     printf("[INFO] File removed successfully\n");
     success++;
-  } else {
+  }
+  else
+  {
     failed++;
   }
 
@@ -435,7 +498,8 @@ int AK_lo_unlink(char *oid) {
  * @author Samuel Picek
  * @brief  Tests
  */
-TestResult AK_lo_test() {
+TestResult AK_lo_test()
+{
 
   FILE *f;
   FILE *f2;
@@ -448,7 +512,8 @@ TestResult AK_lo_test() {
   AK_lo_unlink(oid);
 
   f = fopen("./config.ini", "rb");
-  if (f == NULL) {
+  if (f == NULL)
+  {
     printf("config.ini orginal doesent exist\n");
   }
   fseek(f, 0, SEEK_END);
@@ -456,14 +521,16 @@ TestResult AK_lo_test() {
   fclose(f);
 
   f2 = fopen("/tmp/config.ini", "rb");
-  if (f2 == NULL) {
+  if (f2 == NULL)
+  {
     printf("config.ini in temp doesent exist\n");
   }
   fseek(f2, 0, SEEK_END);
   size2 = ftell(f2);
   fclose(f2);
 
-  if (f2 == f) {
+  if (f2 == f)
+  {
     printf("config.ini in temp and orginal are same\n");
   }
 

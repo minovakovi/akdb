@@ -20,31 +20,36 @@
 
 #include "redo_log.h"
 
+#define NUM_ARGS 4
+
 /**
  * @author @author Krunoslav Bilić updated by Dražen Bandić, second update by Tomislav Turek
  * @brief Function that adds a new element to redolog
  * @return EXIT_FAILURE if not allocated memory for ispis, otherwise EXIT_SUCCESS
  */
-int AK_add_to_redolog(int command, struct list_node *row_root){
+int AK_add_to_redolog(int command, struct list_node *row_root)
+{
     AK_PRO;
 
-    AK_redo_log* const redoLog = redo_log.ptr;
+    AK_redo_log *const redoLog = redo_log.ptr;
     if (redoLog == NULL)
-      return EXIT_FAILURE;
+        return EXIT_FAILURE;
     int n = redoLog->number;
     printf("AK_add_to_redolog: Recovery checkpoint %d\n", n);
 
-    if(n == MAX_REDO_LOG_ENTRIES){
+    if (n == MAX_REDO_LOG_ENTRIES)
+    {
         AK_archive_log(-10);
         n = 0;
     }
 
-    struct list_node * el = (struct list_node *) AK_First_L2(row_root);
-    
-    char* record;
-    if((record = (char*) AK_calloc(MAX_VARCHAR_LENGTH, sizeof(char))) == NULL){
+    struct list_node *el = (struct list_node *)AK_First_L2(row_root);
+
+    char *record;
+    if ((record = (char *)AK_calloc(MAX_VARCHAR_LENGTH, sizeof(char))) == NULL)
+    {
         AK_EPI;
-    	return EXIT_FAILURE;
+        return EXIT_FAILURE;
     }
 
     char table[MAX_ATT_NAME];
@@ -53,62 +58,67 @@ int AK_add_to_redolog(int command, struct list_node *row_root){
 
     int max = AK_num_attr(table);
     int numAttr = 1;
-	int attrs_length = MAX_ATTRIBUTES;
-	if(AK_Size_L2(row_root) > MAX_ATTRIBUTES)
-		attrs_length = AK_Size_L2(row_root);
-    char** attrs = AK_calloc(attrs_length, sizeof(char*));
+    int attrs_length = MAX_ATTRIBUTES;
+    if (AK_Size_L2(row_root) > MAX_ATTRIBUTES)
+        attrs_length = AK_Size_L2(row_root);
+    char **attrs = AK_calloc(attrs_length, sizeof(char *));
     int i = 0;
-    while (el != NULL) {
-        switch (el->type) {
+    while (el != NULL)
+    {
+        switch (el->type)
+        {
 
-            case FREE_CHAR:
-                strncat(record, "null", 4);
-                attrs[i] = "null";
-                break;
-            case TYPE_INT:
-				attrs[i] = (char*) AK_malloc(MAX_VARCHAR_LENGTH * sizeof(char));
-                sprintf (attrs[i], "%i", *((int *) el->data));
-                strncat(record, attrs[i], strlen(attrs[i]));
-                break;
-            case TYPE_FLOAT:
-				attrs[i] = (char*) AK_malloc(MAX_VARCHAR_LENGTH * sizeof(char));
-               	sprintf (attrs[i], "%.3f", *((float *) el->data));
-               	strncat(record, attrs[i], strlen(attrs[i]));
-                break;
-            case TYPE_VARCHAR:
-            default:
-                attrs[i] = AK_check_attributes(el->data);
-                strncat(record, attrs[i], strlen(el->data));
-                break;
+        case FREE_CHAR:
+            strncat(record, "null", 4);
+            attrs[i] = "null";
+            break;
+        case TYPE_INT:
+            attrs[i] = (char *)AK_malloc(MAX_VARCHAR_LENGTH * sizeof(char));
+            sprintf(attrs[i], "%i", *((int *)el->data));
+            strncat(record, attrs[i], strlen(attrs[i]));
+            break;
+        case TYPE_FLOAT:
+            attrs[i] = (char *)AK_malloc(MAX_VARCHAR_LENGTH * sizeof(char));
+            sprintf(attrs[i], "%.3f", *((float *)el->data));
+            strncat(record, attrs[i], strlen(attrs[i]));
+            break;
+        case TYPE_VARCHAR:
+        default:
+            attrs[i] = AK_check_attributes(el->data);
+            strncat(record, attrs[i], strlen(el->data));
+            break;
         }
-        if(numAttr < max){
+        if (numAttr < max)
+        {
             strncat(record, "|", 1);
         }
         numAttr++;
-		i++;
+        i++;
         el = el->next;
     }
-    
+
     printf("AK_add_to_redolog: redolog new entry -- %s, %s\n", table, record);
     memcpy(redoLog->command_recovery[n].table_name, table, strlen(table));
-	for(i=0; i<numAttr-1; i++)
-		strcpy(redoLog->command_recovery[n].arguments[i], attrs[i]);
+    for (i = 0; i < numAttr - 1; i++)
+        strcpy(redoLog->command_recovery[n].arguments[i], attrs[i]);
     redoLog->command_recovery[n].operation = command;
     redoLog->command_recovery[n].finished = 0;
-    redoLog->number = n+1;
+    redoLog->number = n + 1;
     AK_free(record);
-	for(i=0; i < numAttr-1; i++)
-		AK_free(attrs[i]);
-	AK_free(attrs);
+    for (i = 0; i < numAttr - 1; i++)
+        AK_free(attrs[i]);
+    AK_free(attrs);
     printf("AK_add_to_redolog: Recovery checkpoint saved\n");
     AK_EPI;
     return EXIT_SUCCESS;
 }
 
-void AK_redolog_commit() {
+void AK_redolog_commit()
+{
     int i;
-    AK_redo_log* const redoLog = redo_log.ptr;
-    for(i = 0; i < redoLog->number; i++) {
+    AK_redo_log *const redoLog = redo_log.ptr;
+    for (i = 0; i < redoLog->number; i++)
+    {
         redoLog->command_recovery[i].finished = 1;
     }
 }
@@ -119,15 +129,17 @@ void AK_redolog_commit() {
  * current code works with selection.c
  * @return EXIT_FAILURE if not allocated memory for ispis, otherwise EXIT_SUCCESS
  */
-int AK_add_to_redolog_select(int command, struct list_node *condition, char *srcTable){
+int AK_add_to_redolog_select(int command, struct list_node *condition, char *srcTable)
+{
     AK_PRO;
-    AK_redo_log* const redoLog = redo_log.ptr;
+    AK_redo_log *const redoLog = redo_log.ptr;
     if (redoLog == NULL)
         return EXIT_FAILURE;
     int n = redoLog->number;
     printf("AK_add_to_redolog_select: Select checkpoint %d\n", n);
 
-    if(n == MAX_REDO_LOG_ENTRIES){
+    if (n == MAX_REDO_LOG_ENTRIES)
+    {
         AK_archive_log(-10);
         n = 0;
     }
@@ -154,30 +166,33 @@ int AK_add_to_redolog_select(int command, struct list_node *condition, char *src
         el_attr = el_attr->next;
     }*/
 
-    struct list_node * el_cond = (struct list_node *) AK_First_L2(condition);
+    struct list_node *el_cond = (struct list_node *)AK_First_L2(condition);
 
-    char* record_cond;
-    if((record_cond = (char*) AK_calloc(MAX_VARCHAR_LENGTH, sizeof(char))) == NULL){
+    char *record_cond;
+    if ((record_cond = (char *)AK_calloc(MAX_VARCHAR_LENGTH, sizeof(char))) == NULL)
+    {
         AK_EPI;
         return EXIT_FAILURE;
     }
 
     int numConds = 1;
 
-    char** conds = AK_calloc(MAX_ATTRIBUTES, sizeof(char*));
+    char **conds = AK_calloc(MAX_ATTRIBUTES, sizeof(char *));
     int i = 0;
-    while (el_cond != NULL) {
-        switch (el_cond->type) {
+    while (el_cond != NULL)
+    {
+        switch (el_cond->type)
+        {
 
-            case TYPE_INT:
-                conds[i] = (char*) AK_malloc(MAX_VARCHAR_LENGTH * sizeof(char));
-                sprintf (conds[i], "%i", *((int *) el_cond->data));
-                strncat(record_cond, conds[i], strlen(conds[i]));
-                break;
-            default:
-                conds[i] = AK_check_attributes(el_cond->data);
-                strncat(record_cond, conds[i], strlen(el_cond->data));
-                break;
+        case TYPE_INT:
+            conds[i] = (char *)AK_malloc(MAX_VARCHAR_LENGTH * sizeof(char));
+            sprintf(conds[i], "%i", *((int *)el_cond->data));
+            strncat(record_cond, conds[i], strlen(conds[i]));
+            break;
+        default:
+            conds[i] = AK_check_attributes(el_cond->data);
+            strncat(record_cond, conds[i], strlen(el_cond->data));
+            break;
         }
         strncat(record_cond, "|", 1);
         numConds++;
@@ -191,10 +206,10 @@ int AK_add_to_redolog_select(int command, struct list_node *condition, char *src
     /*for(i=0; i<numAttr-1; i++)
         strcpy(redoLog->command_recovery[n].arguments[i], attrs[i]);*/
 
-    for(i=0; i<numConds-1; i++)
+    for (i = 0; i < numConds - 1; i++)
         strcpy(redoLog->command_recovery[n].condition[i], conds[i]);
     redoLog->command_recovery[n].operation = command;
-    redoLog->number = n+1;
+    redoLog->number = n + 1;
 
     /*AK_free(record);
     for(i=0; i < numAttr-1; i++)
@@ -202,7 +217,7 @@ int AK_add_to_redolog_select(int command, struct list_node *condition, char *src
     AK_free(attrs);*/
 
     AK_free(record_cond);
-    for(i=0; i < numConds-1; i++)
+    for (i = 0; i < numConds - 1; i++)
         AK_free(conds[i]);
     AK_free(conds);
 
@@ -216,33 +231,37 @@ int AK_add_to_redolog_select(int command, struct list_node *condition, char *src
  * @brief Function that checks redolog for select, works only with selection.c, not select.c
  * @return 0 if select was not found, otherwise 1
  */
-int AK_check_redo_log_select(int command, struct list_node *condition, char *srcTable){
+int AK_check_redo_log_select(int command, struct list_node *condition, char *srcTable)
+{
     AK_PRO;
 
-    struct list_node * el_cond = (struct list_node *) AK_First_L2(condition);
+    struct list_node *el_cond = (struct list_node *)AK_First_L2(condition);
 
-    char* record_cond;
-    if((record_cond = (char*) AK_calloc(MAX_VARCHAR_LENGTH, sizeof(char))) == NULL){
+    char *record_cond;
+    if ((record_cond = (char *)AK_calloc(MAX_VARCHAR_LENGTH, sizeof(char))) == NULL)
+    {
         AK_EPI;
         return EXIT_FAILURE;
     }
 
     int numConds = 1;
 
-    char** conds = AK_calloc(MAX_ATTRIBUTES, sizeof(char*));
+    char **conds = AK_calloc(MAX_ATTRIBUTES, sizeof(char *));
     int i = 0;
-    while (el_cond != NULL) {
-        switch (el_cond->type) {
+    while (el_cond != NULL)
+    {
+        switch (el_cond->type)
+        {
 
-            case TYPE_INT:
-                conds[i] = (char*) AK_malloc(MAX_VARCHAR_LENGTH * sizeof(char));
-                sprintf (conds[i], "%i", *((int *) el_cond->data));
-                strncat(record_cond, conds[i], strlen(conds[i]));
-                break;
-            default:
-                conds[i] = AK_check_attributes(el_cond->data);
-                strncat(record_cond, conds[i], strlen(el_cond->data));
-                break;
+        case TYPE_INT:
+            conds[i] = (char *)AK_malloc(MAX_VARCHAR_LENGTH * sizeof(char));
+            sprintf(conds[i], "%i", *((int *)el_cond->data));
+            strncat(record_cond, conds[i], strlen(conds[i]));
+            break;
+        default:
+            conds[i] = AK_check_attributes(el_cond->data);
+            strncat(record_cond, conds[i], strlen(el_cond->data));
+            break;
         }
         strncat(record_cond, "|", 1);
         numConds++;
@@ -252,26 +271,32 @@ int AK_check_redo_log_select(int command, struct list_node *condition, char *src
 
     int check_var;
     int j;
-    AK_redo_log* const redoLog = redo_log.ptr;
-    for(i = redoLog->number; i >= 0; i--) {
-        if(redoLog->command_recovery[i].operation == command){
-            if(strcmp(redoLog->command_recovery[i].table_name, srcTable) == 0)
+    AK_redo_log *const redoLog = redo_log.ptr;
+    for (i = redoLog->number; i >= 0; i--)
+    {
+        if (redoLog->command_recovery[i].operation == command)
+        {
+            if (strcmp(redoLog->command_recovery[i].table_name, srcTable) == 0)
             {
-                for(j=0; j < numConds-1; j++){
+                for (j = 0; j < numConds - 1; j++)
+                {
                     printf("AK_check_redolog: attrs -- %s, %s\n", redoLog->command_recovery[i].condition[j], conds[j]);
                     check_var = strcmp(redoLog->command_recovery[i].condition[j], conds[j]);
                     printf("AK_check_redolog: check_var -- %d\n", check_var);
-                    if(check_var != 0)
+                    if (check_var != 0)
                     {
                         printf("AK_check_redolog: Action mismatch\n");
                         break;
                     }
                 }
-                if(check_var == 0){
+                if (check_var == 0)
+                {
                     printf("AK_check_redolog: Action match -- \n");
                     return 1;
                 }
-            } else printf("AK_check_redolog: Action mismatch\n");
+            }
+            else
+                printf("AK_check_redolog: Action mismatch\n");
         }
     }
     printf("No such action found \n");
@@ -283,14 +308,21 @@ int AK_check_redo_log_select(int command, struct list_node *condition, char *src
  * @brief Function that prints out the content of redolog memory
  * @return No return value.
  */
-void AK_printout_redolog(){
+void AK_printout_redolog()
+{
     AK_PRO;
-    AK_redo_log* const redoLog = redo_log.ptr;
+    AK_redo_log *const redoLog = redo_log.ptr;
     int x = redoLog->number;
     int i = 0;
-    for (i = 0; i < x; i++){
-        printf("%d. %s %s %s\n", i, redoLog->command_recovery[i].table_name,
-                redoLog->command_recovery[i].operation, redoLog->command_recovery[i].arguments);
+    for (i = 0; i < x; i++)
+    {
+        printf("%d. %s %d", i, redoLog->command_recovery[i].table_name,
+               redoLog->command_recovery[i].operation);
+        for (int j = 0; j < NUM_ARGS; j++)
+        {
+            printf(" %s", redoLog->command_recovery[i].arguments[j]);
+        }
+        printf("\n");
     }
     AK_EPI;
 }
@@ -300,34 +332,43 @@ void AK_printout_redolog(){
  * @brief Function that checks if the attribute contains '|', and if it does it replaces it with "\|"
  * @return new attribute
  */
-char* AK_check_attributes(char *attributes){
+char *AK_check_attributes(char *attributes)
+{
     AK_PRO;
     int n = strlen(attributes);
 
-    if( attributes[n-1] == '\\' ){
-        if( n == MAX_VARCHAR_LENGTH )
-            attributes[n-1] = ' ';
+    if (attributes[n - 1] == '\\')
+    {
+        if (n == MAX_VARCHAR_LENGTH)
+            attributes[n - 1] = ' ';
         else
             attributes[n] = ' ';
     }
 
-    char* result = AK_malloc(MAX_VARCHAR_LENGTH * sizeof(char));
+    char *result = AK_malloc(MAX_VARCHAR_LENGTH * sizeof(char));
     int index = 0;
     int att_index = 0;
 
-    do{
-        if ( attributes[att_index] == '|' ){
-            if ( index + 2 <= MAX_VARCHAR_LENGTH ){
+    do
+    {
+        if (attributes[att_index] == '|')
+        {
+            if (index + 2 <= MAX_VARCHAR_LENGTH)
+            {
                 result[index++] = '\\';
                 result[index++] = '|';
-            } else {
+            }
+            else
+            {
                 break;
             }
-        } else {
+        }
+        else
+        {
             result[index++] = attributes[att_index];
         }
         att_index++;
-    } while ( att_index < n || index < MAX_VARCHAR_LENGTH);
+    } while (att_index < n || index < MAX_VARCHAR_LENGTH);
     AK_EPI;
     return result;
 }

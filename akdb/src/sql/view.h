@@ -32,11 +32,11 @@
  * @param name Name of the view
  * @return EXIT_ERROR if the name already exists or name
  */
-char* AK_check_view_name(char *name);
+char *AK_check_view_name(char *name);
 
 /**
  * @author Kresimir Ivkovic
- * @brief Function that adds a new view to the view table with the corresponding name and value (view query); 
+ * @brief Function that adds a new view to the view table with the corresponding name and value (view query);
  * set_id is optional, if it's not set, the system will determine the new id automatically
  * @param name name og the view
  * @param query query of the view
@@ -48,7 +48,7 @@ int AK_view_add(char *name, char *query, char *rel_exp, int set_id);
 
 /**
  * @author Kresimir Ivkovic
- * @brief Function that removes the view by its name by identifying the 
+ * @brief Function that removes the view by its name by identifying the
  * view's id and passing id to AK_view_remove_by_obj_id
  * @param name name of the view
  * @return Result of AK_view_remove_by_obj_id or EXIT_ERROR if no id is found
@@ -75,6 +75,8 @@ int AK_view_rename(char *name, char *new_name);
 int AK_view_change_query(char *name, char *query, char *rel_exp);
 TestResult AK_view_test();
 
-char* AK_get_view_query(char *name);
+char *AK_get_view_query(char *name);
+
+char *AK_get_relation_expression(char *view_name);
 
 #endif
