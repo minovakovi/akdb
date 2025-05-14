@@ -520,6 +520,7 @@ void AK_update(int addBlock, int addTd, char *tableName, char *attributeName, ch
     strcpy(inde, tableName);
     indexName = strcat(inde, attributeName);
     indexName = strcat(indexName, "_bmapIndex");
+    AK_header *AK_get_index_header(char *indexName);
 
     AK_header *temp_head = AK_get_index_header(indexName);
     num_attr = AK_num_index_attr(indexName);
