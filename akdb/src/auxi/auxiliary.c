@@ -31,11 +31,13 @@ int testLowArray[8];
  * @param int base mathematic base (e.g. 2, 10 etc.)
  * @return the number of digits for the given number
  */
-int AK_chars_num_from_number(int number, int base) {
+int AK_chars_num_from_number(int number, int base)
+{
   int len = 0;
   AK_PRO;
 
-  do {
+  do
+  {
     len++;
   } while ((double)(number /= base) > 0);
 
@@ -50,70 +52,86 @@ int AK_chars_num_from_number(int number, int base) {
  * @return EXIT_SUCCESS of the function (return type of argument as a value of
  * the integer) or EXIT_ERROR
  */
-char *AK_convert_type(char *arg_type) {
+char *AK_convert_type(char *arg_type)
+{
   AK_PRO;
-  if (arg_type == NULL) {
+  if (arg_type == NULL)
+  {
     AK_EPI;
     return "-1";
   }
-  if (strcmp(arg_type, "internal") == 0) {
+  if (strcmp(arg_type, "internal") == 0)
+  {
     AK_EPI;
     return "0";
   }
-  if (strcmp(arg_type, "int") == 0) {
+  if (strcmp(arg_type, "int") == 0)
+  {
     AK_EPI;
     return "1";
   }
-  if (strcmp(arg_type, "float") == 0) {
+  if (strcmp(arg_type, "float") == 0)
+  {
     AK_EPI;
     return "2";
   }
-  if (strcmp(arg_type, "number") == 0) {
+  if (strcmp(arg_type, "number") == 0)
+  {
     AK_EPI;
     return "3";
   }
-  if (strcmp(arg_type, "varchar") == 0) {
+  if (strcmp(arg_type, "varchar") == 0)
+  {
     AK_EPI;
     return "4";
   }
-  if (strcmp(arg_type, "date") == 0) {
+  if (strcmp(arg_type, "date") == 0)
+  {
     AK_EPI;
     return "5";
   }
-  if (strcmp(arg_type, "datetime") == 0) {
+  if (strcmp(arg_type, "datetime") == 0)
+  {
     AK_EPI;
     return "6";
   }
-  if (strcmp(arg_type, "time") == 0) {
+  if (strcmp(arg_type, "time") == 0)
+  {
     AK_EPI;
     return "7";
   }
-  if (strcmp(arg_type, "blob") == 0) {
+  if (strcmp(arg_type, "blob") == 0)
+  {
     AK_EPI;
     return "8";
   }
-  if (strcmp(arg_type, "bool") == 0) {
+  if (strcmp(arg_type, "bool") == 0)
+  {
     AK_EPI;
     return "9";
   }
-  if (strcmp(arg_type, "operand") == 0) {
+  if (strcmp(arg_type, "operand") == 0)
+  {
     AK_EPI;
     return "10";
   }
-  if (strcmp(arg_type, "operator") == 0) {
+  if (strcmp(arg_type, "operator") == 0)
+  {
     AK_EPI;
     return "11";
   }
-  if (strcmp(arg_type, "attribs") == 0) {
+  if (strcmp(arg_type, "attribs") == 0)
+  {
     AK_EPI;
     return "12";
   }
-  if (strcmp(arg_type, "condition") == 0) {
+  if (strcmp(arg_type, "condition") == 0)
+  {
     AK_EPI;
     return "13";
   }
   AK_EPI;
-  return EXIT_ERROR;
+  return NULL;
 }
 
 /**
@@ -125,9 +143,11 @@ char *AK_convert_type(char *arg_type) {
  * @return size of provided data type in bytes if the provided data type is
  * valid, else return 0
  */
-size_t AK_type_size(int iDB_type, char *szVarchar) {
+size_t AK_type_size(int iDB_type, char *szVarchar)
+{
   AK_PRO;
-  switch (iDB_type) {
+  switch (iDB_type)
+  {
   case TYPE_INTERNAL:
     AK_EPI;
     return sizeof(int);
@@ -177,7 +197,8 @@ size_t AK_type_size(int iDB_type, char *szVarchar) {
  * @param *b pointer of a value to compare
  * @return result of the comparison in line with strcmp function
  */
-int AK_strcmp(const void *a, const void *b) {
+int AK_strcmp(const void *a, const void *b)
+{
   const char **ia = (const char **)a;
   const char **ib = (const char **)b;
   AK_PRO;
@@ -192,7 +213,8 @@ int AK_strcmp(const void *a, const void *b) {
  * @return NO return value
  */
 
-void AK_Init_L3(struct list_node **L) {
+void AK_Init_L3(struct list_node **L)
+{
   AK_PRO;
   assert(L != NULL);
   (*L)->next = NULL;
@@ -206,9 +228,11 @@ void AK_Init_L3(struct list_node **L) {
  * @return first element of the list
  */
 
-struct list_node *AK_First_L2(struct list_node *L) {
+struct list_node *AK_First_L2(struct list_node *L)
+{
   AK_PRO;
-  if (L == NULL) {
+  if (L == NULL)
+  {
     AK_EPI;
     return NULL;
   }
@@ -223,18 +247,21 @@ struct list_node *AK_First_L2(struct list_node *L) {
  * @return last element of the list
  */
 
-struct list_node *AK_End_L2(struct list_node *L) {
+struct list_node *AK_End_L2(struct list_node *L)
+{
   AK_PRO;
   struct list_node *current;
   current = AK_First_L2(L);
 
-  if (current == NULL) {
+  if (current == NULL)
+  {
     AK_EPI;
     return NULL;
   }
 
   int counter = 0;
-  while (current->next != NULL) {
+  while (current->next != NULL)
+  {
     current = current->next;
     counter++;
     assert(counter < MAX_LOOP_ITERATIONS);
@@ -251,9 +278,11 @@ struct list_node *AK_End_L2(struct list_node *L) {
  * @return next element of the list
  */
 
-struct list_node *AK_Next_L2(struct list_node *current) {
+struct list_node *AK_Next_L2(struct list_node *current)
+{
   AK_PRO;
-  if (current == NULL) {
+  if (current == NULL)
+  {
     AK_EPI;
     return NULL;
   }
@@ -270,17 +299,20 @@ struct list_node *AK_Next_L2(struct list_node *current) {
  */
 
 struct list_node *AK_Previous_L2(struct list_node *current,
-                                 struct list_node *L) {
+                                 struct list_node *L)
+{
   AK_PRO;
 
-  if (current == NULL || current == L) {
+  if (current == NULL || current == L)
+  {
     AK_EPI;
     return NULL;
   }
 
   struct list_node *previous = L;
   int counter = 0;
-  while (previous->next != current) {
+  while (previous->next != current)
+  {
     previous = previous->next;
     counter++;
     assert(counter < MAX_LOOP_ITERATIONS);
@@ -297,7 +329,8 @@ struct list_node *AK_Previous_L2(struct list_node *current,
  * @return 1 if the list is empty, otherwise returns 0
  */
 
-unsigned int AK_IsEmpty_L2(struct list_node *L) {
+unsigned int AK_IsEmpty_L2(struct list_node *L)
+{
   AK_PRO;
   unsigned int ret;
   ret = (AK_First_L2(L) == NULL ? 1 : 0);
@@ -316,7 +349,8 @@ unsigned int AK_IsEmpty_L2(struct list_node *L) {
  */
 
 void AK_InsertBefore_L2(int type, char *data, int size,
-                        struct list_node **current, struct list_node **L) {
+                        struct list_node **current, struct list_node **L)
+{
   AK_PRO;
   struct list_node *new_elem;
 
@@ -326,7 +360,8 @@ void AK_InsertBefore_L2(int type, char *data, int size,
 
   memcpy(new_elem->data, data, MAX_VARCHAR_LENGTH);
 
-  if ((*current) == NULL) {
+  if ((*current) == NULL)
+  {
     (*L)->next = new_elem;
     new_elem->next = NULL;
     AK_EPI;
@@ -349,7 +384,8 @@ void AK_InsertBefore_L2(int type, char *data, int size,
  */
 
 void AK_InsertAfter_L2(int type, char *data, int size,
-                       struct list_node **current, struct list_node **L) {
+                       struct list_node **current, struct list_node **L)
+{
 
   AK_PRO;
   struct list_node *new_elem;
@@ -358,7 +394,8 @@ void AK_InsertAfter_L2(int type, char *data, int size,
   new_elem->size = size;
   new_elem->type = type;
   memcpy(new_elem->data, data, MAX_VARCHAR_LENGTH);
-  if ((*current) == NULL) {
+  if ((*current) == NULL)
+  {
     (*L)->next = new_elem;
     new_elem->next = NULL;
     AK_EPI;
@@ -378,7 +415,8 @@ void AK_InsertAfter_L2(int type, char *data, int size,
  * @return No return value
  */
 
-void AK_InsertAtBegin_L3(int type, char *data, int size, struct list_node *L) {
+void AK_InsertAtBegin_L3(int type, char *data, int size, struct list_node *L)
+{
   AK_PRO;
   assert(L != NULL);
 
@@ -398,7 +436,8 @@ void AK_InsertAtBegin_L3(int type, char *data, int size, struct list_node *L) {
  * @return No return value.
  */
 
-void AK_InsertAtEnd_L3(int type, char *data, int size, struct list_node *L) {
+void AK_InsertAtEnd_L3(int type, char *data, int size, struct list_node *L)
+{
   AK_PRO;
   assert(L != NULL);
   struct list_node *current;
@@ -417,9 +456,11 @@ void AK_InsertAtEnd_L3(int type, char *data, int size, struct list_node *L) {
  * @retrun No return value
  */
 
-void AK_Delete_L3(struct list_node **current, struct list_node **L) {
+void AK_Delete_L3(struct list_node **current, struct list_node **L)
+{
   AK_PRO;
-  if ((*current) == NULL || (*L) == NULL) {
+  if ((*current) == NULL || (*L) == NULL)
+  {
     AK_EPI;
     return;
   }
@@ -438,17 +479,20 @@ void AK_Delete_L3(struct list_node **current, struct list_node **L) {
  * @return No return value
  */
 
-void AK_DeleteAll_L3(struct list_node **L) {
+void AK_DeleteAll_L3(struct list_node **L)
+{
   AK_PRO;
 
   struct list_node *current;
-  if ((*L) == NULL) {
+  if ((*L) == NULL)
+  {
     AK_EPI;
     return;
   }
 
   int counter = 0;
-  while ((current = AK_First_L2(*L)) != NULL) {
+  while ((current = AK_First_L2(*L)) != NULL)
+  {
     (*L)->next = current->next;
     AK_free(current);
     counter++;
@@ -465,7 +509,8 @@ void AK_DeleteAll_L3(struct list_node **L) {
  * @return Size of the list
  */
 
-int AK_Size_L2(struct list_node *L) {
+int AK_Size_L2(struct list_node *L)
+{
   AK_PRO;
 
   int size = 0;
@@ -474,7 +519,8 @@ int AK_Size_L2(struct list_node *L) {
   current = AK_First_L2(L);
 
   int counter = 0;
-  while (current) {
+  while (current)
+  {
     size++;
     current = AK_Next_L2(current);
     counter++;
@@ -492,11 +538,13 @@ int AK_Size_L2(struct list_node *L) {
  * @return data from the list element
  */
 
-char *AK_Retrieve_L2(struct list_node *current, struct list_node *L) {
+char *AK_Retrieve_L2(struct list_node *current, struct list_node *L)
+{
   char *data;
   AK_PRO;
 
-  if (current == NULL || L == NULL) {
+  if (current == NULL || L == NULL)
+  {
     return NULL;
   }
 
@@ -553,15 +601,18 @@ int AK_GetSize_L(AK_list_elem current, AK_list *L) {
 
  */
 
-struct list_node *AK_GetNth_L2(int pos, struct list_node *row) {
+struct list_node *AK_GetNth_L2(int pos, struct list_node *row)
+{
   AK_PRO;
   int i;
   struct list_node *temp_elem;
 
   assert(pos > -1);
   temp_elem = AK_First_L2(row);
-  for (i = 1; temp_elem != NULL; ++i) {
-    if (i == pos) {
+  for (i = 1; temp_elem != NULL; ++i)
+  {
+    if (i == pos)
+    {
       AK_EPI;
       return temp_elem;
     }
@@ -601,7 +652,8 @@ int AK_Get_Position_Of_Element(AK_list_elem SearchedElement, AK_list *L) {
  * @param arr array of chars to perform permutation on
  * @return char pointer to an array of pointers pointing to permuted char arrays
  */
-char *AK_get_array_perms(char *arr) {
+char *AK_get_array_perms(char *arr)
+{
   int div, num_perms = 1;
   int next_perm, next_chr;
   int len_arr = strlen(arr);
@@ -612,13 +664,15 @@ char *AK_get_array_perms(char *arr) {
 
   char *res_perm, *perms[num_perms];
 
-  for (next_perm = 0; next_perm < num_perms; next_perm++) {
+  for (next_perm = 0; next_perm < num_perms; next_perm++)
+  {
     char *perm = (char *)AK_calloc(len_arr, sizeof(char));
     memcpy(perm, arr, len_arr);
 
     res_perm = (char *)AK_calloc(len_arr, sizeof(char));
 
-    for (next_chr = len_arr, div = num_perms; next_chr > 0; next_chr--) {
+    for (next_chr = len_arr, div = num_perms; next_chr > 0; next_chr--)
+    {
       div /= next_chr;
       int index = (next_perm / div) % next_chr;
       // printf("%c", perm[index] );
@@ -648,13 +702,16 @@ char *AK_get_array_perms(char *arr) {
  * @param graphRoot root node of the graph structure
  * @return found graph nod or null
  */
-AK_vertex AK_search_vertex(int id) {
+AK_vertex AK_search_vertex(int id)
+{
   AK_vertex tmp;
   AK_PRO;
   tmp = &G;
 
-  while (tmp->nextVertex != NULL) {
-    if (tmp->nextVertex->vertexId == id) {
+  while (tmp->nextVertex != NULL)
+  {
+    if (tmp->nextVertex->vertexId == id)
+    {
       AK_EPI;
       return tmp->nextVertex;
     }
@@ -669,13 +726,15 @@ AK_vertex AK_search_vertex(int id) {
  * @param graphRoot oot node of the graph structure
  * @return empty link for a new graph node
  */
-AK_vertex AK_search_empty_link() {
+AK_vertex AK_search_empty_link()
+{
 
   AK_vertex tmp;
   AK_PRO;
   tmp = &G;
 
-  while (tmp->nextVertex != NULL) {
+  while (tmp->nextVertex != NULL)
+  {
     tmp = tmp->nextVertex;
   }
   AK_EPI;
@@ -689,7 +748,8 @@ AK_vertex AK_search_empty_link() {
  * @param graphRoot root node of the graph structure
  * @return pointer to the newly created node
  */
-AK_vertex AK_add_vertex(int id) {
+AK_vertex AK_add_vertex(int id)
+{
   AK_vertex node;
   AK_PRO;
   node = (AK_vertex)AK_malloc(sizeof(struct Vertex));
@@ -709,7 +769,8 @@ AK_vertex AK_add_vertex(int id) {
  * @param succesorOf source of the newly created edge
  * @return pointer to the newly created edge
  */
-AK_succesor AK_add_succesor(int succesorId, int succesorOf) {
+AK_succesor AK_add_succesor(int succesorId, int succesorOf)
+{
   AK_succesor edge;
   AK_vertex root;
   AK_succesor suc;
@@ -719,10 +780,14 @@ AK_succesor AK_add_succesor(int succesorId, int succesorOf) {
   root = AK_search_vertex(succesorOf);
   suc = root->nextSuccesor;
 
-  if (root->nextSuccesor == NULL) {
+  if (root->nextSuccesor == NULL)
+  {
     root->nextSuccesor = edge;
-  } else {
-    while (suc->nextSuccesor != NULL) {
+  }
+  else
+  {
+    while (suc->nextSuccesor != NULL)
+    {
       suc = suc->nextSuccesor;
     }
     suc->nextSuccesor = edge;
@@ -739,13 +804,15 @@ AK_succesor AK_add_succesor(int succesorId, int succesorOf) {
  * @param stackRoot root node of the selected stack
  * @return pointer to the empty link
  */
-AK_stack AK_search_empty_stack_link(AK_stack stackRoot) {
+AK_stack AK_search_empty_stack_link(AK_stack stackRoot)
+{
 
   AK_stack tmp;
   AK_PRO;
   tmp = stackRoot;
 
-  while (tmp->nextElement != NULL) {
+  while (tmp->nextElement != NULL)
+  {
     tmp = tmp->nextElement;
   }
   AK_EPI;
@@ -757,7 +824,8 @@ AK_stack AK_search_empty_stack_link(AK_stack stackRoot) {
  * @param id of the element that is being added to the stack
  * @return pointer to the newly added stack node
  */
-AK_stack AK_push_to_stack(int id) {
+AK_stack AK_push_to_stack(int id)
+{
 
   AK_stack node;
   AK_PRO;
@@ -775,7 +843,8 @@ AK_stack AK_push_to_stack(int id) {
  * @brief Pops a entry to the stack
  * @return pointer to the popped stack node
  */
-AK_stack AK_pop_from_stack() {
+AK_stack AK_pop_from_stack()
+{
 
   AK_stack node;
   AK_stack tmp;
@@ -783,11 +852,13 @@ AK_stack AK_pop_from_stack() {
   node = AK_search_empty_stack_link(&S);
   tmp = &S;
 
-  if (node == tmp) {
+  if (node == tmp)
+  {
     AK_EPI;
     return NULL;
   }
-  while (tmp->nextElement != node) {
+  while (tmp->nextElement != node)
+  {
     tmp = tmp->nextElement;
   }
   tmp->nextElement = NULL;
@@ -800,14 +871,17 @@ AK_stack AK_pop_from_stack() {
  * @param id of the node that needs to be found in the stack
  * @return pointer to the found stack node
  */
-AK_stack AK_search_in_stack(int id) {
+AK_stack AK_search_in_stack(int id)
+{
 
   AK_stack tmp;
   AK_PRO;
   tmp = &S;
 
-  while (tmp->nextElement != NULL) {
-    if (tmp->nextElement->link->vertexId == id) {
+  while (tmp->nextElement != NULL)
+  {
+    if (tmp->nextElement->link->vertexId == id)
+    {
       AK_EPI;
       return tmp->nextElement;
     }
@@ -817,7 +891,8 @@ AK_stack AK_search_in_stack(int id) {
   return NULL;
 }
 
-int MIN(int X, int Y) {
+int MIN(int X, int Y)
+{
   int ret;
   AK_PRO;
   ret = X > Y ? Y : X;
@@ -829,7 +904,8 @@ int MIN(int X, int Y) {
  * @author Blaž Rajič
  * @brief Function for creating graph for testing tarjan algorithm
  */
-void AK_define_tarjan_graph() {
+void AK_define_tarjan_graph()
+{
   AK_vertex node0;
   AK_vertex node1;
   AK_vertex node2;
@@ -896,7 +972,8 @@ void AK_define_tarjan_graph() {
  * @param id of the element on which the algorithm looks for an id of a strongly
  * connected component
  */
-void AK_tarjan(int id) {
+void AK_tarjan(int id)
+{
   AK_vertex node;
   AK_succesor succ;
   AK_PRO;
@@ -908,27 +985,33 @@ void AK_tarjan(int id) {
 
   AK_push_to_stack(id);
 
-  while (succ != NULL) {
+  while (succ != NULL)
+  {
 
-    if (succ->link->index == -1) {
+    if (succ->link->index == -1)
+    {
 
       AK_tarjan(succ->link->vertexId);
       node->lowLink = MIN(node->lowLink, succ->link->lowLink);
-
-    } else if (AK_search_in_stack(succ->link->vertexId) != NULL) {
+    }
+    else if (AK_search_in_stack(succ->link->vertexId) != NULL)
+    {
       node->lowLink = MIN(node->lowLink, succ->link->index);
     }
 
     succ = succ->nextSuccesor;
   }
 
-  if (node->lowLink == node->index) {
+  if (node->lowLink == node->index)
+  {
     AK_vertex loop = NULL;
     AK_stack elem = AK_pop_from_stack();
 
-    if (elem->link != node) {
+    if (elem->link != node)
+    {
       printf("\nStrongy connected component detected. Edges:\n");
-      do {
+      do
+      {
         if (elem == NULL)
           break;
         loop = elem->link;
@@ -949,7 +1032,8 @@ void AK_tarjan(int id) {
  * @return No return value
  */
 
-TestResult AK_tarjan_test() {
+TestResult AK_tarjan_test()
+{
   AK_vertex root;
   AK_vertex ro_ot;
   AK_vertex loop;
@@ -982,17 +1066,21 @@ TestResult AK_tarjan_test() {
   printf("             │7│◄────────┤6│ \n");
   printf("             └─┘         └─┘ \n");
 
-  for (int i = 0; i < 5; i++) {
+  for (int i = 0; i < 5; i++)
+  {
     loop = AK_search_vertex(i);
-    if (loop->index == -1) {
+    if (loop->index == -1)
+    {
       AK_tarjan(loop->vertexId);
     }
   }
 
   int testingArray[8] = {0, 0, 0, 3,
                          3, 5, 5, 5}; // values that are expected as end result
-  for (int i = 0; i < 8; i++) {
-    if (testLowArray[i] != testingArray[i]) {
+  for (int i = 0; i < 8; i++)
+  {
+    if (testLowArray[i] != testingArray[i])
+    {
       printf("\nFAILURE\n");
       AK_EPI;
       return TEST_result(0, 1);
@@ -1009,14 +1097,16 @@ TestResult AK_tarjan_test() {
  *        pointer that must later be passed on to AK_destroy_critical_section.
  * @return Initialized synchronization object
  */
-AK_synchronization_info *AK_init_critical_section() {
+AK_synchronization_info *AK_init_critical_section()
+{
   AK_synchronization_info *info = AK_calloc(1, sizeof(AK_synchronization_info));
   if (info == NULL)
     return NULL;
 
 #ifdef _WIN32
   if (InitializeCriticalSectionAndSpinCount(&info->critical_section,
-                                            0x00000400) == 0) {
+                                            0x00000400) == 0)
+  {
     free(info);
     return NULL;
   }
@@ -1036,7 +1126,8 @@ AK_synchronization_info *AK_init_critical_section() {
  *        frees the pointer.
  * @return void
  */
-void AK_destroy_critical_section(AK_synchronization_info *info) {
+void AK_destroy_critical_section(AK_synchronization_info *info)
+{
   if (info == NULL)
     return;
   if (info->init != 1)
@@ -1057,7 +1148,8 @@ void AK_destroy_critical_section(AK_synchronization_info *info) {
  * @brief Enters a critical section.
  * @return void
  */
-void AK_enter_critical_section(AK_synchronization_info *info) {
+void AK_enter_critical_section(AK_synchronization_info *info)
+{
   assert(info != NULL && info->init == 1);
 #ifdef __linux__
   pthread_mutex_lock(&info->mutex);
@@ -1082,7 +1174,8 @@ void AK_enter_critical_section(AK_synchronization_info *info) {
  * @brief Leaves a critical section
  * @return void
  */
-void AK_leave_critical_section(AK_synchronization_info *info) {
+void AK_leave_critical_section(AK_synchronization_info *info)
+{
   assert(info != NULL && info->init == 1);
   info->ready = 1;
 }

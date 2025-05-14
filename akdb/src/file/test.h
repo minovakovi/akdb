@@ -6,12 +6,12 @@
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
  * (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU Library General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor Boston, MA 02110-1301,  USA
@@ -29,7 +29,7 @@
  * @param tblName name of the table for which the attribute types will be returned
  */
 
-char* AK_get_table_atribute_types(char* tblName);
+char *AK_get_table_atribute_types(char *tblName);
 
 /**
  * @author Luka Rajcevic
@@ -40,8 +40,7 @@ char* AK_get_table_atribute_types(char* tblName);
  * @param _type - array of attribute types (eg. TYPE_INT, TYPE_VARCHAR, etc.)
  * @return 1 if ok, 0 otherwise
  */
-int create_header_test(char* tbl_name, char** attr_name, int _num, int* _type);
-
+int create_header_test(char *tbl_name, char **attr_name, int _num, int *_type);
 
 /**
  * @author Luka Rajcevic
@@ -53,7 +52,7 @@ int create_header_test(char* tbl_name, char** attr_name, int _num, int* _type);
  * @param _type - array of attribute types (eg. TYPE_INT, TYPE_VARCHAR, etc.)
  * @return EXIT_SUCCESS if ok, EXIT_ERROR otherwise
  */
-int insert_data_test(char* tbl_name, char** attr_name, char** attr_value, int _num, int* _type);
+int insert_data_test(char *tbl_name, char **attr_name, char **attr_value, int _num, int *_type);
 
 /**
  * @author Luka Rajcevic
@@ -66,7 +65,7 @@ int insert_data_test(char* tbl_name, char** attr_name, char** attr_value, int _n
  * @return EXIT_SUCCESS if ok, EXIT_ERROR otherwise
  *
  */
-int selection_test(char* src_table, char* dest_table, char** sel_query, int _num, int* _type);
+int selection_test(char *src_table, char *dest_table, char **sel_query, int _num, int *_type);
 
 /**
  * @author Luka Rajcevic
@@ -75,7 +74,7 @@ int selection_test(char* src_table, char* dest_table, char** sel_query, int _num
  * @param num - 0 based index of column
  * @param tbl - name of the table
  */
-int get_column_test(int num, char* tbl);
+int get_column_test(int num, char *tbl);
 
 /**
  * @author Luka Rajcevic
@@ -85,7 +84,7 @@ int get_column_test(int num, char* tbl);
  * @param tbl - name of the table
  */
 
-int get_row_test(int num, char* tbl);
+int get_row_test(int num, char *tbl);
 
 /**
  * @author Dino Laktašić
@@ -94,5 +93,12 @@ int get_row_test(int num, char* tbl);
  */
 void AK_create_test_tables();
 
-#endif
+void AK_create_test_table_student(void);
+void AK_create_test_table_professor(void);
+void AK_create_test_table_professor2(void);
+void AK_create_test_table_assistant(void);
+void AK_create_test_table_employee(void);
+void AK_create_test_table_department(void);
+void AK_create_test_table_course(void);
 
+#endif

@@ -46,7 +46,7 @@ void AK_create_block_header(int old_block, char *dstTable, struct list_node *att
     int new_head = 0; //counter of the new headers created for the projection table
     int a_type;
     int b_type;
-    int header_type = NULL;
+    int header_type = 0;
 
    
     //iterates through header attributes and determinates if header already exists, if so copy the header, else create new header

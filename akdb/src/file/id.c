@@ -24,44 +24,49 @@
  * @brief Function that fetches unique ID for any object, stored in a sequence
  * @return objectID
  */
-int AK_get_id() {
+int AK_get_id()
+{
     int obj_id = 0;
-    char name = "objectID";
+    char *name = "objectID";
     int current_value;
     AK_PRO;
-    struct list_node *row_root = (struct list_node *) AK_malloc(sizeof (struct list_node));
-    AK_Init_L3(&row_root); 
-    
+    struct list_node *row_root = (struct list_node *)AK_malloc(sizeof(struct list_node));
+    AK_Init_L3(&row_root);
+
     /* Assumption was that objectID is always in the first row of table AK_sequence. If in future, for some reason, that won't be the case
-     * then check all rows of table AK_sequence (for(i=0; i<num_rec; i++)) and update a row which contains objectID (AK_GetNth_L2(2, row), value in column 
+     * then check all rows of table AK_sequence (for(i=0; i<num_rec; i++)) and update a row which contains objectID (AK_GetNth_L2(2, row), value in column
      * name must be objectID) or create a row which will contain objectID */
-    
+
     int num_rec = AK_get_num_records("AK_sequence");
-    
-    if (num_rec > 0) {
-	    // Existing row found for AK_sequence table
+
+    if (num_rec > 0)
+    {
+        // Existing row found for AK_sequence table
         struct list_node *row = AK_get_row(0, "AK_sequence");
         struct list_node *attribute = AK_GetNth_L2(3, row);
         memcpy(&current_value, &attribute->data, attribute->size);
         AK_DeleteAll_L3(&row);
-        
+
         current_value++;
-        
-        //TODO: this is a temporary solution that should be fixed after the memory management is fixed
-		AK_Update_Existing_Element(TYPE_VARCHAR, &name, "AK_sequence", "name", row_root);
+
+        // TODO: this is a temporary solution that should be fixed after the memory management is fixed
+        AK_Update_Existing_Element(TYPE_VARCHAR, &name, "AK_sequence", "name", row_root);
         AK_Insert_New_Element(TYPE_VARCHAR, &name, "AK_sequence", "name", row_root);
         AK_Insert_New_Element(TYPE_INT, &current_value, "AK_sequence", "current_value", row_root);
         int result = AK_update_row(row_root);
         AK_DeleteAll_L3(&row_root);
-        
-        if (result != EXIT_SUCCESS) {
+
+        if (result != EXIT_SUCCESS)
+        {
             AK_EPI;
             return EXIT_ERROR;
         }
         AK_EPI;
         return current_value;
-    } else {
-	    // No existing rows found for AK_sequence table, creating new row
+    }
+    else
+    {
+        // No existing rows found for AK_sequence table, creating new row
         AK_Insert_New_Element(TYPE_INT, &obj_id, "AK_sequence", "obj_id", row_root);
         AK_Insert_New_Element(TYPE_VARCHAR, &name, "AK_sequence", "name", row_root);
         current_value = ID_START_VALUE;
@@ -74,7 +79,7 @@ int AK_get_id() {
         return current_value;
     }
     AK_EPI;
-    //return 100;
+    // return 100;
 }
 /**
  * @author Lovro Predovan, updated by Jakov Gatarić
@@ -83,22 +88,26 @@ int AK_get_id() {
  * @param tableName The name of the object for which the ID is going to be fetched.
  * @return The objectID in string (char) format. If no matching tableName is found, it returns 0.
  */
-char AK_get_table_id(char *tableName) {
+char *AK_get_table_id(char *tableName)
+{
     AK_PRO;
     char *table = "AK_relation";
-    char result = 0;
+    char *result = 0;
 
     int num_rows = AK_get_num_records(table);
     int rowIndex;
 
-    if (num_rows == 0) {
+    if (num_rows == 0)
+    {
         return result;
     }
     // Iterate over the rows of the "AK_relation" table to find a matching tableName.
-    for (rowIndex = 0; rowIndex < num_rows; rowIndex++) {
+    for (rowIndex = 0; rowIndex < num_rows; rowIndex++)
+    {
         struct list_node *el;
         el = AK_get_tuple(rowIndex, 1, table);
-        if (strcmp(tableName, el->data) == 0) {
+        if (strcmp(tableName, el->data) == 0)
+        {
             result = AK_tuple_to_string(AK_get_tuple(rowIndex, 0, table));
             break;
         }
@@ -112,7 +121,8 @@ char AK_get_table_id(char *tableName) {
  * @brief Function for testing getting ID's
  * @return No return value
  */
-TestResult AK_id_test() {
+TestResult AK_id_test()
+{
     AK_PRO;
     int result;
     int failed = 0;
@@ -120,18 +130,24 @@ TestResult AK_id_test() {
     printf("\nCurrent value of objectID (depends on number of AK_get_id() calls (when objects are created...) before call of AK_id_test()):\n\n");
     AK_print_table("AK_sequence");
     result = AK_get_id();
-    if (result == EXIT_ERROR) {
+    if (result == EXIT_ERROR)
+    {
         failed++;
-    } else {
+    }
+    else
+    {
         success++;
     }
 
     printf("\nIncremented value of objectID:\n\n");
     AK_print_table("AK_sequence");
     result = AK_get_id();
-    if (result == EXIT_ERROR) {
+    if (result == EXIT_ERROR)
+    {
         failed++;
-    } else {
+    }
+    else
+    {
         success++;
     }
     printf("\nIncremented value of objectID:\n\n");

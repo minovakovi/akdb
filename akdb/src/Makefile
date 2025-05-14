@@ -4,6 +4,10 @@ DEBUG = -g
 CFLAGS = $(DEBUG) -c
 LDFLAGS = -lssl -lcrypto
 
+CFLAGS += -I/opt/homebrew/opt/openssl/include
+LDFLAGS += -L/opt/homebrew/opt/openssl/lib
+CFLAGS += -I.
+
 DISKTARGETS = dm/dbman.o
 MEMORYTARGETS = mm/memoman.o
 FILETARGETS = file/files.o file/fileio.o file/filesearch.o file/filesort.o file/idx/index.o file/idx/btree.o file/idx/hash.o file/idx/bitmap.o file/table.o file/blobs.o

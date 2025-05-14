@@ -27,11 +27,15 @@
 
 /**
  * @author Nenad Makar, updated by Mislav Jurinić
- * @brief Function that checks if constraint name would be unique in database 
+ * @brief Function that checks if constraint name would be unique in database
  * @param char constraintName name which you want to give to constraint which you are trying to create
  * @return EXIT_ERROR or EXIT_SUCCESS
  **/
 int AK_check_constraint_name(char *constraintName, char *constraintTable);
+
+int AK_set_constraint_unique(char *tableName, char *attributeName, char *constraintName);
+int AK_delete_constraint_unique(char *tableName, char *constraintName);
+
 TestResult AK_constraint_names_test();
 
 #endif
