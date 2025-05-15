@@ -445,9 +445,6 @@ int AK_delete_constraint_unique(char* tableName, char* constraintName){
   * @brief Function for testing UNIQUE constraint
   * @return No return value
   */
-
-
-
 TestResult AK_unique_test(void) {
     AK_PRO;
     int passed = 0, failed = 0;
@@ -523,7 +520,7 @@ TestResult AK_unique_test(void) {
         } else if (t->op == DEL) {
             printf("Deleting constraint %s...\n", t->cn);
             res = AK_delete_constraint_unique((char *)t->tbl, (char *)t->cn);
-        } else {
+        } else { //DEL_ALL
             printf("\n============== Running Test DELETE ==============\n");
             printf("\nTrying to set delete all existing UNIQUE constraints ...\n\n");
             int d1 = AK_delete_constraint_unique("AK_constraints_unique", cons3);
@@ -536,7 +533,10 @@ TestResult AK_unique_test(void) {
             int d8 = AK_delete_constraint_unique("AK_constraints_unique", cons7);
             int d9 = AK_delete_constraint_unique("AK_constraints_unique", cons8);
             int d10= AK_delete_constraint_unique("AK_constraints_unique", cons9);
-            if (d1 == EXIT_SUCCESS && d2 == EXIT_SUCCESS && d3 == EXIT_SUCCESS && d4 == EXIT_SUCCESS) {
+            if (d1==EXIT_SUCCESS && d2==EXIT_SUCCESS && d3==EXIT_SUCCESS &&
+                d4==EXIT_SUCCESS && d5==EXIT_SUCCESS && d6==EXIT_SUCCESS &&
+                d7==EXIT_SUCCESS && d8==EXIT_SUCCESS && d9==EXIT_SUCCESS &&
+                d10==EXIT_SUCCESS) {
                 passed++;
                 printf("\nSUCCESS\n\nAll existing UNIQUE constraints deleted successfully\n");
                 res = EXIT_SUCCESS;
