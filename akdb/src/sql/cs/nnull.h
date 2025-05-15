@@ -1,5 +1,5 @@
 /**
-@file nnull.h Header file that provides functions and defines for not null constraint
+ * @file nnull.h Header file that provides functions and defines for NOT NULL constraint management
  */
 /*
  * This program is free software; you can redistribute it and/or modify
@@ -26,46 +26,73 @@
 #include "../../auxi/mempro.h"
 #include "constraint_names.h"
 
-
 /**
- * @author Saša Vukšić, updated by Nenad Makar
- * @brief Function that sets NOT NULL constraint on an attribute
- * @param char* tableName name of table
- * @param char* attName name of attribute
- * @param char* constraintName name of constraint
- * @return EXIT_ERROR or EXIT_SUCCESS
- **/
+ * @author Saša Vukšić, updated by Nenad Makar, updated by Vilim Trakoštanec
+ * @brief Creates a new NOT NULL constraint on a table column
+ * @details Verifies that no NULL values exist in the column and that the constraint name is unique
+ * before creating the constraint. Performs necessary validation to ensure data integrity.
+ * @param tableName name of table to add constraint to
+ * @param attName name of attribute (column) to constrain
+ * @param constraintName unique name for the new constraint
+ * @return EXIT_SUCCESS if constraint is created successfully, EXIT_ERROR if:
+ *         - Any parameter is NULL
+ *         - Constraint already exists on the attribute
+ *         - Column contains NULL values
+ *         - Constraint name is not unique
+ */
 int AK_set_constraint_not_null(char* tableName, char* attName, char* constraintName);
 
 /**
- * @author Saša Vukšić, updated by Nenad Makar
- * @brief Function checks if NOT NULL constraint is already set 
- * @param char* tableName name of table
- * @param char* attName name of attribute
- * @param char* newValue new value
- * @return EXIT_ERROR or EXIT_SUCCESS
- **/
+ * @author Saša Vukšić, updated by Nenad Makar, updated by Vilim Trakoštanec
+ * @brief Validates if a NOT NULL constraint can be created
+ * @details Checks two conditions:
+ *          1. No NULL values exist in the specified column
+ *          2. The constraint name is unique in the system
+ * @param tableName name of table to check
+ * @param attName name of attribute to check
+ * @param constraintName name of constraint to validate
+ * @return EXIT_SUCCESS if constraint can be created, EXIT_ERROR if:
+ *         - Any parameter is NULL
+ *         - Column contains NULL values
+ *         - Constraint name already exists
+ */
+int AK_check_constraint_not_null(char* tableName, char* attName, char* constraintName);
+
+/**
+ * @author Saša Vukšić, updated by Nenad Makar, updated by Vilim Trakoštanec
+ * @brief Checks if a NOT NULL constraint already exists on a column
+ * @details Searches the constraint system table for an existing NOT NULL constraint
+ * on the specified table and attribute combination.
+ * @param tableName name of table to check
+ * @param attName name of attribute to check
+ * @param newValue optional parameter (can be NULL) for future constraint modifications
+ * @return EXIT_SUCCESS if no constraint exists, EXIT_ERROR if:
+ *         - tableName or attName is NULL
+ *         - Constraint already exists on the specified column
+ */
 int AK_read_constraint_not_null(char* tableName, char* attName, char* newValue);
 
 /**
- * @author Saša Vukšić, updated by Nenad Makar
- * @brief Function that checks if constraint name is unique and in violation of NOT NULL constraint
- * @param char* tableName name of table
- * @param char* attName name of attribute
- * @param char* constraintName name of constraint
- * @return EXIT_ERROR or EXIT_SUCCESS
- **/
-int AK_check_constraint_not_null(char* tableName, char* attName, char* newValue);
-
-/**
- * @author Maja Vračan
- * @brief Function for deleting specific not null constraint
- * @param tableName name of table on which constraint refers
- * @param attName name of attribute on which constraint is declared
- * @param constraintName name of constraint 
- * @return EXIT_SUCCESS when constraint is deleted, else EXIT_ERROR
+ * @author Bruno Pilošta, updated by Vilim Trakoštanec
+ * @brief Removes a NOT NULL constraint from a table
+ * @details Searches for and removes the specified constraint from the system table.
+ * Verifies the constraint exists before attempting deletion.
+ * @param tableName name of table containing the constraint
+ * @param constraintName name of constraint to delete
+ * @return EXIT_SUCCESS if constraint is deleted successfully, EXIT_ERROR if:
+ *         - Any parameter is NULL
+ *         - Constraint does not exist
+ *         - Deletion operation fails
  */
 int AK_delete_constraint_not_null(char* tableName, char* constraintName);
+
+/**
+ * @author Saša Vukšić, updated by Nenad Makar, updated by Tea Jelavić, updated by Vilim Trakoštanec
+ * @brief Tests the NOT NULL constraint functionality
+ * @details Runs a comprehensive suite of tests for creating, checking, and deleting
+ * NOT NULL constraints. Includes cleanup of test data.
+ * @return TestResult structure containing the number of passed and failed tests
+ */
 TestResult AK_nnull_constraint_test();
 
 #endif
