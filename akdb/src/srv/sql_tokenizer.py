@@ -1,6 +1,6 @@
 # @file sql_tokenizer.py - Parsing commands
 
-from pyparsing import *
+import pyparsing
 import re
 
 
