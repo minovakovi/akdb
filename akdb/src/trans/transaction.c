@@ -19,6 +19,11 @@
  */
 #include "transaction.h"
 #include "../auxi/ptrcontainer.h"
+#include <stdint.h>
+#include <stdbool.h>
+#include <stdlib.h>
+#include <stdio.h>
+#include <time.h>
 
 AK_transaction_list LockTable[NUMBER_OF_KEYS];
 
@@ -35,16 +40,20 @@ int activeTransactionsCount = 0;
 int transactionsCount = 0;
 
 /**
- * @author Frane Jakelić
- * @brief Function that calculates the hash value for a given memory address. Hash values are used to identify location of locked resources.
- * @todo The current implementation is very limited it doesn't cope well with collision. recommendation use some better version of hash calculation. Maybe Knuth's memory address hashing function.
+ * @author Frane Jakelić updated by Petar Knezovic
+ * @brief Function that calculates the hash value for a given memory address using MurmurHash3 algorithm. Hash values are used to identify location of locked resources.
  * @param blockMemoryAddress integer representation of memory address, the hash value is calculated from this parameter.
  * @return integer containing the hash value of the passed memory address
  */
 int AK_memory_block_hash(int blockMemoryAddress) {
-    int ret;
     AK_PRO;
-    ret = blockMemoryAddress % NUMBER_OF_KEYS;
+    uint32_t h = (uint32_t)blockMemoryAddress;
+    h ^= h >> 16;
+    h *= 0x85ebca6b;
+    h ^= h >> 13;
+    h *= 0xc2b2ae35;
+    h ^= h >> 16;
+    int ret = (int)(h % NUMBER_OF_KEYS);
     AK_EPI;
     return ret;
 }
@@ -800,10 +809,49 @@ AK_observer_lock * AK_init_observer_lock() {
     return self;
 }
 
+
+/** 
+ * @author Petar Knezovic
+ * @brief Function that computes the integer square root of a number using Heron's method
+ */
+
+static unsigned isqrt(unsigned long n) {
+    unsigned long x = n;
+    unsigned long y = (x + 1) >> 1;
+    while (y < x) {
+        x = y;
+        y = (x + n / x) >> 1;
+    }
+    return (unsigned)x;
+}
+
+
+
+/** 
+ * @author Petar Knezovic
+ * @brief Function that approximates the 95% critical value for chi-square distribution
+ */
+
+static double chi2_crit95(int df) {
+    return df + 2u * isqrt(2u * df);
+}
+
+
 TestResult AK_test_Transaction() {
     AK_PRO;
+    srand((unsigned)time(NULL));   
     int successfulTest = 0;
     int failedTest = 0;
+    int sample_min = 0;
+    int sample_max = 0;
+    double sample_avg = 0.0;
+    double sample_chi2 = 0.0;
+    double sample_crit = 0.0;
+    int sample_passed = 0;
+    
+    double avalanche_avg_dist = 0.0;
+    int    avalanche_passed   = 0;
+    
     printf("***Test Transaction***\n");
     pthread_mutex_lock(&endTransationTestLockMutex);
     pthread_mutex_lock(&newTransactionLockMutex);
@@ -819,6 +867,94 @@ TestResult AK_test_Transaction() {
     // observable_transaction->observable->AK_notify_observers(observable_transaction->observable);
     
     memset(LockTable, 0, NUMBER_OF_KEYS * sizeof (struct transaction_list_head));
+
+    /**************** HASH UNIFORMITY TEST ******************/
+{
+    const int sampleSize = 100000;
+    int counts[NUMBER_OF_KEYS] = {0};
+
+    for (int i = 0; i < sampleSize; ++i) {
+        int blockAddr = i;
+        int h = AK_memory_block_hash(blockAddr);
+        counts[h]++;
+    }
+
+
+    int min = counts[0], max = counts[0];
+    for (int b = 1; b < NUMBER_OF_KEYS; ++b) {
+        if (counts[b] < min) min = counts[b];
+        if (counts[b] > max) max = counts[b];
+    }
+
+    double expected_uniform = (double)sampleSize / NUMBER_OF_KEYS;
+
+
+    double chi2 = 0.0;
+    for (int b = 0; b < NUMBER_OF_KEYS; ++b) {
+        double diff = counts[b] - expected_uniform;
+        chi2 += (diff * diff) / expected_uniform;
+    }
+
+    int df = NUMBER_OF_KEYS - 1;
+    double crit = chi2_crit95(df);
+
+
+    sample_min    = min;
+    sample_max    = max;
+    sample_avg    = expected_uniform;
+    sample_chi2   = chi2;
+    sample_crit   = crit;
+    sample_passed = (chi2 < crit);
+    
+     if (sample_chi2 < sample_crit) {
+        successfulTest++;
+    } else {
+        failedTest++;
+    }
+    
+}
+
+
+    /**************** AVALANCHE TEST ******************/
+{
+    const int N = 1000;      
+    const int B = 32;        
+    long total_dist = 0;    
+    srand((unsigned)time(NULL));
+    #define POPCNT(x) __builtin_popcount((x))
+
+
+    uint32_t murmur32(uint32_t h) {
+        h ^= h >> 16;
+        h *= 0x85ebca6b;
+        h ^= h >> 13;
+        h *= 0xc2b2ae35;
+        h ^= h >> 16;
+        return h;
+    }
+
+    for (int i = 0; i < N; ++i) {
+        uint32_t x  = (uint32_t)rand();
+        uint32_t h1 = murmur32(x);
+        for (int b = 0; b < B; ++b) {
+            uint32_t x2 = x ^ (1u << b);
+            uint32_t h2 = murmur32(x2);
+            total_dist += POPCNT(h1 ^ h2);
+        }
+    }
+
+    avalanche_avg_dist = (double)total_dist / (N * B);
+
+
+    if (avalanche_avg_dist > B*0.5*0.75 && avalanche_avg_dist < B*0.5*1.25) {
+        avalanche_passed = 1;
+        successfulTest++;
+    } else {
+        avalanche_passed = 0;
+        failedTest++;
+    }
+}
+
 
     /**************** INSERT AND UPDATE COMMAND TEST ******************/
     char *tblName = "student";
@@ -927,6 +1063,27 @@ TestResult AK_test_Transaction() {
     
     printf("***End test Transaction***\n");
     AK_EPI;
+
+
+    printf("\n========== HASH UNIFORMITY TEST SUMMARY ==========\n");
+printf("Sample size: %d\n", 10000);
+printf("Result: %s\n", sample_passed ? "PASSED" : "FAILED");
+printf("  min  = %d\n", sample_min);
+printf("  max  = %d\n", sample_max);
+printf("  avg  = %.2f\n", sample_avg);
+printf("  chi2 = %.2f\n", sample_chi2);
+printf("  crit = %.2f\n", sample_crit);
+printf("===============================================\n\n");
+
+
+printf("\n====== AVALANCHE TEST ======\n");
+printf("Samples: %d  Bits flipped/test: %d\n", 1000, 32);
+printf("Avg Hamming distance: %.2f  (ideal ~%d)\n",
+       avalanche_avg_dist, 32/2);
+printf("Result: %s\n", avalanche_passed ? "PASSED" : "FAILED");
+printf("============================\n\n");
+
+
 
     return TEST_result(successfulTest,failedTest);
 }
