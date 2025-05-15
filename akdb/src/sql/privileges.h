@@ -54,6 +54,15 @@ static void to_hex(const unsigned char *in, size_t in_len, char *out);
 static void hash_password_with_salt(const char *password, const char *salt_hex, char *out_hash_hex);
 
 /**
+ * @author Luka Balažinec
+ * @brief Validates the strength of a password based on multiple security rules.
+ * @param password The password to validate.
+ * @param username The associated username (used to prevent inclusion in the password).
+ * @return 1 if the password is strong, 0 otherwise. Prints messages for each failed condition.
+ */
+int is_password_strong(const char *password, const char *username);
+
+/**
  * @author Kristina Takač.
  * @brief  Inserts a new user in the AK_user table 
  * @param *username username of user to be added
@@ -222,6 +231,15 @@ int AK_user_rename(char *old_name, char *new_name, char *password);
  * @return EXIT_SUCCESS or EXIT_ERROR
  */
 int AK_group_rename(char *old_name, char *new_name);
+
+/**
+ * @author Luka Balažinec
+ * @brief List all users that have the specified privilege on any table.
+ * @param  privilege A privilege string like "SELECT" or "INSERT".
+ * @return EXIT_SUCCESS.
+ */
+int AK_list_users_with_privilege(char *privilege);
+
 TestResult AK_privileges_test();
 
 #endif

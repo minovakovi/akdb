@@ -24,6 +24,7 @@
 #include <openssl/rand.h>
 #include <string.h>
 #include <stdio.h>
+#include <ctype.h>
 
 #define SALT_LEN 16
 #define SALT_HEX_LEN (SALT_LEN * 2)
@@ -80,6 +81,88 @@ static void hash_password_with_salt(const char *password, const char *salt_hex, 
 }
 
 /**
+ * @author Luka Balažinec
+ * @brief Validates the strength of a password based on multiple security rules.
+ * @param password The password to validate.
+ * @param username The associated username (used to prevent inclusion in the password).
+ * @return 1 if the password is strong, 0 otherwise. Prints messages for each failed condition.
+ */
+int is_password_strong(const char *password, const char *username) {
+    if (strlen(password) <= 8) {
+        printf("Password must be longer than 8 characters.\n");
+        return 0;
+    }
+
+    int has_lower = 0, has_upper = 0, has_digit = 0, has_special = 0;
+    int repeat_count = 1;
+
+    for (size_t i = 0; password[i]; i++) {
+        if (islower(password[i])) has_lower = 1;
+        else if (isupper(password[i])) has_upper = 1;
+        else if (isdigit(password[i])) has_digit = 1;
+        else if (ispunct(password[i])) has_special = 1;
+
+        if (i > 0 && password[i] == password[i - 1]) {
+            repeat_count++;
+            if (repeat_count > 4) {
+                printf("Password must not contain more than 4 identical consecutive characters.\n");
+                return 0;
+            }
+        } else {
+            repeat_count = 1;
+        }
+    }
+
+    if (!has_lower) {
+        printf("Password must contain at least one lowercase letter.\n");
+        return 0;
+    }
+    if (!has_upper) {
+        printf("Password must contain at least one uppercase letter.\n");
+        return 0;
+    }
+    if (!has_digit) {
+        printf("Password must contain at least one digit.\n");
+        return 0;
+    }
+    if (!has_special) {
+        printf("Password must contain at least one special character.\n");
+        return 0;
+    }
+
+    size_t len = strlen(password);
+    int is_palindrome = 1;
+    for (size_t i = 0; i < len / 2; i++) {
+        if (password[i] != password[len - 1 - i]) {
+            is_palindrome = 0;
+            break;
+        }
+    }
+    if (is_palindrome) {
+        printf("Password must not be a palindrome.\n");
+        return 0;
+    }
+
+    if (strstr(password, username) != NULL) {
+        printf("Password must not contain the username.\n");
+        return 0;
+    }
+
+    const char *sequences[] = {
+        "1234", "abcd", "qwertz", "asdf", "0000", "1111",
+        "password", "admin", NULL
+    };
+    for (int i = 0; sequences[i]; i++) {
+        if (strstr(password, sequences[i]) != NULL) {
+            printf("Password must not contain common or predictable patterns like '%s'.\n", sequences[i]);
+            return 0;
+        }
+    }
+
+    return 1;
+}
+
+/**
  * @author Kristina Takač, edited by Borna Romić, update by Luka Balažinec
  * @brief  Inserts a new user in the AK_user table 
  * @param *username Username of the user to be added
@@ -98,6 +181,10 @@ int AK_user_add(char *username, char *password, int set_id) {
         AK_EPI;
         return EXIT_ERROR;
     }
+
+    if (!is_password_strong(password, username)) {
+        return 0;
+    }    
 
     unsigned char salt_bin[SALT_LEN];
     char salt_hex[SALT_HEX_LEN + 1] = {0};
@@ -217,6 +304,10 @@ int AK_user_change_password(char *username, char *new_password) {
         printf("User '%s' does not exist!\n", username);
         AK_EPI;
         return EXIT_ERROR;
+    }
+
+    if (!is_password_strong(new_password, username)) {
+        return 0;
     }
 
     unsigned char salt_bin[SALT_LEN];
@@ -1198,6 +1289,77 @@ int AK_check_group_privilege(char *group) {
 }
 
 /**
+ * @author Luka Balažinec
+ * @brief List all users that have the specified privilege on any table.
+ * @param  privilege A privilege string like "SELECT" or "INSERT".
+ * @return EXIT_SUCCESS.
+ */
+int AK_list_users_with_privilege(char *privilege) {
+    AK_PRO;
+
+    printf("Users with privilege '%s':\n", privilege);
+
+    int seen_cap = 16;
+    int *seen_ids = malloc(seen_cap * sizeof(*seen_ids));
+    if (!seen_ids) {
+        AK_EPI;
+        return EXIT_ERROR;
+    }
+    int seen_cnt = 0;
+
+    struct list_node *row;
+    int row_idx = 0;
+    while ((row = (struct list_node *)AK_get_row(row_idx++, "AK_user_right")) != NULL) {
+        struct list_node *user_elem  = AK_GetNth_L2(2, row);
+        struct list_node *right_elem = AK_GetNth_L2(4, row);
+
+        if (strcmp((char *)right_elem->data, privilege) == 0) {
+            int user_id = *(int *)user_elem->data;
+
+            int k;
+            for (k = 0; k < seen_cnt; ++k) {
+                if (seen_ids[k] == user_id) break;
+            }
+            if (k == seen_cnt) {
+                if (seen_cnt == seen_cap) {
+                    seen_cap *= 2;
+                    int *tmp = realloc(seen_ids, seen_cap * sizeof(*tmp));
+                    if (!tmp) break;
+                    seen_ids = tmp;
+                }
+                seen_ids[seen_cnt++] = user_id;
+
+                struct list_node *urow;
+                int uidx = 0;
+                while ((urow = (struct list_node *)AK_get_row(uidx++, "AK_user")) != NULL) {
+                    int curr_id = *(int *)AK_GetNth_L2(1, urow)->data;
+                    if (curr_id == user_id) {
+                        char *username = (char *)AK_GetNth_L2(2, urow)->data;
+                        printf("  - %s\n", username);
+                        AK_DeleteAll_L3(&urow);
+                        AK_free(urow);
+                        break;
+                    }
+                    AK_DeleteAll_L3(&urow);
+                    AK_free(urow);
+                }
+            }
+        }
+
+        AK_DeleteAll_L3(&row);
+        AK_free(row);
+    }
+
+    if (seen_cnt == 0) {
+        printf("  (none)\n");
+    }
+
+    free(seen_ids);
+    AK_EPI;
+    return EXIT_SUCCESS;
+}
+
+/**
  * @author Kristina Takač, updated by Tomislav Ilisevic, updated by Lidija Lastavec, updated by Marko Flajšek
  * @brief Function that tests all the previous functions
  * @return no return value                                                     
@@ -1223,19 +1385,52 @@ TestResult AK_privileges_test() {
     printf("\nTest data: user1 1111; user2 2222; user3 3333; user4 4444;\n\n");
     printf("Result:\n\n");
 
-    if (AK_user_add("user1", "1111", NEW_ID) == "taken") {
+    if (AK_user_add("user1", "?Baze2020", NEW_ID) == "taken") {
         printf("Test 1. - Fail!\n\n");
     } else {
         printf("Test 1. - Pass!\n\n");
         successful[0] = 1;
     }
 
-    //adding 3 more users for future tests
-    AK_user_add("user2", "2222", NEW_ID);
-    AK_user_add("user3", "3333", NEW_ID);
-    AK_user_add("user4", "4444", NEW_ID);
-
+    printf("Adding user2 with password '!Sifra2025'...\n");
+    AK_user_add("user2", "!Sifra2025", NEW_ID);
     printf("\n");
+
+    printf("Adding user3 with password '#Lozinka2024'...\n");
+    AK_user_add("user3", "#Lozinka2024", NEW_ID);
+    printf("\n");
+
+    printf("Adding user4 with password '$Pass2023'...\n\n");
+    AK_user_add("user4", "$Pass2023", NEW_ID);
+
+    printf("Adding user10 with password 'Aa1!'...\n");
+    AK_user_add("user10", "Aa1!", NEW_ID);
+    printf("\n");
+
+    printf("Adding user11 with password 'lowercase1]'...\n");
+    AK_user_add("user11", "lowercase1]", NEW_ID);
+    printf("\n");
+
+    printf("Adding user12 with password 'NoDigits!'...\n");
+    AK_user_add("user12", "NoDigits!", NEW_ID);
+    printf("\n");
+
+    printf("Adding user13 with password '4G?racecar?G4'...\n");
+    AK_user_add("user13", "4G?racecar?G4", NEW_ID);
+    printf("\n");
+
+    printf("Adding user14 with password '2023user14X['...\n");
+    AK_user_add("user14", "2023user14X[", NEW_ID);
+    printf("\n");
+
+    printf("Adding user15 with password 'Abc123456!'...\n");
+    AK_user_add("user15", "Abc123456!", NEW_ID);
+    printf("\n");
+
+    printf("Adding user16 with password 'Aaaaaa0011@'...\n");
+    AK_user_add("user16", "Aaaaaa0011@", NEW_ID);
+    printf("\n");
+
     AK_print_table("AK_user");
 
     printf("\n\n||====================================================================|| \n");
@@ -1667,7 +1862,7 @@ TestResult AK_privileges_test() {
     printf("Result:\n\n");
 
 
-    if (AK_user_check_pass("user2", "2222") == 0) {
+    if (AK_user_check_pass("user2", "!Sifra2025") == 0) {
         printf("\n\nTest 19. - Fail!\n");
     } else {
         printf("\n\nTest 19. - Pass!\n");
@@ -1687,8 +1882,8 @@ TestResult AK_privileges_test() {
     printf("Original AK_user table:\n\n");
     AK_print_table("AK_user");
 
-    printf("\nChanging password for 'user3' from '3333' to '1234'...\n");
-    if (AK_user_change_password("user3", "1234") != EXIT_SUCCESS) {
+    printf("\nChanging password for 'user3' from '#Lozinka2024' to '#Lozinka2026'...\n");
+    if (AK_user_change_password("user3", "#Lozinka2026") != EXIT_SUCCESS) {
         printf("\n\nTest 20. - Fail!\n");
     } else {
         printf("\nPassword changed successfully.\n\n");
@@ -1700,12 +1895,29 @@ TestResult AK_privileges_test() {
     
     printf("\n\n||====================================================================|| \n");
 
+
+    /**************************************/
+    /* 21. AK_list_users_with_privilege   */
+    /**************************************/
+    printf("\n21. Test - AK_list_users_with_privilege for SELECT, INSERT, UPDATE and DELETE privileges\n\n");
+
+    const char *privileges[] = { "SELECT", "INSERT", "UPDATE", "DELETE" };
+    for (int i = 0; i < 4; ++i) {
+        const char *p = privileges[i];
+        AK_list_users_with_privilege((char *)p);
+        printf("\n");
+    }
+    printf("Test 21. - Pass!\n\n");
+    successful[20] = 1;
+
+    printf("||====================================================================||\n");
+
     /* END SUMMARY*/
 
     printf("\nSummary: \n");
     int num = 0;
     int numFail = 0;
-    for (num = 0; num < 20; num++) {
+    for (num = 0; num < 21; num++) {
         printf("%i. Test: %s \n", (num + 1), (successful[num] == 1 ? "Pass" : "Fail"));
         if (successful[num] == 0) numFail++;
     }
