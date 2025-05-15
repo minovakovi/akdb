@@ -49,29 +49,40 @@ def get_attr_type_test():
 
 # init and load sql_executor function
 initialize()
-executor = sql_executor()
+executor = Sql_executor()
 
+# create test table
 student_attr_name = ["id_student", "first_name", "last_name", "year_of_birth", "grade_avg"]
 student_attr_type = [AK47.TYPE_INT, AK47.TYPE_VARCHAR, AK47.TYPE_VARCHAR, AK47.TYPE_INT, AK47.TYPE_FLOAT]
 AK47.create_header_test("student", student_attr_name, student_attr_type)
 
-insert_into1_output = executor.insert("INSERT INTO student VALUES ('1','Marko','Sinko','1990','2.0')")
-insert_into2_output = executor.insert(
-    "INSERT INTO student(id_student, first_name, last_name, year_of_birth, grade_avg) VALUES ('2','Marinko','Radic','1991','3.3')")
-insert_into3_output = executor.insert(
-    "INSERT INTO profesor(id_student, first_name, last_name, year_of_birth, grade_avg) VALUES ('2','Marinko','Radic','1991','3.3')")
-
+# INSERT INTO TEST
+insert_into1_output = executor.execute(
+    "INSERT INTO student VALUES ('1','Marko','Sinko','1990','2.0')")[1]
+insert_into2_output = executor.execute(
+    "INSERT INTO student(id_student, first_name, last_name, year_of_birth, grade_avg) VALUES ('2','Marinko','Radic','1991','3.3')")[1]
+insert_into3_output = executor.execute(
+    "INSERT INTO profesor(id_student, first_name, last_name, year_of_birth, grade_avg) VALUES ('2','Marinko','Radic','1991','3.3')")[1]
 
 def insert_into_test():
     """
-	>>> insert_into1_output
-	True
-	>>> insert_into2_output
-	True
-	>>> insert_into3_output
-	False
-	"""
+    >>> insert_into1_output
+    True
+    >>> insert_into2_output
+    True
+    >>> insert_into3_output
+    False
+    """
 
+# PRINT TABLE TEST
+def print_table_test():
+    """
+    >>> cmd = Print_table_command()
+    >>> bool(cmd.matches("\\p student"))
+    True
+    >>> cmd.execute()
+    'OK'
+    """
 
 # CREATE GROUP TEST
 # tokens are not implemented for this test, need to create Create_group_command() token
@@ -143,7 +154,7 @@ def insert_into_test():
 #     """
 
 
-
+'''
 sequence = Create_sequence_command()
 sequence1_output = sequence.execute("Create sequence numac_1 start with 1 increment by 2 minvalue 0 maxvalue 100 cycle")
 # TODO: fix buffer overflow when running this test, check output in sequence_test() below and remove this comment
@@ -231,7 +242,7 @@ def create_trigger_test():
 #     >>> drop.execute() != False
 #     True
 #     """
-
+'''
 
 '''
 Need to connect these tokens with sql_executor:

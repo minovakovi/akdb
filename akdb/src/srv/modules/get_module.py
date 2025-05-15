@@ -14,9 +14,9 @@ def get_attr_type(value):
     varchar = isinstance(value, str)
     date = is_date(value.replace("'", ""))
     datetime = is_datetime(value.replace("'", ""))
+    time = is_time(value.replace("'", ""))
     interval = is_interval(value.replace("'", ""))
     period = is_period(value.replace("'", ""))
-    time = is_time(value.replace("'", ""))
     boolean = is_bool(value.replace("'", ""))
     
     if integer:
@@ -27,12 +27,12 @@ def get_attr_type(value):
         return AK47.TYPE_DATE
     elif datetime:
         return AK47.TYPE_DATETIME
+    elif time:
+        return AK47.TYPE_TIME
     elif interval:
         return AK47.TYPE_INTERVAL
     elif period:
         return AK47.TYPE_PERIOD
-    elif time:
-        return AK47.TYPE_TIME
     elif boolean:
         return AK47.TYPE_BOOL
     elif varchar:
@@ -56,11 +56,11 @@ def get_type_name(code):
     elif code == AK47.TYPE_DATETIME:
         return "datetime"
     elif code == AK47.TYPE_TIME:
-        return "interval"
-    elif code == AK47.TYPE_INTERVAL:
-        return "period"
-    elif code == AK47.TYPE_PERIOD:
         return "time"
+    elif code == AK47.TYPE_INTERVAL:
+        return "interval"
+    elif code == AK47.TYPE_PERIOD:
+        return "period"
     elif code == AK47.TYPE_BOOL:
         return "boolean"
     elif code == AK47.TYPE_VARCHAR:
