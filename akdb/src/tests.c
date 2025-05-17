@@ -51,6 +51,7 @@
 #include "sql/cs/check_constraint.h"
 //Other
 #include "auxi/observable.h"
+#include "auxi/observable_custom.h"
 #include "auxi/iniparser.h"
 #include "file/blobs.h"
 #include "sql/trigger.h"
@@ -66,17 +67,18 @@ Test tests[] = {
 //---------
 {"auxi: AK_tarjan", &AK_tarjan_test},  //auxi/auxiliary.c
 {"auxi: AK_observable", &AK_observable_test}, //auxi/observable.c
-{"auxi: AK_observable_pattern", &AK_observable_pattern},//auxi/observable.c
+{"auxi: AK_observable_pattern", &AK_observable_pattern}, //auxi/observable.c
+{"auxi: AK_custom_observable", &AK_custom_observable_test}, //auxi/observable_custom.c
 {"auxi: AK_mempro", &AK_mempro_test},//auxi/mempro.c
 {"auxi: AK_dictionary", &AK_dictionary_test},//auxi/dictionary.c
 {"auxi: AK_iniparser", &AK_iniparser_test},//auxi/iniparser.c
-//6 total
+//7 total
 //dm:
 //-------
 {"dm: AK_allocationbit", &AK_allocationbit_test}, //dm/dbman.c
 {"dm: AK_allocationtable", &AK_allocationtable_test}, //dm/dbman.c
 {"dm: AK_thread_safe_block_access", &AK_thread_safe_block_access_test}, //dm/dbman.c
-//3+6=9 total
+//3+7=10 total
 //file:
 //---------
 {"file: AK_id", &AK_id_test}, //file/id.c
@@ -88,18 +90,18 @@ Test tests[] = {
 {"file: AK_filesearch", &AK_filesearch_test}, //file/filesearch.c
 {"file: AK_sequence", &AK_sequence_test}, //file/sequence.c  //old 14, new 17, old user  rinkovec  named this as btree which is not 14=btree??
 {"file: AK_table_test", &AK_table_test}, //file/table.c //old 15, new 18
-//9+9=18 total
+//9+10=19 total
 //file/idx:
 //-------------
 {"idx: AK_bitmap", &AK_bitmap_test}, //file/idx/bitmap.c
 {"idx: AK_btree", &AK_btree_test}, //file/idx/btree.c
 {"idx: AK_hash", &AK_hash_test}, //file/idx/hash.c
-//3+18=21 total
+//3+19=22 total
 //mm:
 //-------
 {"mm: AK_memoman", &AK_memoman_test}, //mm/memoman.c
 {"mm: AK_block", &AK_memoman_test2}, //mm/memoman.c
-//2+21=23 total
+//2+22=24 total
 //opti:
 //---------
 {"opti: AK_rel_eq_assoc", &AK_rel_eq_assoc_test}, //opti/rel_eq_assoc.c
@@ -107,7 +109,7 @@ Test tests[] = {
 {"opti: AK_rel_eq_selection", &AK_rel_eq_selection_test}, //opti/rel_eq_selection.c
 {"opti: AK_rel_eq_projection", &AK_rel_eq_projection_test}, //opti/rel_eq_projection.c
 {"opti: AK_query_optimization", &AK_query_optimization_test}, //opti/query_optimization.c //old 25, new 28
-//5+23=28 total
+//5+24=29 total
 //rel:
 //--------
 {"rel: AK_op_union", &AK_op_union_test}, //rel/union.c
@@ -124,7 +126,7 @@ Test tests[] = {
 {"rel: AK_op_difference", &AK_op_difference_test}, //rel/difference.c
 {"rel: AK_op_projection", &AK_op_projection_test}, //rel/projection.c
 {"rel: AK_op_theta_join", &AK_op_theta_join_test}, //rel/theta_join.c //old 37, new 39
-//11+28=39 total
+//11+29=40 total
 //sql:
 //--------
 {"sql: AK_command", &AK_test_command}, //sql/command.c
@@ -141,15 +143,15 @@ Test tests[] = {
 {"sql: AK_check_constraint", &AK_check_constraint_test}, //sql/cs/check_constraint.c //old 49, new 51
 {"sql: AK_constraint_names", &AK_constraint_names_test}, //sql/cs/constraint_names.c
 {"sql: AK_insert", &AK_insert_test}, //sql/insert.c
-//14+39=53 total
+//14+40=54 total
 //trans:
 //----------
 {"trans: AK_transaction", &AK_test_Transaction}, //src/trans/transaction.c
-//54
+//55
 //rec:
 //----------
 {"rec: AK_recovery", &AK_recovery_test} //rec/recovery.c
-//55
+//56
 };
 //here are all tests in a order like in the folders from the github
 void help()
@@ -216,7 +218,7 @@ void choose_test()
         printf("Test: ");
         scanf("%d", &pickedTest);
         if(!pickedTest) exit( EXIT_SUCCESS );
-        while(pickedTest<0 || pickedTest>55)
+        while(pickedTest<0 || pickedTest>56)
         {
             printf("\nTest: ");
             scanf("%d", &pickedTest);

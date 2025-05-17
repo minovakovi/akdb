@@ -29,30 +29,17 @@
 /**
  * @author Ivan Pusic
  * @enum ObservableType
- * @brief Enumeration which defines possible observable types. You can also add your custom observable type here
+ * @brief Enumeration which defines possible observable types
  */
 typedef enum {
-	AK_TRANSACTION,
-	AK_TRIGGER,
-	AK_CUSTOM_FIRST,
-    AK_CUSTOM_SECOND,
+    AK_TRANSACTION,
+    AK_TRIGGER,
+    AK_CUSTOM_FIRST,
+    AK_CUSTOM_SECOND
 } AK_ObservableType_Enum;
 
-/**
- * @author Ivan Pusic
- * @struct Observer
- * @brief Structure that defines the functions for observer object
- */
-struct Observer {
-    // Members
-    int observer_id;
-    void * AK_observer_type;
-    
-    // Methods
-    void (*AK_observer_type_event_handler) (void *, void *, AK_ObservableType_Enum);
-    int (*AK_notify) (struct Observer*, void *observable_type, AK_ObservableType_Enum);
-    int (*AK_destroy_observer) (struct Observer*);
-};
+// Forward declaration
+struct Observer;
 typedef struct Observer AK_observer;
 
 /**
@@ -78,15 +65,35 @@ struct Observable {
 };
 typedef struct Observable AK_observable;
 
-/** 
+/**
  * @author Ivan Pusic
+ * @struct Observer
+ * @brief Structure that defines the functions for observer object
+ */
+struct Observer {
+    // Members
+    int observer_id;
+    void * AK_observer_type;
+    
+    // Methods
+    void (*AK_observer_type_event_handler) (void *, void *, AK_ObservableType_Enum);
+    int (*AK_notify) (struct Observer*, void *observable_type, AK_ObservableType_Enum);
+    int (*AK_destroy_observer) (struct Observer*);
+};
+
+/** 
  * @brief Function that initializes the observer object
- * 
  * @return Pointer to new observer object
  */
-extern AK_observer * AK_init_observer(void *observable_type, void (*observable_type_event_handler)(void*, void*, AK_ObservableType_Enum));
-extern AK_observable * AK_init_observable(void *AK_observable_type, AK_ObservableType_Enum AK_ObservableType_Def, void * AK_custom_action);
-extern TestResult AK_observable_test();
+AK_observer * AK_init_observer(void *observer_type, void (*observer_type_event_handler)(void*, void*, AK_ObservableType_Enum));
+
+/** 
+ * @brief Function that initializes the observable object
+ * @return Pointer to new observable object
+ */
+AK_observable * AK_init_observable(void *AK_observable_type, AK_ObservableType_Enum AK_ObservableType_Def, void * AK_custom_action);
+
+TestResult AK_observable_test();
 TestResult AK_observable_pattern();
 
 #endif

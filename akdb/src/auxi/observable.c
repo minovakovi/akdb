@@ -9,16 +9,15 @@
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Library General Public License for more details.
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Library General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor Boston, MA 02110-1301,  USA
  */
 
-#include "./observable.h"
-
+#include "observable.h"
+#include "observable_custom.h"
 
 /******************** OBSERVABLE IMPLEMENTATION ********************/
 
@@ -34,17 +33,36 @@ static inline int AK_register_observer(AK_observable *self, AK_observer *observe
 {
     int i;
     AK_PRO;
+
+    // Add NULL checks for parameters
+    if (self == NULL || observer == NULL) {
+        AK_dbg_messg(LOW, GLOBAL, "ERROR: NULL pointer passed to AK_register_observer");
+        AK_EPI;
+        return OBSERVER_REGISTER_FAILURE_MAX_OBSERVERS;
+    }
+
+    // Check if observer is already registered
+    for (i = 0; i < MAX_OBSERVABLE_OBSERVERS; ++i) {
+        if (self->observers[i] == observer) {
+            AK_dbg_messg(LOW, GLOBAL, "ERROR: Observer already registered");
+            AK_EPI;
+            return OBSERVER_REGISTER_FAILURE_MAX_OBSERVERS;
+        }
+    }
+
+    // Look for empty slot to register the observer
     for (i = 0; i < MAX_OBSERVABLE_OBSERVERS; ++i) {
         if(self->observers[i] == 0) {
             // Assigning unique ID to new observer
             observer->observer_id = self->observer_id_counter++;
             self->observers[i] = observer;
-            AK_dbg_messg(LOW, GLOBAL, "NEW OBSERVER ADDED");
+            AK_dbg_messg(LOW, GLOBAL, "NEW OBSERVER ADDED with ID: %d", observer->observer_id);
             AK_EPI;
             return OBSERVER_REGISTER_SUCCESS;
         }
     }
-    AK_dbg_messg(LOW, GLOBAL, "ERROR IN FUNCTION FOR ADDING NEW OBSERVER!");
+    
+    AK_dbg_messg(LOW, GLOBAL, "ERROR: Maximum number of observers (%d) reached!", MAX_OBSERVABLE_OBSERVERS);
     AK_EPI;
     return OBSERVER_REGISTER_FAILURE_MAX_OBSERVERS;
 }
@@ -61,17 +79,28 @@ static inline int AK_unregister_observer(AK_observable *self, AK_observer *obser
 {
     int i;
     AK_PRO;
+
+    // Add NULL checks for parameters
+    if (self == NULL || observer == NULL) {
+        AK_dbg_messg(LOW, GLOBAL, "ERROR: NULL pointer passed to AK_unregister_observer");
+        AK_EPI;
+        return OBSERVER_UNREGISTER_FAILURE_NOT_FOUND;
+    }
+
     for(i = 0; i < MAX_OBSERVABLE_OBSERVERS; ++i) {
         if(observer == self->observers[i]) {
-            AK_free(self->observers[i]);
-            self->observers[i] = 0;
-            AK_dbg_messg(LOW, GLOBAL, "OBSERVER DELETED");
-            AK_EPI;
-            return OBSERVER_UNREGISTER_SUCCESS;
+            // Found the observer, now free it properly
+            if (self->observers[i] != NULL) {
+                AK_free(self->observers[i]);
+                self->observers[i] = 0;
+                AK_dbg_messg(LOW, GLOBAL, "Observer with ID %d successfully unregistered", observer->observer_id);
+                AK_EPI;
+                return OBSERVER_UNREGISTER_SUCCESS;
+            }
         }
     }
     
-    AK_dbg_messg(LOW, GLOBAL, "ERROR IN FUNCTION FOR DELETING OBSERVER!");
+    AK_dbg_messg(LOW, GLOBAL, "ERROR: Observer not found in the observable's list");
     AK_EPI;    
     return OBSERVER_UNREGISTER_FAILURE_NOT_FOUND;
 }
@@ -88,16 +117,38 @@ static inline int AK_notify_observer(AK_observable *self, AK_observer *observer)
 {
     int i;
     AK_PRO;
+
+    // Add NULL checks for parameters
+    if (self == NULL || observer == NULL) {
+        AK_dbg_messg(LOW, GLOBAL, "ERROR: NULL pointer passed to AK_notify_observer");
+        AK_EPI;
+        return OBSERVER_NOTIFY_FAILURE_NOT_FOUND;
+    }
+
+    // Check if observable type is set
+    if (self->AK_observable_type == NULL) {
+        AK_dbg_messg(LOW, GLOBAL, "ERROR: Observable type not set");
+        AK_EPI;
+        return OBSERVER_NOTIFY_FAILURE_NOT_FOUND;
+    }
+
     for(i = 0; i < MAX_OBSERVABLE_OBSERVERS; ++i) {
         if(self->observers[i] != 0 && self->observers[i] == observer) {
+            // Check if notify function exists
+            if (observer->AK_notify == NULL) {
+                AK_dbg_messg(LOW, GLOBAL, "ERROR: Observer notify function not set for observer ID %d", observer->observer_id);
+                AK_EPI;
+                return OBSERVER_NOTIFY_FAILURE_NOT_FOUND;
+            }
+            
             observer->AK_notify(observer, self->AK_observable_type, self->AK_ObservableType_Def);
-            AK_dbg_messg(LOW, GLOBAL, "NOTIFICATION SENT TO OBSERVER");
+            AK_dbg_messg(LOW, GLOBAL, "Notification sent to observer ID: %d", observer->observer_id);
             AK_EPI;
             return OBSERVER_NOTIFY_SUCCESS;
         }
     }
     
-    AK_dbg_messg(LOW, GLOBAL, "ERROR IN FUNCTION FOR SENDING NOTIFICATION TO SPECIFIED OBSERVER!");
+    AK_dbg_messg(LOW, GLOBAL, "ERROR: Observer not found in the observable's list");
     AK_EPI;
     return OBSERVER_NOTIFY_FAILURE_NOT_FOUND;
 }
@@ -111,18 +162,46 @@ static inline int AK_notify_observer(AK_observable *self, AK_observer *observer)
  */
 static inline int AK_notify_observers(AK_observable *self)
 {
-    int i;
+    int i, notify_count = 0;
     AK_PRO;
+
+    // Add NULL check for self parameter
+    if (self == NULL) {
+        AK_dbg_messg(LOW, GLOBAL, "ERROR: NULL pointer passed to AK_notify_observers");
+        AK_EPI;
+        return OBSERVER_NOTIFY_FAILURE_NOT_FOUND;
+    }
+
+    // Check if observable type is set
+    if (self->AK_observable_type == NULL) {
+        AK_dbg_messg(LOW, GLOBAL, "ERROR: Observable type not set");
+        AK_EPI;
+        return OBSERVER_NOTIFY_FAILURE_NOT_FOUND;
+    }
+
     for(i = 0; i < MAX_OBSERVABLE_OBSERVERS; ++i) {
-        if(self->observers[i] != 0 ) {
+        if(self->observers[i] != 0) {
+            // Check if notify function exists
+            if (self->observers[i]->AK_notify == NULL) {
+                AK_dbg_messg(LOW, GLOBAL, "ERROR: Observer notify function not set for observer ID %d", self->observers[i]->observer_id);
+                continue;
+            }
+
             // Call AK_notify and pass AK_observer observer and custom observable instances
             self->observers[i]->AK_notify(self->observers[i], self->AK_observable_type, self->AK_ObservableType_Def);
+            notify_count++;
         }
     }
     
-    AK_dbg_messg(LOW, GLOBAL, "OBSERVERS NOTIFIED");
+    if (notify_count > 0) {
+        AK_dbg_messg(LOW, GLOBAL, "Successfully notified %d observers", notify_count);
+        AK_EPI;
+        return OBSERVER_NOTIFY_SUCCESS;
+    }
+    
+    AK_dbg_messg(LOW, GLOBAL, "WARNING: No observers were notified");
     AK_EPI;
-    return OBSERVER_NOTIFY_SUCCESS;
+    return OBSERVER_NOTIFY_FAILURE_NOT_FOUND;
 }
 
 /** 
@@ -137,14 +216,30 @@ static inline AK_observer *AK_get_observer_by_id(AK_observable *self, int id)
 {
     int i;
     AK_PRO;
+
+    // Add NULL check for self parameter
+    if (self == NULL) {
+        AK_dbg_messg(LOW, GLOBAL, "ERROR: NULL observable passed to AK_get_observer_by_id");
+        AK_EPI;
+        return NULL;
+    }
+
+    // Validate observer ID
+    if (id <= 0 || id >= self->observer_id_counter) {
+        AK_dbg_messg(LOW, GLOBAL, "ERROR: Invalid observer ID: %d", id);
+        AK_EPI;
+        return NULL;
+    }
+
     for(i = 0; i < MAX_OBSERVABLE_OBSERVERS; ++i) {
-        if(self->observers[i] != 0  && self->observers[i]->observer_id == id) {
-            AK_dbg_messg(LOW, GLOBAL, "REQUESTED OBSERVER FOUND. RETURNING OBSERVER BY ID");
+        if(self->observers[i] != 0 && self->observers[i]->observer_id == id) {
+            AK_dbg_messg(LOW, GLOBAL, "Observer with ID %d found successfully", id);
             AK_EPI;
             return self->observers[i];
         }
     }
-    AK_dbg_messg(LOW, GLOBAL, "OBSERVER WITH ID:%d DOESN'T EXIST!", id);
+
+    AK_dbg_messg(LOW, GLOBAL, "ERROR: Observer with ID %d not found in observable's list", id);
     AK_EPI;
     return NULL;
 }
@@ -155,11 +250,27 @@ static inline AK_observer *AK_get_observer_by_id(AK_observable *self, int id)
  *
  * @return Pointer to new observable object
  */
-AK_observable * AK_init_observable(void *AK_observable_type, AK_ObservableType_Enum AK_ObservableType_Def, void * AK_custom_action)
+AK_observable * AK_init_observable(void *AK_observable_type, AK_ObservableType_Enum AK_ObservableType_Def, void *AK_custom_action)
 {
     AK_observable *self;
     AK_PRO;
+
+    // Input validation
+    if (AK_observable_type == NULL) {
+        AK_dbg_messg(LOW, GLOBAL, "ERROR: NULL observable type passed to AK_init_observable");
+        AK_EPI;
+        return NULL;
+    }
+
+    // Allocate memory for observable
     self = (AK_observable*) AK_calloc(1, sizeof(*self));
+    if (self == NULL) {
+        AK_dbg_messg(LOW, GLOBAL, "ERROR: Memory allocation failed in AK_init_observable");
+        AK_EPI;
+        return NULL;
+    }
+
+    // Initialize function pointers
     self->AK_register_observer = &AK_register_observer;
     self->AK_unregister_observer = &AK_unregister_observer;
     self->AK_notify_observer = &AK_notify_observer;
@@ -167,13 +278,15 @@ AK_observable * AK_init_observable(void *AK_observable_type, AK_ObservableType_E
     self->AK_get_observer_by_id = AK_get_observer_by_id;
     self->AK_run_custom_action = AK_custom_action;
 
-    memset(self->observers, 0, sizeof self->observers);
+    // Initialize observers array to NULL
+    memset(self->observers, 0, sizeof(self->observers));
            
-    
+    // Set observable properties
     self->AK_ObservableType_Def = AK_ObservableType_Def;
     self->observer_id_counter = 1;
     self->AK_observable_type = AK_observable_type;
-    AK_dbg_messg(LOW, GLOBAL, "NEW OBSERVABLE OBJECT INITIALIZED!");
+
+    AK_dbg_messg(LOW, GLOBAL, "NEW OBSERVABLE OBJECT INITIALIZED with type: %d", AK_ObservableType_Def);
     AK_EPI;
     return self;
 }
@@ -189,17 +302,30 @@ AK_observable * AK_init_observable(void *AK_observable_type, AK_ObservableType_E
 static inline int AK_destroy_observer(AK_observer *self)
 {
     AK_PRO;
-    if(self) {
-        AK_free(self);
-        self = 0;
-        AK_dbg_messg(LOW, GLOBAL, "OBSERVER DESTROYED!");    
-        AK_EPI;    
-        return OBSERVER_DESTROY_SUCCESS;
+
+    if (self == NULL) {
+        AK_dbg_messg(LOW, GLOBAL, "ERROR: NULL pointer passed to AK_destroy_observer");
+        AK_EPI;
+        return OBSERVER_DESTROY_FAILURE_INVALID_ARGUMENT;
     }
-    
-    AK_dbg_messg(LOW, GLOBAL, "ERROR WHILE DESTROYING OBSERVER");
-    AK_EPI;
-    return OBSERVER_DESTROY_FAILURE_INVALID_ARGUMENT;
+
+    // Check if observer has valid ID before destroying
+    if (self->observer_id <= 0) {
+        AK_dbg_messg(LOW, GLOBAL, "ERROR: Invalid observer ID when attempting to destroy");
+        AK_EPI;
+        return OBSERVER_DESTROY_FAILURE_INVALID_ARGUMENT;
+    }
+
+    // Check if observer type is set
+    if (self->AK_observer_type == NULL) {
+        AK_dbg_messg(LOW, GLOBAL, "WARNING: Observer being destroyed has NULL observer type");
+    }
+
+    AK_free(self);
+    self = 0;
+    AK_dbg_messg(LOW, GLOBAL, "Observer successfully destroyed");    
+    AK_EPI;    
+    return OBSERVER_DESTROY_SUCCESS;
 }
 
 /** 
@@ -213,9 +339,26 @@ static inline int AK_destroy_observer(AK_observer *self)
 static inline int AK_notify(AK_observer *observer, void *observable_type, AK_ObservableType_Enum type)
 {
     AK_PRO;
+
+    // Add NULL checks for parameters
+    if (observer == NULL || observable_type == NULL) {
+        AK_dbg_messg(LOW, GLOBAL, "ERROR: NULL pointer passed to AK_notify");
+        AK_EPI;
+        return OBSERVER_NOTIFY_FAILURE_NOT_FOUND;
+    }
+
+    // Check if observer has event handler function
+    if (observer->AK_observer_type_event_handler == NULL) {
+        AK_dbg_messg(LOW, GLOBAL, "ERROR: Observer event handler function not set");
+        AK_EPI;
+        return OBSERVER_NOTIFY_FAILURE_NOT_FOUND;
+    }
+
+    // Call the event handler
     observer->AK_observer_type_event_handler(observer->AK_observer_type, observable_type, type);
+    AK_dbg_messg(LOW, GLOBAL, "Successfully called event handler for observer ID: %d", observer->observer_id);
     AK_EPI;
-    return OK;
+    return OBSERVER_NOTIFY_SUCCESS;
 }
 
 /** 
@@ -228,296 +371,369 @@ AK_observer *AK_init_observer(void *observer_type, void (*observer_type_event_ha
 {
     AK_observer *self;
     AK_PRO;
+
+    // Check if event handler is provided
+    if (observer_type_event_handler == NULL) {
+        AK_dbg_messg(LOW, GLOBAL, "ERROR: NULL event handler passed to AK_init_observer");
+        AK_EPI;
+        return NULL;
+    }
+
+    // Allocate memory for observer
     self = AK_calloc(1, sizeof(*self));
+    if (self == NULL) {
+        AK_dbg_messg(LOW, GLOBAL, "ERROR: Memory allocation failed in AK_init_observer");
+        AK_EPI;
+        return NULL;
+    }
+
     self->AK_destroy_observer = &AK_destroy_observer;
     self->AK_observer_type = observer_type;
     self->AK_observer_type_event_handler = observer_type_event_handler;
     self->AK_notify = &AK_notify;
+    
     AK_dbg_messg(LOW, GLOBAL, "NEW OBSERVER OBJECT INITIALIZED!");  
     AK_EPI;  
     return self;
 }
 
-/******************** OBSERVABLE PATTERN EXAMPLE ********************/
-
-// This is optional. You can define some notifyTypes for your custom observable type
-typedef enum {
-    ERROR,
-    INFO,
-    WARMING,
-} NotifyType;
-
-// This is also optional. Here we define the structure that holds message, and the notify type
-typedef struct _notifyDetails {
-    char *message;
-    NotifyType type;
-} NotifyDetails;
-
-// First define you observable type 
-struct TypeObservable {
-    // Then specify your type variables
-    NotifyDetails *notifyDetails;
-    // And your methods
-    char* (*AK_get_message) (struct TypeObservable*);
-    
-    // You should define methods for adding and removing observers. You can also define some other method for achieveing this
-    int (*AK_custom_register_observer) (struct TypeObservable*, AK_observer*);
-    int (*AK_custom_unregister_observer) (struct TypeObservable*, AK_observer*);
-    // If you want you can define method for setting observable type and message for our custom observable type
-    void (*AK_set_notify_info_details) (struct TypeObservable*, NotifyType type, char *message);
-    // Define observable variable, nedded for observable pattern. Important!
-    AK_observable *observable;
-};
-typedef struct TypeObservable AK_TypeObservable;
-
-// Implement method for getting some message from observable custom type
-char * AK_get_message(AK_TypeObservable *self) {
-    char *ret;
-    AK_PRO;
-    ret = self->notifyDetails->message;
-    AK_EPI;
-    return ret;
-}
-
-// Implement method for adding observer to custom observable type
-int AK_custom_register_observer(AK_TypeObservable* self, AK_observer* observer) {
-    AK_PRO;
-    self->observable->AK_register_observer(self->observable, observer);
-    AK_EPI;
-    return OK;
-}
-
-// Implement method for removing observer from custom observable type
-int AK_custom_unregister_observer(AK_TypeObservable * self, AK_observer* observer) {
-    AK_PRO;
-	self->observable->AK_unregister_observer(self->observable, observer);
-    AK_EPI;
-    return OK;
-}
-
-// Helper method for setting notify details
-void AK_set_notify_info_details(AK_TypeObservable *self, NotifyType type, char *message) {
-    // Info about notify
-    NotifyDetails *notifyDetails;
-    AK_PRO;
-    notifyDetails = AK_calloc(1, sizeof(NotifyDetails));
-    notifyDetails->message = message;
-    notifyDetails->type = type;
-    self->notifyDetails = notifyDetails;
-    AK_EPI;
-}
-
-// this is definition of a custom action which can be called from custom observable type
-int AK_custom_action(void *data) {
-    AK_PRO;
-    printf ("THIS IS SOME CUSTOM FUNCTION!\n");
-    AK_EPI;
-    return OK;
-}
-
-// You should have some kind of method for initializing observable type
-AK_TypeObservable * init_observable_type() {
-    AK_TypeObservable *self;
-    AK_PRO;
-    self = AK_calloc(1, sizeof(AK_TypeObservable));
-    self->AK_get_message = AK_get_message;
-    self->AK_custom_register_observer = &AK_custom_register_observer;
-    self->AK_custom_unregister_observer = &AK_custom_unregister_observer;
-    self->AK_set_notify_info_details = &AK_set_notify_info_details;
-
-    // Very important!!! Call method for initializing AK_Observable and pass instance of custom observable type
-    // Last parameter is a pointer to function which is custom
-    self->observable = AK_init_observable(self, AK_CUSTOM_FIRST, &AK_custom_action);
-    AK_EPI;
-    return self;
-}
-
-struct TypeObserver {
-    // This is observable type we will track.
-    // You can declare instance of custom observable type here if you want, but it isn't necessary
-    AK_TypeObservable *observable;
-    
-    // Nedded for observable pattern. Important!
-    AK_observer *observer;
-}; 
-typedef struct TypeObserver AK_TypeObserver;
-typedef struct TypeObserver AK_TypeObserver_Second;
-
-// Define event handler for our AK_TypeObservable type. You should also define event handlers for other types if you need.
-void handle_AK_custom_type(AK_TypeObserver *observer, AK_TypeObservable *observable) {
-    char *message;
-    AK_PRO;
-    switch(observable->notifyDetails->type) {
-        // we define possible notify types 
-    case ERROR:
-        // for every possibility some action
-        message = observable->AK_get_message(observable);
-        printf ("%s\n", message);
-        break;
-    case WARMING:
-        message = observable->AK_get_message(observable);
-        printf ("%s\n", message);
-        break;
-    case INFO:
-        break;
-    }
-    AK_EPI;
-}
-
-// This method will be called by observable type 
-void custom_observer_event_handler(void *observer, void *observable, AK_ObservableType_Enum AK_ObservableType_Def) {
-    // Handle event, and call some method from observable type. In this case that is method for getting some message from observable type.
-    // You can also define your custom methods and call that method in event handler (here).
-    AK_PRO;
-    switch(AK_ObservableType_Def) {
-        // we define possible observable types
-    case AK_TRANSACTION:
-        break;
-    case AK_TRIGGER:
-        break;
-    case AK_CUSTOM_FIRST:
-        // for some type we call specified function
-        handle_AK_custom_type((AK_TypeObserver*)observer, (AK_TypeObservable*)observable);
-        break;
-    case AK_CUSTOM_SECOND:
-        break;
-    default:
-        printf("ERROR! OBSERVABLE TYPE NOT FOUND");
-    }
-    AK_EPI;
-}
-
-// Define some method for init observer type
-AK_TypeObserver * init_observer_type(void *observable) {
-    AK_TypeObserver *self;
-    AK_PRO;
-    self = AK_calloc(1, sizeof(AK_TypeObserver));
-    self->observable = observable;
-    // Init AK_Observer type. This is very important!!! Pass custom type observer instance as first parameter, and
-    // pointer to event handler function of custom observer type
-    self->observer = AK_init_observer(self, &custom_observer_event_handler);
-    AK_EPI;
-    return self;
-}
-
-// Define some method for init observer type. This method is without passing custom observable type to observer.
-// This is also correct, if you don't want to have instance of custom observable type in custom observer type
-AK_TypeObserver * init_observer_type_second() {
-    AK_TypeObserver_Second *self;
-    AK_PRO;
-    self = AK_calloc(1, sizeof(AK_TypeObserver_Second));
-    // Init AK_Observer type. This is very important!!! Pass custom type observer instance as first parameter, and
-    // pointer to event handler function of custom observer type
-    self->observer = AK_init_observer(self, custom_observer_event_handler);
-    AK_EPI;
-    return self;
-}
-
 /**
- * @author Ivan Pusic
+ * @author Ivan Pusic, refactored by Vilim Trkakoštanec
  * @brief Function that runs tests for observable pattern
  */
-TestResult AK_observable_test()
-{
+TestResult AK_observable_test() {
     AK_PRO;
-    printf ("\n========== OBSERVABLE PATTERN BEGIN ==========\n");
+    int success = 0, failed = 0;
+    AK_TypeObservable *observable = NULL;
 
-    // Fucntion for init custom observable type
-    AK_TypeObservable *observable_type = init_observable_type();
-    // Init observer type with passing observable type instance
-    AK_TypeObserver *observer_first = init_observer_type(observable_type);
-    // You can also initialize second obsever type without passing observable type instance
-    AK_TypeObserver_Second *observer_second = init_observer_type_second();
+    // For test operations that need a custom handler
+    void (*custom_handler)(void*, void*, AK_ObservableType_Enum) = &custom_observer_event_handler;
 
-    // Register out observers to observable type
-    observable_type->AK_custom_register_observer(observable_type, observer_first->observer);
-    observable_type->AK_custom_register_observer(observable_type, observer_second->observer);
+    // Operation types for test cases
+    typedef enum {
+        INIT_OBSERVABLE,
+        INIT_OBSERVER,
+        REGISTER_OBSERVER,
+        NOTIFY_OBSERVER,
+        UNREGISTER_OBSERVER,
+        GET_OBSERVER,
+        NOTIFY_ALL,
+        CUSTOM_ACTION
+    } Op;
 
-    // Set notify type and message
-    observable_type->AK_set_notify_info_details(observable_type, ERROR, "THIS IS SOME ERROR FOR ALL OBSERVERS");
-    // Notify all observers
-    observable_type->observable->AK_notify_observers(observable_type->observable);
+    // Test case structure
+    typedef struct {
+        Op op;                     // Operation to test
+        void *param1;              // First parameter (varies by operation)
+        void *param2;              // Second parameter (varies by operation)
+        int param3;                // Third parameter (e.g. observer ID)
+        int exp_result;            // Expected result code
+        const char *test_name;     // Test description
+    } TestCase;
 
-    // Set notify type and message
-    observable_type->AK_set_notify_info_details(observable_type, WARMING, "THIS IS SOME WARMING FOR SPECIFIED OBSERVER");
-    // Notify specified observer
-    observable_type->observable->AK_notify_observer(observable_type->observable, observer_first->observer);
+    TestCase tests[] = {
+        // Error handling tests
+        { INIT_OBSERVABLE, NULL, NULL, 0, 0, "NULL parameter handling in AK_init_observable" },
+        { INIT_OBSERVER, NULL, NULL, 0, 0, "Observer initialization with NULL handler" },
+        { REGISTER_OBSERVER, NULL, NULL, 0, OBSERVER_REGISTER_FAILURE_MAX_OBSERVERS, "Register observer with NULL parameters" },
+        { NOTIFY_OBSERVER, NULL, NULL, 0, OBSERVER_NOTIFY_FAILURE_NOT_FOUND, "Notify observer with NULL parameters" },
+        { UNREGISTER_OBSERVER, NULL, NULL, 0, OBSERVER_UNREGISTER_FAILURE_NOT_FOUND, "Unregister observer with NULL parameters" },
+        { GET_OBSERVER, NULL, NULL, -1, 0, "Negative observer ID handling" },
+        { GET_OBSERVER, NULL, NULL, 0, 0, "Zero observer ID handling" },
+        { NOTIFY_ALL, NULL, NULL, 0, OBSERVER_NOTIFY_FAILURE_NOT_FOUND, "Notify with no observers" },
+        { INIT_OBSERVER, observable, NULL, 0, 0, "Observer with NULL event handler" },
+        
+        { INIT_OBSERVABLE, observable, NULL, 0, 0, "Observable initialization" },
+        { INIT_OBSERVER, observable, custom_handler, 0, 1, "Observer initialization" },
+        { REGISTER_OBSERVER, observable, NULL, 0, OBSERVER_REGISTER_SUCCESS, "Observer registration" },
+        { NOTIFY_OBSERVER, observable, NULL, 0, OBSERVER_NOTIFY_SUCCESS, "Observer notification" },
+        { UNREGISTER_OBSERVER, observable, NULL, 0, OBSERVER_UNREGISTER_SUCCESS, "Observer unregistration" },
+        { CUSTOM_ACTION, NULL, NULL, 0, OK, "Custom action execution" }
+    };
+    size_t n_tests = sizeof(tests) / sizeof(tests[0]);
 
-    observable_type->observable->AK_run_custom_action(NULL);
-    // Search for observer by ID
-    AK_observer *requested_observer = observable_type->observable->AK_get_observer_by_id(observable_type->observable, 1);
-    int success=0;
-    int failed=0;
-	if(requested_observer) {
-        printf ("Observer was found. Observer adress: %p\n", requested_observer);
-		success++;
-	}
-    else{
-        printf ("Requested observer was not found!\n");
-		failed++;
-	}
+    printf("\n========== OBSERVABLE PATTERN TEST BEGIN ==========\n");
+
+    // Initialize observable for tests that need it
+    observable = init_observable_type();
+    AK_observer *current_observer = NULL;
+
+    for (size_t i = 0; i < n_tests; i++) {
+        TestCase *t = &tests[i];
+        printf("\n--- Test %zu: %s ---\n", i + 1, t->test_name);
+        
+        int result = EXIT_ERROR;
+        
+        switch (t->op) {
+            case INIT_OBSERVABLE:
+                if (t->param1) {
+                    // For success test - check if observable is already initialized
+                    result = (observable != NULL);
+                } else {
+                    // For error test - try to initialize with NULL
+                    result = (AK_init_observable(NULL, AK_CUSTOM_FIRST, NULL) == NULL) ? 0 : 1;
+                }
+                break;
+                
+            case INIT_OBSERVER:
+                current_observer = AK_init_observer(t->param1, t->param2);
+                result = (current_observer != NULL);
+                break;
+                
+            case REGISTER_OBSERVER:
+                if (observable && observable->observable) {
+                    result = observable->observable->AK_register_observer(observable->observable, current_observer);
+                }
+                break;
+                
+            case NOTIFY_OBSERVER:
+                if (observable && observable->observable) {
+                    result = observable->observable->AK_notify_observer(observable->observable, current_observer);
+                }
+                break;
+                
+            case UNREGISTER_OBSERVER:
+                if (observable && observable->observable) {
+                    result = observable->observable->AK_unregister_observer(observable->observable, current_observer);
+                }
+                break;
+                
+            case GET_OBSERVER:
+                if (observable && observable->observable) {
+                    result = (observable->observable->AK_get_observer_by_id(observable->observable, t->param3) == NULL) ? 0 : 1;
+                }
+                break;
+                
+            case NOTIFY_ALL:
+                if (observable && observable->observable) {
+                    result = observable->observable->AK_notify_observers(observable->observable);
+                }
+                break;
+                
+            case CUSTOM_ACTION:
+                if (observable && observable->observable) {
+                    result = observable->observable->AK_run_custom_action(NULL);
+                }
+                break;
+        }
+
+        if (result == t->exp_result) {
+            printf("PASS: %s\n", t->test_name);
+            success++;
+        } else {
+            printf("FAIL: %s (got %d, expected %d)\n", t->test_name, result, t->exp_result);
+            failed++;
+        }
+    }
+
+    // Cleanup
+    if (observable != NULL) {
+        if (observable->observable) {
+            for (int i = 0; i < MAX_OBSERVABLE_OBSERVERS; i++) {
+                if (observable->observable->observers[i] != NULL) {
+                    observable->observable->AK_unregister_observer(observable->observable, observable->observable->observers[i]);
+                }
+            }
+            AK_free(observable->observable);
+        }
+        if (observable->notifyDetails) {
+            AK_free(observable->notifyDetails);
+        }
+        AK_free(observable);
+    }
+
+    printf("\n========== TEST SUMMARY ==========\n");
+    printf("Tests passed: %d\n", success);
+    printf("Tests failed: %d\n", failed);
+    printf("================================\n\n");
     
-    printf ("========== OBSERVABLE PATTERN END ==========\n");
     AK_EPI;
-    return TEST_result(success,failed);
+    return TEST_result(success, failed);
 }
 
-TestResult AK_observable_pattern(){
-
+TestResult AK_observable_pattern() {
     AK_PRO;
-
-    int passed_tests=0;
-    int failed_tests=0;
-
-    printf ("\n========== OBSERVABLE PATTERN TEST BEGIN ==========\n\n");
+    int passed = 0, failed = 0;
     
+    // Setup test data
+    char *msg1 = "AK_CUSTOM_FIRST proslijedi dalje!";
+    char *msg2 = "AK_TRANSACTION proslijedi dalje!";
 
-    char *m1 = "AK_CUSTOM_FIRST proslijedi dalje!";
-    char *m2 = "AK_TRANSACTION proslijedi dalje!";
+    // Operation types for test cases
+    typedef enum {
+        INIT_TYPE,
+        REGISTER,
+        NOTIFY_ALL,
+        NOTIFY_ONE,
+        CUSTOM_ACTION,
+        GET_BY_ID,
+        UNREGISTER,
+        DOUBLE_UNREG,
+        MAX_REG
+    } PatternOp;
 
+    // Test case structure
+    typedef struct {
+        PatternOp op;
+        const char *msg;           // Message for notification tests
+        int id;                    // For observer ID tests
+        int exp_result;            // Expected result code
+        const char *test_name;     // Test description
+    } PatternTest;
 
+    PatternTest tests[] = {
+        { INIT_TYPE, NULL, 0, 1, "Observable Type Initialization" },
+        { REGISTER, NULL, 0, OBSERVER_REGISTER_SUCCESS, "Observer Registration" },
+        { NOTIFY_ALL, msg1, 0, OBSERVER_NOTIFY_SUCCESS, "Notify All Observers with Custom Message" },
+        { NOTIFY_ONE, msg2, 0, OBSERVER_NOTIFY_SUCCESS, "Notify Single Observer with Transaction Message" },
+        { CUSTOM_ACTION, NULL, 0, OK, "Execute Custom Action" },
+        { GET_BY_ID, NULL, 1, 1, "Observer Lookup by ID" },
+        { UNREGISTER, NULL, 0, OBSERVER_UNREGISTER_SUCCESS, "Observer Unregistration" },
+        { DOUBLE_UNREG, NULL, 0, OBSERVER_UNREGISTER_FAILURE_NOT_FOUND, "Double Unregistration (Should Fail)" },
+        { MAX_REG, NULL, MAX_OBSERVABLE_OBSERVERS, 1, "Maximum Observer Registration" }
+    };
+    size_t n_tests = sizeof(tests) / sizeof(tests[0]);
 
-    // Function for init custom observable type
-    AK_TypeObservable *observable_type = init_observable_type();
+    printf("\n========== OBSERVABLE PATTERN TEST BEGIN ==========\n\n");
 
-    // Init observer type with passing observable type instance
-    AK_TypeObserver *observer_first = init_observer_type(observable_type);
+    // Initialize observable and observer
+    AK_TypeObservable *observable = init_observable_type();
+    if (observable == NULL) {
+        printf("FAIL: Failed to initialize observable type\n");
+        failed++;
+        AK_EPI;
+        return TEST_result(passed, failed);
+    }
 
-    // Register out observers to observable type
-    observable_type->AK_custom_register_observer(observable_type, observer_first->observer);
+    AK_TypeObserver *observer = init_observer_type(observable);
+    if (observer == NULL) {
+        printf("FAIL: Failed to initialize observer\n");
+        failed++;
+        if (observable->observable) AK_free(observable->observable);
+        AK_free(observable);
+        AK_EPI;
+        return TEST_result(passed, failed);
+    }
 
-    // Set notify type and message
-    observable_type->AK_set_notify_info_details(observable_type, AK_CUSTOM_FIRST, m1);
+    // Run test cases
+    for (size_t i = 0; i < n_tests; i++) {
+        PatternTest *t = &tests[i];
+        printf("\n--- Test %zu: %s ---\n", i + 1, t->test_name);
+        
+        int result = EXIT_ERROR;
+        
+        switch (t->op) {
+            case INIT_TYPE:
+                result = (observable != NULL);
+                break;
+                
+            case REGISTER:
+                result = observable->observable->AK_register_observer(
+                    observable->observable, 
+                    observer->observer
+                );
+                break;
+                
+            case NOTIFY_ALL:
+                observable->AK_set_notify_info_details(observable, INFO, (char *)t->msg);
+                result = observable->observable->AK_notify_observers(observable->observable);
+                break;
+                
+            case NOTIFY_ONE:
+                observable->AK_set_notify_info_details(observable, INFO, (char *)t->msg);
+                result = observable->observable->AK_notify_observer(
+                    observable->observable, 
+                    observer->observer
+                );
+                break;
+                
+            case CUSTOM_ACTION:
+                result = observable->observable->AK_run_custom_action(NULL);
+                break;
+                
+            case GET_BY_ID:
+                result = (observable->observable->AK_get_observer_by_id(
+                    observable->observable, 
+                    t->id
+                ) != NULL);
+                break;
+                
+            case UNREGISTER:
+                result = observable->observable->AK_unregister_observer(
+                    observable->observable,
+                    observer->observer
+                );
+                break;
+                
+            case DOUBLE_UNREG:
+                result = observable->observable->AK_unregister_observer(
+                    observable->observable,
+                    observer->observer
+                );
+                break;
+                
+            case MAX_REG:
+                int success_count = 0;
+                AK_TypeObserver *temp_observers[MAX_OBSERVABLE_OBSERVERS + 1];
+                
+                for (int j = 0; j < MAX_OBSERVABLE_OBSERVERS + 1; j++) {
+                    temp_observers[j] = init_observer_type(observable);
+                    if (temp_observers[j] != NULL) {
+                        if (observable->observable->AK_register_observer(
+                            observable->observable,
+                            temp_observers[j]->observer
+                        ) == OBSERVER_REGISTER_SUCCESS) {
+                            success_count++;
+                        }
+                    }
+                }
+                
+                // Cleanup temp observers
+                for (int j = 0; j < MAX_OBSERVABLE_OBSERVERS + 1; j++) {
+                    if (temp_observers[j] != NULL) {
+                        if (temp_observers[j]->observer != NULL) {
+                            observable->observable->AK_unregister_observer(
+                                observable->observable,
+                                temp_observers[j]->observer
+                            );
+                        }
+                        AK_free(temp_observers[j]);
+                    }
+                }
+                
+                result = (success_count == t->id); // t->id contains MAX_OBSERVABLE_OBSERVERS
+                break;
+        }
 
-    // Notify all observers
-    observable_type->observable->AK_notify_observers(observable_type->observable);
+        if ((result == t->exp_result) || 
+            (t->exp_result == 1 && result > 0)) { // Handle cases where 1 means success
+            printf("PASS: %s\n", t->test_name);
+            passed++;
+        } else {
+            printf("FAIL: %s (got %d, expected %d)\n", t->test_name, result, t->exp_result);
+            failed++;
+        }
+    }
 
-    // Set notify type and message
-    observable_type->AK_set_notify_info_details(observable_type, AK_TRANSACTION, m2);
-
-    // Notify specified observer
-    observable_type->observable->AK_notify_observer(observable_type->observable, observer_first->observer);
-
-    observable_type->observable->AK_run_custom_action(NULL);
-    // Search for observer by ID
-
-    AK_observer *requested_observer = observable_type->observable->AK_get_observer_by_id(observable_type->observable, 1);
+    // Cleanup
+    if (observer != NULL) {
+        AK_free(observer);
+    }
+    if (observable != NULL) {
+        if (observable->observable) {
+            AK_free(observable->observable);
+        }
+        if (observable->notifyDetails) {
+            AK_free(observable->notifyDetails);
+        }
+        AK_free(observable);
+    }
     
-    if(requested_observer!=0) 
-	{
-        printf ("Observer was found. Observer adress: %p\n\n", requested_observer);
-	passed_tests++;
-	}
-
-    else{
-        printf ("Requested observer was not found!\n\n");
-	failed_tests++;
-	}
+    printf("\n========== OBSERVABLE PATTERN TEST END ==========\n");
+    printf("Tests passed: %d\n", passed);
+    printf("Tests failed: %d\n", failed);
+    printf("====================================\n\n");
     
-    printf ("========== OBSERVABLE PATTERN TEST END ==========\n\n");
-
     AK_EPI;
-
-    return TEST_result(passed_tests,failed_tests);
+    return TEST_result(passed, failed);
 }
-
