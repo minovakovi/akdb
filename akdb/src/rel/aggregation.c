@@ -145,553 +145,367 @@ void AK_agg_input_fix(AK_agg_input *input) {
    @return EXIT_SUCCESS if continues succesfuly, when not EXIT_ERROR
 
  */
-int AK_aggregation(AK_agg_input *input, char *source_table, char *agg_table) {
-    int i, j;
-    AK_PRO;
-    AK_agg_input_fix(input);
-    AK_header *att_root = (*input).attributes;
-    int *att_tasks = (*input).tasks;
-    int num_aggregations = (*input).counter;
-	AK_header *agg_head_ptr[MAX_ATTRIBUTES];
-    AK_header agg_head[MAX_ATTRIBUTES];
-    int agg_group_number = 0;
-    int inttemp = 0;
-    double doubletemp = 0;
-    float floattemp = 0;
 
-    char agg_h_name[MAX_ATT_NAME];
-    int agg_h_type;
-    char group_h_name[MAX_ATT_NAME];
+ // === Pomoćne funkcije ===
 
-    AK_agg_value *needed_values = AK_malloc(sizeof (AK_agg_value) * num_aggregations);
+void AK_process_block_with_grouping(AK_agg_input *input, AK_agg_value *needed_values, AK_header *agg_head, char *group_name, char *source_table) {
+    table_addresses *addresses = (table_addresses*) AK_get_table_addresses(source_table);
+    int num_attr = AK_num_attr(source_table);
+    AK_block *temp = NULL;
 
-    char new_table[MAX_ATT_NAME];
-    sprintf(new_table, "_%s", agg_table);
+    rowroot_struct rowroot_table;
+    rowroot_table.row_root = (struct list_node*) AK_malloc(sizeof(struct list_node));
+    AK_Init_L3(&rowroot_table);
 
-    for (i = 0; i < num_aggregations; i++) 
-	{
-        agg_h_type = att_root[i].type;
-        switch (att_tasks[i]) {
+    for (int i = 0; addresses->address_from[i] != 0; i++) {
+        for (int j = addresses->address_from[i]; j < addresses->address_to[i]; j++) {
+            temp = (AK_block*) AK_read_block(j);
+            if (temp->last_tuple_dict_id == 0) break;
+
+            for (int k = 0; k < temp->last_tuple_dict_id; k += num_attr) {
+                char *group_value = NULL;
+
+                for (int l = 0; l < num_attr; l++) {
+    if (temp->tuple_dict[k + l].is_null) continue;
+                    if (strcmp(temp->header[l].att_name, group_name) == 0) {
+                        group_value = (char*) &temp->data[temp->tuple_dict[k + l].address];
+                        break;
+                    }
+                }
+
+                struct list_node *existing_row = AK_Find_Row_By_Value(rowroot_table.row_root, group_value);
+                if (existing_row == NULL) {
+                    for (int l = 0; l < input->counter; l++) {
+                        for (int m = 0; m < num_attr; m++) {
+                            if (strcmp(needed_values[l].att_name, temp->header[m].att_name) == 0) {
+    if (temp->tuple_dict[k + m].is_null) continue;
+    void *src = &(temp->data[temp->tuple_dict[k + m].address]);
+                                AK_Insert_New_Element(agg_head[l].type, src, source_table, agg_head[l].att_name, rowroot_table.row_root);
+                            }
+                        }
+                    }
+                    AK_insert_row(rowroot_table.row_root);
+                } else {
+                    // logika ažuriranja postojećeg reda u rowroot_table ako je već grupa unesena
+                    for (int l = 0; l < input->counter; l++) {
+                        for (int m = 0; m < num_attr; m++) {
+                            if (strcmp(needed_values[l].att_name, temp->header[m].att_name) == 0) {
+                                void *src = &(temp->data[temp->tuple_dict[k + m].address]);
+                                struct list_node *target = AK_Find_Column_In_Row(existing_row, agg_head[l].att_name);
+                                if (target != NULL) {
+                                    switch (needed_values[l].agg_task) {
+                                        case AGG_TASK_COUNT:
+                                        case AGG_TASK_AVG_COUNT: {
+                                            int prev = *((int*) target->value);
+                                            prev++;
+                                            memcpy(target->value, &prev, sizeof(int));
+                                            break;
+                                        }
+                                        case AGG_TASK_SUM:
+                                        case AGG_TASK_AVG_SUM: {
+                                            int new_val = *((int*) src);
+                                            int old_val = *((int*) target->value);
+                                            int result = new_val + old_val;
+                                            memcpy(target->value, &result, sizeof(int));
+                                            break;
+                                        }
+                                        case AGG_TASK_MAX: {
+                                            int new_val = *((int*) src);
+                                            int old_val = *((int*) target->value);
+                                            if (new_val > old_val)
+                                                memcpy(target->value, &new_val, sizeof(int));
+                                            break;
+                                        }
+                                        case AGG_TASK_MIN: {
+                                            int new_val = *((int*) src);
+                                            int old_val = *((int*) target->value);
+                                            if (new_val < old_val)
+                                                memcpy(target->value, &new_val, sizeof(int));
+                                            break;
+                                        }
+                                        default:
+                                            break;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    for (int l = 0; l < input->counter; l++) {
+                        for (int m = 0; m < num_attr; m++) {
+                            if (strcmp(needed_values[l].att_name, temp->header[m].att_name) == 0) {
+                                void *src = &(temp->data[temp->tuple_dict[k + m].address]);
+                                struct list_node *target = AK_Find_Column_In_Row(existing_row, agg_head[l].att_name);
+                                if (target != NULL) {
+                                    if (needed_values[l].agg_task == AGG_TASK_COUNT || needed_values[l].agg_task == AGG_TASK_AVG_COUNT) {
+                                        int prev = *((int*) target->value);
+                                        prev++;
+                                        memcpy(target->value, &prev, sizeof(int));
+                                    } else if (needed_values[l].agg_task == AGG_TASK_SUM || needed_values[l].agg_task == AGG_TASK_AVG_SUM) {
+                                        int new_val = *((int*) src);
+                                        int old_val = *((int*) target->value);
+                                        int result = new_val + old_val;
+                                        memcpy(target->value, &result, sizeof(int));
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    AK_free(temp);
+    AK_free(addresses);
+    AK_free(rowroot_table.row_root);
+}
+
+void AK_prepare_aggregation_headers(AK_agg_input *input, AK_header *agg_head, AK_header **agg_head_ptr, AK_agg_value *needed_values, int *agg_group_number, char *group_h_name) {
+    for (int i = 0; i < input->counter; i++) {
+        int agg_h_type = input->attributes[i].type;
+        char agg_h_name[MAX_ATT_NAME];
+
+        switch (input->tasks[i]) {
             case AGG_TASK_GROUP:
-                strcpy(agg_h_name, att_root[i].att_name);
-                strcpy(group_h_name, att_root[i].att_name);
-                agg_group_number++;
+                strcpy(agg_h_name, input->attributes[i].att_name);
+                strcpy(group_h_name, input->attributes[i].att_name);
+                (*agg_group_number)++;
                 break;
             case AGG_TASK_COUNT:
-                sprintf(agg_h_name, "Cnt(%s)", att_root[i].att_name);
+                sprintf(agg_h_name, "Cnt(%s)", input->attributes[i].att_name);
                 agg_h_type = TYPE_INT;
                 break;
             case AGG_TASK_SUM:
-                sprintf(agg_h_name, "Sum(%s)", att_root[i].att_name);
-                if (agg_h_type != TYPE_INT && agg_h_type != TYPE_FLOAT && agg_h_type != TYPE_NUMBER)
-                    agg_h_type = TYPE_INT;
+                sprintf(agg_h_name, "Sum(%s)", input->attributes[i].att_name);
+                agg_h_type = TYPE_INT;
                 break;
             case AGG_TASK_MAX:
-                sprintf(agg_h_name, "Max(%s)", att_root[i].att_name);
-                if (agg_h_type != TYPE_INT && agg_h_type != TYPE_FLOAT && agg_h_type != TYPE_NUMBER)
-                    agg_h_type = TYPE_INT;
+                sprintf(agg_h_name, "Max(%s)", input->attributes[i].att_name);
+                agg_h_type = TYPE_INT;
                 break;
             case AGG_TASK_MIN:
-                sprintf(agg_h_name, "Min(%s)", att_root[i].att_name);
-                if (agg_h_type != TYPE_INT && agg_h_type != TYPE_FLOAT && agg_h_type != TYPE_NUMBER)
-                    agg_h_type = TYPE_INT;
+                sprintf(agg_h_name, "Min(%s)", input->attributes[i].att_name);
+                agg_h_type = TYPE_INT;
                 break;
             case AGG_TASK_AVG:
-                sprintf(agg_h_name, "Avg(%s)", att_root[i].att_name);
+                sprintf(agg_h_name, "Avg(%s)", input->attributes[i].att_name);
                 agg_h_type = TYPE_FLOAT;
                 break;
             case AGG_TASK_AVG_COUNT:
-                sprintf(agg_h_name, "_cAvg(%s)", att_root[i].att_name);
+                sprintf(agg_h_name, "_cAvg(%s)", input->attributes[i].att_name);
                 agg_h_type = TYPE_INT;
                 break;
             case AGG_TASK_AVG_SUM:
-                sprintf(agg_h_name, "_sAvg(%s)", att_root[i].att_name);
+                sprintf(agg_h_name, "_sAvg(%s)", input->attributes[i].att_name);
                 agg_h_type = TYPE_FLOAT;
                 break;
         }
-        needed_values[i].agg_task = att_tasks[i];
-        strcpy(needed_values[i].att_name, att_root[i].att_name);
-		agg_head_ptr[i] = AK_create_header(agg_h_name, agg_h_type, FREE_INT, FREE_CHAR, FREE_CHAR);
+
+        needed_values[i].agg_task = input->tasks[i];
+        strcpy(needed_values[i].att_name, input->attributes[i].att_name);
+        agg_head_ptr[i] = AK_create_header(agg_h_name, agg_h_type, FREE_INT, FREE_CHAR, FREE_CHAR);
         agg_head[i] = *(agg_head_ptr[i]);
     }
-
-    // removing rest of the unneeded attributes (where attribute id is greater than number of used aggregations)
-    for (i = num_aggregations; i < MAX_ATTRIBUTES; i++) {
-    printf("Before memcpy: agg_head[%d] = %c\n", i, agg_head[i]);
-    memcpy(&agg_head[i], "\0", sizeof("\0"));
-    printf("After memcpy: agg_head[%d] = %c\n", i, agg_head[i]);
 }
 
-    
+void AK_clean_unused_headers(AK_header *agg_head, int from) {
+    for (int i = from; i < MAX_ATTRIBUTES; i++) {
+        memcpy(&agg_head[i], "\0", sizeof("\0"));
+    }
+}
 
-    int startAddress = AK_initialize_new_segment(new_table, SEGMENT_TYPE_TABLE, agg_head);
+int AK_initialize_aggregation_table(char *table_name, AK_header *header) {
+    int addr = AK_initialize_new_segment(table_name, SEGMENT_TYPE_TABLE, header);
+    if (addr != EXIT_ERROR) {
+        printf("\nTABLE %s CREATED!\n", table_name);
+    }
+    return addr;
+}
 
-    if (startAddress != EXIT_ERROR)
-        printf("\nTABLE %s CREATED!\n", new_table);
-
-    // this was an optimisation or something, so that sort works normally
-    //sort_segment(source_table,group_h_name);
-
-    search_params search_parameters[agg_group_number];
-    search_result sresult;
-    j = 0;
-
-
+void AK_process_block_without_grouping(AK_agg_input *input, AK_agg_value *needed_values, AK_header *agg_head, char *source_table) {
     table_addresses *addresses = (table_addresses*) AK_get_table_addresses(source_table);
     int num_attr = AK_num_attr(source_table);
+    int counter = 0;
+    AK_block *temp = NULL;
+    int inttemp = 0;
+    float floattemp = 0.0;
+    double doubletemp = 0.0;
 
-    int k, l, m, n, o, counter;
-
-    AK_block *temp;
-    AK_mem_block *mem_block;
-
-
-	rowroot_struct rowroot_table = {.row_root = (struct list_node*) AK_malloc(sizeof(struct list_node))};
-
-    AK_Init_L3(&rowroot_table);
-
-
-    i = 0;
-    counter = 0;
-
-    while (addresses->address_from[ i ] != 0) {
-        for (j = addresses->address_from[ i ]; j < addresses->address_to[ i ]; j++) {
+    for (int i = 0; addresses->address_from[i] != 0; i++) {
+        for (int j = addresses->address_from[i]; j < addresses->address_to[i]; j++) {
             temp = (AK_block*) AK_read_block(j);
-            if ( temp->last_tuple_dict_id == 0 )
-            	break;
-            for (k = 0; k < temp->last_tuple_dict_id; k += num_attr) {
+            if (temp->last_tuple_dict_id == 0) break;
+
+            for (int k = 0; k < temp->last_tuple_dict_id; k += num_attr) {
                 counter++;
-                n = 0;
-
-                //aggregation when no grouping is done will be executed separately to skip the unsorted search
-                if(agg_group_number == 0){
-                	for (l = 0; l < num_attr; l++) {
-						for (m = 0; m < num_aggregations; m++) {
-							if (strcmp(needed_values[m].att_name, temp->header[l].att_name) == 0) {
-								switch (needed_values[m].agg_task) {
-									case AGG_TASK_COUNT:
-										//no break is intentional
-									case AGG_TASK_AVG_COUNT:
-										//memcpy(needed_values[m].data, &counter, sizeof(int));
-										//needed_values[m].data[sizeof(int)] = '\0';
-
-
-										//prepravljeni dio koda
-										*((int*)needed_values[m].data) = counter;
-										((char*)needed_values[m].data)[sizeof(int)] = '\0';
-										
-									break;
-
-									case AGG_TASK_MAX:
-										switch (agg_head[m].type) {
-											case TYPE_INT:
-												memcpy(&inttemp, &(temp->data[temp->tuple_dict[k + l].address]), temp->tuple_dict[k + l].size);
-												if (*((int*)needed_values[m].data) < inttemp || counter == 1)
-													memcpy(needed_values[m].data, &inttemp, sizeof (int));
-												break;
-
-											case TYPE_FLOAT:
-												memcpy(&floattemp, &(temp->data[temp->tuple_dict[k + l].address]), temp->tuple_dict[k + l].size);
-												if (*((float *)needed_values[m].data) < floattemp || counter == 1)
-													memcpy(needed_values[m].data, &floattemp, sizeof(float));
-												break;
-
-											case TYPE_NUMBER:
-												memcpy(&doubletemp, &(temp->data[temp->tuple_dict[k + l].address]), temp->tuple_dict[k + l].size);
-												if (*((double *)needed_values[m].data) < doubletemp || counter == 1)
-													memcpy(needed_values[m].data, &doubletemp, sizeof(double));
-												break;
-										}
-										needed_values[m].data[temp->tuple_dict[k + l].size] = '\0';
-										break;
-
-									case AGG_TASK_MIN:
-										switch (agg_head[m].type) {
-											case TYPE_INT:
-												memcpy(&inttemp, &(temp->data[temp->tuple_dict[k + l].address]), temp->tuple_dict[k + l].size);
-												if (*((int*)needed_values[m].data) > inttemp || counter == 1)
-													memcpy(needed_values[m].data, &inttemp, sizeof (int));
-												break;
-
-											case TYPE_FLOAT:
-												memcpy(&floattemp, &(temp->data[temp->tuple_dict[k + l].address]), temp->tuple_dict[k + l].size);
-												if (*((float *)needed_values[m].data) > floattemp || counter == 1)
-													memcpy(needed_values[m].data, &floattemp, sizeof(float));
-												break;
-
-											case TYPE_NUMBER:
-												memcpy(&doubletemp, &(temp->data[temp->tuple_dict[k + l].address]), temp->tuple_dict[k + l].size);
-												if (*((double *)needed_values[m].data) > doubletemp || counter == 1)
-													memcpy(needed_values[m].data, &doubletemp, sizeof(double));
-												break;
-										}
-										needed_values[m].data[temp->tuple_dict[k + l].size] = '\0';
-										break;
-
-									case AGG_TASK_SUM:
-										//no break is intentional
-									case AGG_TASK_AVG_SUM:
-										switch (agg_head[m].type) {
-											case TYPE_INT:
-												memcpy(&inttemp, &(temp->data[temp->tuple_dict[k + l].address]), temp->tuple_dict[k + l].size);
-												inttemp += *((int*) needed_values[m].data);
-												memcpy(needed_values[m].data, &inttemp, sizeof (int));
-												break;
-
-											case TYPE_FLOAT:
-												memcpy(&floattemp, &(temp->data[temp->tuple_dict[k + l].address]), temp->tuple_dict[k + l].size);
-												floattemp += *((float *)needed_values[m].data);
-												memcpy(needed_values[m].data, &floattemp, sizeof (float));
-												break;
-
-											case TYPE_NUMBER:
-												memcpy(&doubletemp, &(temp->data[temp->tuple_dict[k + l].address]), temp->tuple_dict[k + l].size);
-												doubletemp += *((double*) needed_values[m].data);
-												memcpy(needed_values[m].data, &doubletemp, sizeof (double));
-												break;
-										}
-										needed_values[m].data[temp->tuple_dict[k + l].size] = '\0';
-								}
-							}
-						}
-					}
-				}
-				else{
-
-					for (l = 0; l < num_attr; l++) {
-						for (m = 0; m < num_aggregations; m++) {
-							if (strcmp(needed_values[m].att_name, temp->header[l].att_name) == 0) {
-
-								memcpy(needed_values[m].data, &(temp->data[temp->tuple_dict[k + l].address]), temp->tuple_dict[k + l].size);
-								needed_values[m].data[temp->tuple_dict[k + l].size] = '\0';
-
-								if (needed_values[m].agg_task == AGG_TASK_GROUP) {
-									search_parameters[n].iSearchType = SEARCH_PARTICULAR;
-									search_parameters[n].pData_lower = AK_malloc(temp->tuple_dict[k + l].size + 1);
-									memcpy(search_parameters[n].pData_lower, &(temp->data[temp->tuple_dict[k + l].address]), temp->tuple_dict[k + l].size);
-									((char *) search_parameters[n].pData_lower)[ temp->tuple_dict[k + l].size ] = '\0';
-									search_parameters[n].szAttribute = (temp->header[l].att_name);
-									n++;
-								}
-							}
-						}
-					}
-
-					sresult = AK_search_unsorted(new_table, search_parameters, agg_group_number);
-
-					if (sresult.iNum_tuple_addresses == 0) {
-						AK_DeleteAll_L3(&rowroot_table);
-
-						for (l = 0; l < num_aggregations; l++) {
-							switch (needed_values[l].agg_task) {
-								case AGG_TASK_COUNT:
-									//no break is intentional
-								case AGG_TASK_AVG_COUNT:
-									inttemp = 1;
-									/**
-									 * THIS SINGLE LINE BELOW (memcpy) is the purpose of ALL evil in the world!
-									 * This line is the reason why test function prints one extra empty 
-									 * row with "nulls" at the end! Trust me! Comment it, and you will see - 
-									 * test function will not print extra row with nulls (but counts and averages 
-									 * in table will be all messed up!)
-									 * After two days of hard research, I still have not found what is the
-									 * reason behind printing extra row at the end! Fellow programmer,
-									 * if you really really want to solve this issue, arm yourself with
-									 * at least 2 liters of hot coffee!
-									 *
-									 * What this line does? What is the purpose of this line in the universe?
-									 * Well, fellow programmer, this line sets the initial count to 1.
-									 * That means if name "Ivan" is found, it will have count of 1
-									 * because, well, that's the first Ivan that is found!
-									 * If function finds another Ivan (which, actually, will happen),
-									 * this part of code will not handle it (other part of code will).
-									 *
-									 * That actually means that this little piece of code 
-									 * (this line below) only (and ONLY) sets count to 1! And besides that
-									 * causes every other evil in the world. :O
-									 *
-									 * P.S. The reason for that may be in linked list, or in AK_insert_row()
-									 * You'll have to check every piece of AKDB code to find cause!
-									 * I have found out that additional line is added when k == 25.
-									 * There may be problem in linked lists or in AK_insert_row function
-									 * or somewhere else. Who knows.
-									 *
-									 * If I didn't handle that last row (which has one attribute of size 0),
-									 * test would not pass!
-									 *
-									 * Good luck, fellow programmer!
-									 */
-									//promijenjeno
-									*((int*)needed_values[m].data) = counter;
-									((char*)needed_values[m].data)[sizeof(int)] = '\0';
-									AK_Insert_New_Element(agg_head[l].type, needed_values[l].data, new_table, agg_head[l].att_name, rowroot_table.row_root);
-									break;
-
-								case AGG_TASK_AVG:
-									//no break is intentional
-								case AGG_TASK_MAX:
-									//no break is intentional
-								case AGG_TASK_MIN:
-									//no break is intentional
-								case AGG_TASK_SUM:
-									//no break is intentional
-								case AGG_TASK_GROUP:
-									//no break is intentional
-								case AGG_TASK_AVG_SUM:
-									//no break is intentional
-								default:
-									AK_Insert_New_Element(agg_head[l].type, needed_values[l].data, new_table, agg_head[l].att_name, rowroot_table.row_root);
-							}
-
-						}
-                        //FILE  -  fix this!
-						AK_insert_row(rowroot_table.row_root);
-
-					} else {
-						mem_block = AK_get_block(sresult.aiBlocks[0]);
-
-						for (l = 0; l < num_attr; l++) {
-							for (m = 0; m < num_aggregations; m++) {
-								if (strcmp(needed_values[m].att_name, temp->header[l].att_name) == 0) {
-									switch (needed_values[m].agg_task) {
-										case AGG_TASK_COUNT:
-											//no break is intentional
-										case AGG_TASK_AVG_COUNT:
-											inttemp = *((int *) (mem_block->block->data + mem_block->block->tuple_dict[sresult.aiTuple_addresses[i] + m].address)) + 1;
-											memcpy(&mem_block->block->data[mem_block->block->tuple_dict[sresult.aiTuple_addresses[i] + m].address], &inttemp, sizeof (int));
-											break;
-
-										case AGG_TASK_SUM:
-											//no break is intentional
-										case AGG_TASK_AVG_SUM:
-											switch (agg_head[m].type) {
-												case TYPE_INT:
-													printf("Before memcpy for AGG_TASK_MAX: inttemp = %d, existing value = %d\n", inttemp, *((int*) needed_values[m].data));
-													inttemp = *((int*) needed_values[m].data) + *((int *) (mem_block->block->data + mem_block->block->tuple_dict[sresult.aiTuple_addresses[i] + m].address));
-													memcpy(mem_block->block->data + mem_block->block->tuple_dict[sresult.aiTuple_addresses[i] + m].address, &inttemp, sizeof (int));
-													printf("After memcpy for AGG_TASK_MAX: new value = %d\n", inttemp);
-													break;
-
-												case TYPE_FLOAT:
-													printf("Before memcpy for AGG_TASK_MAX: inttemp = %d, existing value = %d\n", inttemp, *((int*) needed_values[m].data));
-													floattemp = *((float*) needed_values[m].data) + *((float *) (mem_block->block->data + mem_block->block->tuple_dict[sresult.aiTuple_addresses[i] + m].address));
-													memcpy(mem_block->block->data + mem_block->block->tuple_dict[sresult.aiTuple_addresses[i] + m].address, &floattemp, sizeof (float));
-													printf("After memcpy for AGG_TASK_MAX: new value = %d\n", inttemp);
-													break;
-
-												case TYPE_NUMBER:
-													printf("Before memcpy for AGG_TASK_MAX: inttemp = %d, existing value = %d\n", inttemp, *((int*) needed_values[m].data));
-													doubletemp = *((double*) needed_values[m].data) + *((double *) (mem_block->block->data + mem_block->block->tuple_dict[sresult.aiTuple_addresses[i] + m].address));
-													memcpy(mem_block->block->data + mem_block->block->tuple_dict[sresult.aiTuple_addresses[i] + m].address, &doubletemp, sizeof (double));
-													printf("After memcpy for AGG_TASK_MAX: new value = %d\n", inttemp);
-													break;
-											}
-											break;
-
-										case AGG_TASK_MAX:
-											switch (agg_head[m].type) {
-												case TYPE_INT:
-													inttemp = *((int *) (mem_block->block->data + mem_block->block->tuple_dict[sresult.aiTuple_addresses[i] + m].address));
-													if (*((int*) needed_values[m].data) > inttemp) {
-														inttemp = *((int*) needed_values[m].data);
-														memcpy(mem_block->block->data + mem_block->block->tuple_dict[sresult.aiTuple_addresses[i] + m].address, &inttemp, sizeof (int));
-													}
-													break;
-
-												case TYPE_FLOAT:
-													floattemp = *((float *) (mem_block->block->data + mem_block->block->tuple_dict[sresult.aiTuple_addresses[i] + m].address));
-													if (*((float*) needed_values[m].data) > floattemp) {
-														floattemp = *((float*) needed_values[m].data);
-														memcpy(mem_block->block->data + mem_block->block->tuple_dict[sresult.aiTuple_addresses[i] + m].address, &floattemp, sizeof (float));
-													}
-													break;
-
-												case TYPE_NUMBER:
-													doubletemp = *((double *) (mem_block->block->data + mem_block->block->tuple_dict[sresult.aiTuple_addresses[i] + m].address));
-													if (*((double*) needed_values[m].data) > doubletemp) {
-														doubletemp = *((double*) needed_values[m].data);
-														memcpy(mem_block->block->data + mem_block->block->tuple_dict[sresult.aiTuple_addresses[i] + m].address, &doubletemp, sizeof (double));
-													}
-													break;
-											}
-											break;
-
-										case AGG_TASK_MIN:
-											switch (agg_head[m].type) {
-												case TYPE_INT:
-													inttemp = *((int *) (mem_block->block->data + mem_block->block->tuple_dict[sresult.aiTuple_addresses[i] + m].address));
-													if (*((int*) needed_values[m].data) < inttemp) {
-														inttemp = *((int*) needed_values[m].data);
-														memcpy(mem_block->block->data + mem_block->block->tuple_dict[sresult.aiTuple_addresses[i] + m].address, &inttemp, sizeof (int));
-													}
-													break;
-
-												case TYPE_FLOAT:
-													floattemp = *((float *) (mem_block->block->data + mem_block->block->tuple_dict[sresult.aiTuple_addresses[i] + m].address));
-													if (*((float*) needed_values[m].data) < floattemp) {
-														floattemp = *((float*) needed_values[m].data);
-														memcpy(mem_block->block->data + mem_block->block->tuple_dict[sresult.aiTuple_addresses[i] + m].address, &floattemp, sizeof (float));
-													}
-													break;
-
-												case TYPE_NUMBER:
-													doubletemp = *((double *) (mem_block->block->data + mem_block->block->tuple_dict[sresult.aiTuple_addresses[i] + m].address));
-													if (*((double*) needed_values[m].data) < doubletemp) {
-														doubletemp = *((double*) needed_values[m].data);
-														memcpy(mem_block->block->data + mem_block->block->tuple_dict[sresult.aiTuple_addresses[i] + m].address, &doubletemp, sizeof (double));
-													}
-													break;
-											}
-											break;
-
-										case AGG_TASK_AVG:
-											inttemp = floattemp = -1;
-											for (o = 0; o < num_aggregations; o++) {
-												sprintf(agg_h_name, "_cAvg(%s)", needed_values[m].att_name);
-
-												if (strcmp(agg_h_name, mem_block->block->header[o].att_name) == 0) {
-													inttemp = *((int*) (mem_block->block->data + mem_block->block->tuple_dict[sresult.aiTuple_addresses[i] + o].address));
-												}
-												sprintf(agg_h_name, "_sAvg(%s)", needed_values[m].att_name);
-
-												if (strcmp(agg_h_name, mem_block->block->header[o].att_name) == 0) {
-													floattemp = *((float*) (mem_block->block->data + mem_block->block->tuple_dict[sresult.aiTuple_addresses[i] + o].address));
-												}
-
-												if (inttemp != -1 && doubletemp != -1)
-													break;
-											}
-											floattemp = floattemp / (float) inttemp;
-											memcpy(mem_block->block->data + mem_block->block->tuple_dict[sresult.aiTuple_addresses[i] + m].address, &floattemp, sizeof (float));
-											break;
-
-										case AGG_TASK_GROUP:
-											break;
-									}
-								}
-							}
-						}
-						AK_deallocate_search_result(sresult);
-						
-						AK_DeleteAll_L3(&rowroot_table);
-
-						for (l = 0; l<num_aggregations;l++) {
-							if (needed_values[l].agg_task == AGG_TASK_GROUP)
-							   inttemp = 1;
-							else
-								inttemp = 0;
-							AK_Insert_New_Element_For_Update(agg_head[l].type, needed_values[l].data, new_table, agg_head[l].att_name, rowroot_table.row_root, inttemp);
-						}
-
-						//AK_update_delete_row_from_block(mem_block->block, row_root, 0);
-                        AK_mem_block_modify(mem_block, BLOCK_DIRTY);
-					}
-				}
+                for (int l = 0; l < num_attr; l++) {
+                    for (int m = 0; m < input->counter; m++) {
+                        if (strcmp(needed_values[m].att_name, temp->header[l].att_name) == 0) {
+                            void *src = &(temp->data[temp->tuple_dict[k + l].address]);
+                            switch (needed_values[m].agg_task) {
+                                case AGG_TASK_COUNT:
+                                case AGG_TASK_AVG_COUNT:
+                                    *((int*) needed_values[m].data) = counter;
+                                    ((char*) needed_values[m].data)[sizeof(int)] = '\0';
+                                    break;
+                                case AGG_TASK_SUM:
+                                case AGG_TASK_AVG_SUM:
+                                    memcpy(&inttemp, src, temp->tuple_dict[k + l].size);
+                                    inttemp += *((int*) needed_values[m].data);
+                                    memcpy(needed_values[m].data, &inttemp, sizeof(int));
+                                    break;
+                                default:
+                                    break;
+                            }
+                        }
+                    }
+                }
             }
         }
-        i++;
     }
 
-    //if there is no grouping, we only need to insert one row into the table and we can insert it straight into the destination table
-    if(agg_group_number == 0)
-	{
-
-    	AK_header agg_head_final[MAX_ATTRIBUTES];
-    	j = 0;
-
-    	for (i = 0; i < num_aggregations; i++) {
-			if (agg_head[i].att_name[0] != '_') {
-				agg_head_final[j] = agg_head[i];
-				j++;
-			}
-		}
-
-    	startAddress = AK_initialize_new_segment(agg_table, SEGMENT_TYPE_TABLE, agg_head_final);
-
-		if (startAddress != EXIT_ERROR)
-			printf("\nTABLE %s CREATED!\n", agg_table);
-
-    	
-	AK_DeleteAll_L3(&rowroot_table);
-
-		for (l = 0; l < num_aggregations; l++) 
-		{
-
-			switch (needed_values[l].agg_task) {
-
-				case AGG_TASK_AVG_SUM:
-					floattemp = *((float *)needed_values[l].data);
-					break;
-
-				case AGG_TASK_AVG_COUNT:
-					inttemp = *((int *)needed_values[l].data);
-					break;
-
-				case AGG_TASK_AVG:
-					floattemp = floattemp/inttemp;
-					memcpy(needed_values[l].data, &floattemp, sizeof(float));
-					needed_values[l].data[sizeof(float)] = '\0';
-					//no break is intentional
-				case AGG_TASK_COUNT:
-					//no break is intentional
-				case AGG_TASK_MAX:
-					//no break is intentional
-				case AGG_TASK_MIN:
-					//no break is intentional
-				case AGG_TASK_SUM:
-					//no break is intentional
-				default:
-					AK_Insert_New_Element(agg_head[l].type, needed_values[l].data, agg_table, agg_head[l].att_name, rowroot_table.row_root);
-					break;
-			}
-		}
-		AK_insert_row(rowroot_table.row_root);
-    }
-    else
-	{
-
-	
-	projection_att_struct projection_att_table = {.projection_att = (struct list_node*) AK_malloc(sizeof(struct list_node))};
-	
-	AK_Init_L3(&projection_att_table);
-
-
-
-	for (i = 0; i < num_aggregations; i++) 
-		{
-			if (agg_head[i].att_name[0] != '_') 
-			{
-				AK_InsertAtEnd_L3(TYPE_ATTRIBS, agg_head[i].att_name, strlen(agg_head[i].att_name), projection_att_table.projection_att);
-
-			}
-		}
-
-		AK_projection(new_table, agg_table, projection_att_table.projection_att,NULL);
-
-		
-		AK_DeleteAll_L3(&projection_att_table);
-		AK_free(projection_att_table.projection_att);
-    }
-	AK_free(addresses);
-		
-
-        //TODO replace this segment with AK_drop_table() once when it's done
-	addresses = (table_addresses*) AK_get_table_addresses(new_table);
-	i = 0;
-	while (addresses->address_from[i] != 0) 
-	{
-		AK_delete_extent(addresses->address_from[i], addresses->address_to[i]);
-		i++;
-	}
-	for (i = 0; i < num_aggregations; i++)
-		AK_free(agg_head_ptr[i]);
-    AK_free(needed_values);
-    AK_free(rowroot_table.row_root);
     AK_free(temp);
-	AK_free(addresses);
+    AK_free(addresses);
+}
+
+void AK_finalize_aggregation_result(AK_agg_input *input, AK_header *agg_head, AK_agg_value *needed_values, char *agg_table) {
+    AK_header agg_head_final[MAX_ATTRIBUTES];
+    rowroot_struct rowroot_table;
+    rowroot_table.row_root = (struct list_node*) AK_malloc(sizeof(struct list_node));
+    AK_Init_L3(&rowroot_table);
+
+    int j = 0;
+    for (int i = 0; i < input->counter; i++) {
+        if (agg_head[i].att_name[0] != '_') {
+            agg_head_final[j++] = agg_head[i];
+        }
+    }
+
+    int startAddress = AK_initialize_new_segment(agg_table, SEGMENT_TYPE_TABLE, agg_head_final);
+    if (startAddress != EXIT_ERROR)
+        printf("\nTABLE %s CREATED!\n", agg_table);
+
+    for (int i = 0; i < input->counter; i++) {
+        AK_Insert_New_Element(agg_head[i].type, needed_values[i].data,
+                              agg_table, agg_head[i].att_name,
+                              rowroot_table.row_root);
+    }
+
+    AK_insert_row(rowroot_table.row_root);
+    AK_free(rowroot_table.row_root);
+}
+
+void AK_cleanup_aggregation(AK_agg_value *needed_values, AK_header **agg_head_ptr, int num_aggregations) {
+    for (int i = 0; i < num_aggregations; i++) {
+        AK_free(agg_head_ptr[i]);
+    }
+    AK_free(needed_values);
+}
+
+// === Testne funkcije ===
+
+void AK_aggregation_test_print_result(char *table) {
+    printf("
+=== Rezultat za tablicu: %s ===
+", table);
+    AK_print_table(table);
+    printf("===============================
+");
+}
+
+void AK_aggregation_test_sum_and_count(char *source_table) {
+    AK_agg_input input;
+    input.counter = 2;
+    strcpy(input.attributes[0].att_name, "amount");
+    strcpy(input.attributes[1].att_name, "amount");
+    input.tasks[0] = AGG_TASK_SUM;
+    input.tasks[1] = AGG_TASK_COUNT;
+
+    AK_aggregation(&input, source_table, "agg_sum_count");
+    AK_aggregation_test_print_result("agg_sum_count");
+}
+
+void AK_aggregation_test_group_by(char *source_table) {
+    AK_agg_input input;
+    input.counter = 3;
+    strcpy(input.attributes[0].att_name, "category");
+    strcpy(input.attributes[1].att_name, "amount");
+    strcpy(input.attributes[2].att_name, "amount");
+    input.tasks[0] = AGG_TASK_GROUP;
+    input.tasks[1] = AGG_TASK_SUM;
+    input.tasks[2] = AGG_TASK_COUNT;
+
+    AK_aggregation(&input, source_table, "agg_grouped");
+    AK_aggregation_test_print_result("agg_grouped");
+}
+
+void AK_aggregation_test_avg(char *source_table) {
+    AK_agg_input input;
+    input.counter = 3;
+    strcpy(input.attributes[0].att_name, "amount");
+    strcpy(input.attributes[1].att_name, "amount");
+    strcpy(input.attributes[2].att_name, "amount");
+    input.tasks[0] = AGG_TASK_AVG;
+    input.tasks[1] = AGG_TASK_AVG_SUM;
+    input.tasks[2] = AGG_TASK_AVG_COUNT;
+
+    AK_aggregation(&input, source_table, "agg_avg");
+    AK_aggregation_test_print_result("agg_avg");
+}
+
+// === HAVING, projection i cleanup ===
+
+void AK_apply_having_clause(char *agg_table, char *condition) {
+    char *tmp_table = "_tmp_having";
+    AK_selection(agg_table, tmp_table, condition);
+    AK_delete_table(agg_table);
+    AK_rename_table(tmp_table, agg_table);
+}
+
+void AK_projection_and_cleanup(char *agg_table, char **attributes, int attr_count) {
+    char *tmp_table = "_tmp_projected";
+    AK_projection(agg_table, tmp_table, attributes, attr_count);
+    AK_delete_table(agg_table);
+    AK_rename_table(tmp_table, agg_table);
+}
+
+// === Glavna funkcija ===
+
+int AK_aggregation(AK_agg_input *input, char *source_table, char *agg_table) {
+    AK_PRO;
+    AK_agg_input_fix(input);
+
+    int num_aggregations = input->counter;
+    AK_header *att_root = input->attributes;
+    int *att_tasks = input->tasks;
+
+    AK_header *agg_head_ptr[MAX_ATTRIBUTES];
+    AK_header agg_head[MAX_ATTRIBUTES];
+    AK_agg_value *needed_values = AK_malloc(sizeof(AK_agg_value) * num_aggregations);
+
+    int agg_group_number = 0;
+    char group_h_name[MAX_ATT_NAME];
+    char new_table[MAX_ATT_NAME];
+    sprintf(new_table, "_%s", agg_table);
+
+    AK_prepare_aggregation_headers(input, agg_head, agg_head_ptr, needed_values, &agg_group_number, group_h_name);
+    AK_clean_unused_headers(agg_head, num_aggregations);
+
+    int startAddress = AK_initialize_aggregation_table(new_table, agg_head);
+
+    if (agg_group_number == 0) {
+        AK_process_block_without_grouping(input, needed_values, agg_head, source_table);
+        AK_finalize_aggregation_result(input, agg_head, needed_values, agg_table);
+    } else {
+        AK_process_block_with_grouping(input, needed_values, agg_head, group_h_name, source_table);
+    }
+
+    AK_cleanup_aggregation(needed_values, agg_head_ptr, num_aggregations);
+
     AK_EPI;
     return EXIT_SUCCESS;
 }
+
 
 /*
 *@author Marin Bogešić
