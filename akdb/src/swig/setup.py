@@ -3,6 +3,7 @@ from distutils.core import setup, Extension
 
 kalashnikovDB_module = Extension('_kalashnikovDB',
                            sources=['kalashnikovDB_wrap.c'],
+                           libraries=['crypto'],
                            )
 
 setup (name = 'kalashnikovDB',
