@@ -234,6 +234,7 @@ void* AK_sql_div(void* a, void* b, int type) {
     return result;
 }
 
+
 /**
  * @author Antonio Brković
  * @brief Potenciranje dvaju vrijednosti (int ili float)
