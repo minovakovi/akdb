@@ -656,3 +656,148 @@ TestResult AK_hash_test() {
     AK_EPI;
     return TEST_result(passedTest,failedTest);
 }
+
+/**
+ * @author Karlo Ipsa
+ * @brief Fetches values from a single column by attribute name.
+ */
+ struct list_node *AK_get_column_values(char *tblName, char *attrName) {
+    struct list_node *col = (struct list_node *)AK_malloc(sizeof(struct list_node));
+    AK_Init_L3(&col);
+
+    int attr_index = -1;
+    int i, j;
+    AK_header *headers = AK_get_header(tblName);
+    int num_attr = AK_num_attr(tblName);
+    for (i = 0; i < num_attr; i++) {
+        if (strcmp(headers[i].att_name, attrName) == 0) {
+            attr_index = i;
+            break;
+        }
+    }
+
+    if (attr_index == -1) {
+        printf("Attribute %s not found in table %s.\n", attrName, tblName);
+        return col;
+    }
+
+    table_addresses *addresses = AK_get_table_addresses(tblName);
+    for (i = 0; addresses->address_from[i]; i++) {
+        for (j = addresses->address_from[i]; j < addresses->address_to[i]; j++) {
+            AK_block *block = AK_read_block(j);
+            for (int k = 0; k < DATA_BLOCK_SIZE; k += num_attr) {
+                if (block->tuple_dict[k].type == FREE_INT)
+                    break;
+                int type = block->tuple_dict[k + attr_index].type;
+                int size = block->tuple_dict[k + attr_index].size;
+                int offset = block->tuple_dict[k + attr_index].address;
+                char value[MAX_VARCHAR_LENGTH];
+                memcpy(value, &block->data[offset], size);
+                value[size] = '\0';
+                AK_InsertAtEnd_L3(type, value, size, col);
+            }
+        }
+    }
+
+    return col;
+}
+
+/**
+ * @author Karlo Ipsa
+ * @brief Deletes all elements of a L2 list (list_node with ->next).
+ */
+void AK_DeleteAll_L2(struct list_node **L) {
+    if (L == NULL || *L == NULL)
+        return;
+
+    struct list_node *current = (*L)->next;
+    struct list_node *next;
+
+    while (current != NULL) {
+        next = current->next;
+        AK_free(current);
+        current = next;
+    }
+
+    (*L)->next = NULL;
+}
+
+/**
+ * @author Karlo Ipsa
+ * @brief Simple hash function for int and varchar values.
+ */
+int AK_hash_function(void *data, int type) {
+    int value = 0;
+    char *str;
+
+    switch (type) {
+        case TYPE_INT:
+            memcpy(&value, data, sizeof(int));
+            break;
+        case TYPE_VARCHAR:
+            str = (char *)data;
+            while (*str)
+                value += (int)(*str++);
+            break;
+        default:
+            value = 0;
+    }
+    return value;
+}
+
+/**
+ * @author Karlo Ipsa
+ * @brief Counts hash collisions, analyzes distribution and access time.
+ */
+void AK_analyze_hash_index(char *tblName, char *attrName) {
+    int bucket_count = 20;
+    int collisions = 0;
+    int *distribution = calloc(bucket_count, sizeof(int));
+    double total_time = 0.0;
+    int total_elements = 0;
+
+    struct list_node *rows = AK_get_column_values(tblName, attrName);
+    if (AK_IsEmpty_L2(rows)) {
+        printf("No data found in table %s, column %s.\n", tblName, attrName);
+        return;
+    }
+
+    struct list_node *curr = rows->next;
+    while (curr != NULL) {
+        clock_t start = clock();
+
+        int hash_val = AK_hash_function(curr->data, curr->type) % bucket_count;
+        distribution[hash_val]++;
+        if (distribution[hash_val] > 1) collisions++;
+
+        clock_t end = clock();
+        total_time += (double)(end - start) / CLOCKS_PER_SEC;
+
+        total_elements++;
+        curr = curr->next;
+    }
+
+    printf("\n--- Hash Index Analysis for %s.%s ---\n", tblName, attrName);
+    printf("Total elements: %d\n", total_elements);
+    printf("Total collisions: %d\n", collisions);
+    printf("Average access time: %.6f sec\n", total_time / total_elements);
+    printf("Distribution per bucket:\n");
+
+    for (int i = 0; i < bucket_count; i++) {
+        if (distribution[i] > 0)
+            printf("Bucket %d: %d\n", i, distribution[i]);
+    }
+
+    free(distribution);
+    AK_DeleteAll_L2(&rows);
+}
+
+/**
+ * @author Karlo Ipsa
+ * @brief Test function for hash index statistics on a test table.
+ */
+void AK_test_hash_stats() {
+    printf("\n[TEST] Running hash index analysis on table 'student', column 'mbr'\n");
+    AK_analyze_hash_index("student", "mbr");
+}
+

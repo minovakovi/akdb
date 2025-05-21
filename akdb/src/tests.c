@@ -94,7 +94,8 @@ Test tests[] = {
 {"idx: AK_bitmap", &AK_bitmap_test}, //file/idx/bitmap.c
 {"idx: AK_btree", &AK_btree_test}, //file/idx/btree.c
 {"idx: AK_hash", &AK_hash_test}, //file/idx/hash.c
-//3+18=21 total
+{"idx: AK_hash_stats_test", &AK_test_hash_stats}, //file/idx/hash.c
+//4+18=22 total
 //mm:
 //-------
 {"mm: AK_memoman", &AK_memoman_test}, //mm/memoman.c
