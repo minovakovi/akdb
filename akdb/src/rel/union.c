@@ -20,6 +20,30 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 #include "union.h"
 
+
+#include <string.h>  
+/* Provides:
+   - memcpy() for copying header and tuple data  
+   - strcmp() for key comparisons  
+   - strdup() for duplicating string keys  
+*/
+
+#include <stdlib.h>  
+/* Provides:
+   - malloc()/free() for dynamic memory  
+   - EXIT_SUCCESS/EXIT_ERROR constants  
+   - strdup() fallback if not in <string.h>  
+   - unlink()/access() on POSIX systems  
+*/
+
+//array to keep track of each row’s “key” (first column value) 
+//used for duplicate detection during the union:
+#define MAX_UNION_KEYS 1024  
+static char *union_keys[MAX_UNION_KEYS];
+static int union_key_count;
+
+
+
 /**
  * @author Dino Laktašić; updated by Elena Kržina
  * @brief  Function that makes a union of two tables. Union is implemented for working with multiple sets of data, i.e. duplicate tuples can be written in same table (union) 
@@ -30,6 +54,9 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
  int AK_union(char *srcTable1, char *srcTable2, char *dstTable) {
     AK_PRO;
+    //reset the key counter before processing    
+    union_key_count = 0; 
+
     table_addresses *src_addr1 = (table_addresses*) AK_get_table_addresses(srcTable1);
     table_addresses *src_addr2 = (table_addresses*) AK_get_table_addresses(srcTable2);
     
@@ -122,8 +149,33 @@ void AK_Write_Segments(char *dstTable, int num_att, table_addresses *src_addr1, 
 
                     AK_Insert_New_Element(type, data, dstTable, tbl1_temp_block->block->header[k % num_att].att_name, row_root);
 
-                    if ((k + 1) % num_att == 0 && k != 0) {
+                    //Removed: original row-insertion code lacked any duplicate check
+                    /*if ((k + 1) % num_att == 0 && k != 0) {
                         AK_insert_row(row_root);
+                        AK_DeleteAll_L3(&row_root);
+                    }*/
+                   /*once a full tuple is buffered,
+                     compare its key against stored keys;
+                     insert only if the key is not yet recorded*/
+                    if ((k + 1) % num_att == 0 && k != 0) {
+                        struct list_node *first_elem = row_root->next;
+                        char *new_key = first_elem ? first_elem->data : NULL;
+                        
+                        int exists = 0;
+                        if (union_key_count > 0) {
+                            for (int u = 0; u < union_key_count; u++) {
+                                if (strcmp(union_keys[u], new_key) == 0) {
+                                    exists = 1;
+                                    break;
+                                }
+                            }
+                        }
+                        if (!exists) {
+                        AK_insert_row(row_root);
+                            if (union_key_count < MAX_UNION_KEYS && new_key) {
+                                union_keys[union_key_count++] = strdup(new_key);
+                            }
+                        }
                         AK_DeleteAll_L3(&row_root);
                     }
                 }
