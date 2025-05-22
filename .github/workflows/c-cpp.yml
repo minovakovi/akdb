@@ -52,6 +52,7 @@ jobs:
       - name: Generate documentation
         working-directory: ./akdb/src
         run: |
+          chmod +x ./tools/updateVersion.sh
           make doc
 
       # Run make swig to compile SWIG files
