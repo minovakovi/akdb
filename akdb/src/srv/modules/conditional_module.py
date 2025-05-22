@@ -97,7 +97,9 @@ def is_interval(lit):
 # @param lit the value to be checked
 def is_period(lit):
     try:
-        time.strptime(lit, '%Y-%m-%d %H:%M:%S - %Y-%m-%d %H:%M:%S')
+        start_str, end_str = lit.split(" - ")
+        time.strptime(start_str, '%Y-%m-%d %H:%M:%S')
+        time.strptime(end_str, '%Y-%m-%d %H:%M:%S')
         return True
     except ValueError:
         return False
