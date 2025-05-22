@@ -501,7 +501,7 @@ TestResult AK_reference_test() {
     a = 35891;
     
       
-    AK_DeleteAll_L3(row_root);
+    AK_DeleteAll_L3(&row_root);
     AK_Insert_New_Element(TYPE_INT, &a, "ref_test", "FK", row_root);
     AK_Insert_New_Element(TYPE_VARCHAR, "Mislav", "ref_test", "Value", row_root);
     AK_Insert_New_Element(TYPE_VARCHAR, "TheMutilator", "ref_test", "Rnd", row_root);
@@ -509,7 +509,7 @@ TestResult AK_reference_test() {
 
     a = 35893;
       
-    AK_DeleteAll_L3(row_root);
+    AK_DeleteAll_L3(&row_root);
     AK_Insert_New_Element(TYPE_INT, &a, "ref_test", "FK", row_root);
     AK_Insert_New_Element(TYPE_VARCHAR, "Mislav", "ref_test", "Value", row_root);
     AK_Insert_New_Element(TYPE_VARCHAR, "TheMutilator", "ref_test", "Rnd", row_root);
