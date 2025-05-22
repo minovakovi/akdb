@@ -95,13 +95,14 @@ int main(int argc, char * argv[])
                 }
                 else if((argc == 3) && !strcmp(argv[1], "test"))
                 {
-
+                   
                     int pickedTest;
                     pickedTest = strtol(argv[2], NULL, 10)-1;
-
-                    AK_create_test_tables();
+                    selected_test(pickedTest);
+                   /* AK_create_test_tables();
                     set_catalog_constraints();
-                    tests[pickedTest].func();
+                    tests[pickedTest].func();*/
+            
                 }
                 /*component test area --- end */
                 if ( AK_flush_cache() == EXIT_SUCCESS ){

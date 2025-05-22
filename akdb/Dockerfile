@@ -1,23 +1,16 @@
-#ubuntu image
-FROM ubuntu:20.04
+# Use Ubuntu 22.04 LTS (Jammy) as the base image
+FROM ubuntu:22.04
 
-#install required files
-RUN apt-get update -y
-RUN apt-get install git build-essential swig make doxygen python2.7 dos2unix libffi-dev libssl-dev curl python3 python3-pip -y
-RUN curl https://bootstrap.pypa.io/pip/2.7/get-pip.py -o get-pip.py
-RUN python2.7 get-pip.py
-
-#installing latex takes some time, comment out the lines 12 and 13 if you do not plan to compile documentation(make doc)
-RUN DEBIAN_FRONTEND="noninteractive" apt-get -y install tzdata
-RUN apt-get install texlive -y
-RUN apt-get install texlive-latex-extra -y
-RUN pip3 install virtualenv
-RUN pip3 install paramiko
-RUN pip3 install pyparsing==2.4.7
-RUN pip3 install configparser
-RUN pip3 install langdetect
-
+# Update APT and install software-properties-common (for add-apt-repository)
+# Enable the 'universe' repo (needed for python2.7), then install required packages
+RUN apt-get update && apt-get install -y --no-install-recommends software-properties-common \
+    && add-apt-repository universe \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends \
+        python2.7 git build-essential swig make doxygen python3-distutils python3-apt python3-dev python3-pip
+RUN pip install paramiko
 RUN mkdir -p /usr/akdb
 VOLUME ["/usr/akdb"]
 WORKDIR /usr/akdb
 RUN cd /usr/akdb
+

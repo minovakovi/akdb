@@ -3,7 +3,7 @@
 docker-install:
 	docker build -t akdb .
 docker-compose:
-	docker-compose up -d
+	docker-compose up -d --build
 	docker-compose exec akdb bash
 	make docker-compose-stop
 

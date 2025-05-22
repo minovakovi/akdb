@@ -202,6 +202,17 @@ void show_test()
     AK_EPI;
 }
 
+void selected_test(int test)
+{
+    AK_PRO;
+    AK_create_test_tables();
+    set_catalog_constraints();
+    TEST_output_results(tests[test].func());
+    exit( EXIT_SUCCESS );
+    AK_EPI;
+}
+
+
 
 void choose_test()
 {
