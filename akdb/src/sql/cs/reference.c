@@ -455,71 +455,169 @@ int AK_reference_check_entry(struct list_node *lista) {
  */
 TestResult AK_reference_test() {
     AK_PRO;
-    printf("reference.c: Present!\n");
+    int passing_tests = 0;
+    int failing_tests = 0;
+    printf("reference.c: Starting tests!\n");
 
-    AK_header t_header[4] ={
+    // Test setup - create test tables
+    AK_header t_header[4] = {
         {TYPE_INT, {"FK"}, {0}, {{'\0'}}, {{'\0'}}},
         {TYPE_VARCHAR, {"Value"}, {0}, {{'\0'}}, {{'\0'}}},
         {TYPE_VARCHAR, {"Rnd"}, {0}, {{'\0'}}, {{'\0'}}},
         {0, {'\0'}, {0}, {{'\0'}}, {{'\0'}}}
     };
 
+    // Create test table
     int startAddress = AK_initialize_new_segment("ref_test", SEGMENT_TYPE_TABLE, t_header);
+    if (startAddress != EXIT_ERROR) {
+        printf("\nTest table 'ref_test' created successfully\n");
+        passing_tests++;
+    } else {
+        printf("\nFAILED: Could not create test table 'ref_test'\n");
+        failing_tests++;
+        return TEST_result(passing_tests, failing_tests);
+    }
 
-    if (startAddress != EXIT_ERROR)
-        printf("\nTABLE %s CREATED!\n", "ref_test");
-
-    int a;
-
+    // Test 1: AK_add_reference - Valid case
     char *att[2];
-    att[0] = AK_malloc(sizeof (char) *20);
+    att[0] = AK_malloc(sizeof(char) * 20);
     strcpy(att[0], "FK");
-    att[1] = AK_malloc(sizeof (char) *20);
+    att[1] = AK_malloc(sizeof(char) * 20);
     strcpy(att[1], "Value");
 
-
     char *patt[2];
-    patt[0] = AK_malloc(sizeof (char) *20);
+    patt[0] = AK_malloc(sizeof(char) * 20);
     strcpy(patt[0], "mbr");
-    patt[1] = AK_malloc(sizeof (char) *20);
+    patt[1] = AK_malloc(sizeof(char) * 20);
     strcpy(patt[1], "firstname");
 
-    AK_add_reference("ref_test", att, "student", patt, 2, "constraint", REF_TYPE_SET_NULL);
-    AK_print_table("AK_reference");
-    AK_print_table("student");
+    if (AK_add_reference("ref_test", att, "student", patt, 2, "constraint", REF_TYPE_SET_NULL) == EXIT_SUCCESS) {
+        printf("Test 1 PASSED: Successfully added valid reference\n");
+        passing_tests++;
+    } else {
+        printf("Test 1 FAILED: Could not add valid reference\n");
+        failing_tests++;
+    }
 
-    a = 35891;
+    // Test 2: AK_add_reference - Invalid case (invalid reference type)
+    if (AK_add_reference("ref_test", att, "student", patt, 2, "constraint", 999) == 0) {
+        printf("Test 2 PASSED: Invalid reference type correctly rejected\n");
+        passing_tests++;
+    } else {
+        printf("Test 2 FAILED: Invalid reference type not rejected\n");
+        failing_tests++;
+    }
+
+    // Test 3: AK_get_reference - Valid case
+    AK_ref_item ref = AK_get_reference("ref_test", "constraint");
+    if (ref.attributes_number > 0 && strcmp(ref.table, "ref_test") == 0) {
+        printf("Test 3 PASSED: Successfully retrieved reference\n");
+        passing_tests++;
+    } else {
+        printf("Test 3 FAILED: Could not retrieve existing reference\n");
+        failing_tests++;
+    }
+
+    // Test 4: AK_get_reference - Invalid case
+    ref = AK_get_reference("non_existent", "non_existent");
+    if (ref.attributes_number == 0) {
+        printf("Test 4 PASSED: Non-existent reference returns empty result\n");
+        passing_tests++;
+    } else {
+        printf("Test 4 FAILED: Non-existent reference returned data\n");
+        failing_tests++;
+    }
+
+    // Test 5: AK_reference_check_attribute - Valid case
+    int a = 35891;
+    char value[20];
+    sprintf(value, "%d", a);
     
-    struct list_node *row_root = (struct list_node *) AK_malloc(sizeof (struct list_node));
+    struct list_node *row_root = (struct list_node *) AK_malloc(sizeof(struct list_node));
     AK_Init_L3(&row_root);
     AK_DeleteAll_L3(&row_root);
     AK_Insert_New_Element(TYPE_INT, &a, "ref_test", "FK", row_root);
-    AK_Insert_New_Element(TYPE_VARCHAR, "Dude", "ref_test", "Value", row_root);
-    AK_Insert_New_Element(TYPE_VARCHAR, "TheRippah", "ref_test", "Rnd", row_root);
+    AK_Insert_New_Element(TYPE_VARCHAR, "Test", "ref_test", "Value", row_root);
+    AK_Insert_New_Element(TYPE_VARCHAR, "TestRnd", "ref_test", "Rnd", row_root);
     AK_insert_row(row_root);
 
-    a = 35891;
+    if (AK_reference_check_attribute("ref_test", "FK", value) == EXIT_SUCCESS) {
+        printf("Test 5 PASSED: Valid attribute check passed\n");
+        passing_tests++;
+    } else {
+        printf("Test 5 FAILED: Valid attribute check failed\n");
+        failing_tests++;
+    }
+
+    // Test 6: AK_reference_check_attribute - Invalid case
+    if (AK_reference_check_attribute("ref_test", "FK", "99999") == EXIT_ERROR) {
+        printf("Test 6 PASSED: Invalid attribute correctly rejected\n");
+        passing_tests++;
+    } else {
+        printf("Test 6 FAILED: Invalid attribute not rejected\n");
+        failing_tests++;
+    }
+
+    // Test 7: AK_reference_check_if_update_needed - Valid case
+    struct list_node *update_list = (struct list_node *) AK_malloc(sizeof(struct list_node));
+    AK_Init_L3(&update_list);
+    AK_DeleteAll_L3(&update_list);
+    AK_Insert_New_Element(TYPE_INT, &a, "student", "mbr", update_list);
     
-      
+    if (AK_reference_check_if_update_needed(update_list, UPDATE) == EXIT_SUCCESS) {
+        printf("Test 7 PASSED: Update check successful\n");
+        passing_tests++;
+    } else {
+        printf("Test 7 FAILED: Update check failed\n");
+        failing_tests++;
+    }
+    
+    AK_DeleteAll_L3(&update_list);
+    AK_free(update_list);
+
+    // Test 8: AK_reference_check_restricion - SET_NULL case
+    if (AK_reference_check_restricion(update_list, UPDATE) == EXIT_SUCCESS) {
+        printf("Test 8 PASSED: Restriction check passed for SET_NULL\n");
+        passing_tests++;
+    } else {
+        printf("Test 8 FAILED: Restriction check failed for SET_NULL\n");
+        failing_tests++;
+    }
+
+    // Test 9: AK_reference_check_entry - Valid case
+    if (AK_reference_check_entry(row_root) == EXIT_SUCCESS) {
+        printf("Test 9 PASSED: Entry check passed for valid data\n");
+        passing_tests++;
+    } else {
+        printf("Test 9 FAILED: Entry check failed for valid data\n");
+        failing_tests++;
+    }
+
+    // Test 10: AK_reference_check_entry - Invalid case
     AK_DeleteAll_L3(&row_root);
+    a = 99999; // Invalid foreign key value
     AK_Insert_New_Element(TYPE_INT, &a, "ref_test", "FK", row_root);
-    AK_Insert_New_Element(TYPE_VARCHAR, "Mislav", "ref_test", "Value", row_root);
-    AK_Insert_New_Element(TYPE_VARCHAR, "TheMutilator", "ref_test", "Rnd", row_root);
-    AK_insert_row(row_root);
+    AK_Insert_New_Element(TYPE_VARCHAR, "Invalid", "ref_test", "Value", row_root);
+    
+    if (AK_reference_check_entry(row_root) == EXIT_ERROR) {
+        printf("Test 10 PASSED: Invalid entry correctly rejected\n");
+        passing_tests++;
+    } else {
+        printf("Test 10 FAILED: Invalid entry not rejected\n");
+        failing_tests++;
+    }
 
-    a = 35893;
-      
-    AK_DeleteAll_L3(&row_root);
-    AK_Insert_New_Element(TYPE_INT, &a, "ref_test", "FK", row_root);
-    AK_Insert_New_Element(TYPE_VARCHAR, "Mislav", "ref_test", "Value", row_root);
-    AK_Insert_New_Element(TYPE_VARCHAR, "TheMutilator", "ref_test", "Rnd", row_root);
-    AK_insert_row(row_root);
+    // Cleanup
+    AK_free(att[0]);
+    AK_free(att[1]);
+    AK_free(patt[0]);
+    AK_free(patt[1]);
+    AK_free(row_root);
 
-    AK_print_table("ref_test");
-
-    AK_print_table("student");
-    AK_print_table("ref_test");
+    printf("\nTEST SUMMARY:\n");
+    printf("Passing tests: %d\n", passing_tests);
+    printf("Failing tests: %d\n", failing_tests);
+    
     AK_EPI;
-
-    return TEST_result(0,1);
+    return TEST_result(passing_tests, failing_tests);
 }
