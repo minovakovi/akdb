@@ -22,7 +22,7 @@
 /******************** OBSERVABLE IMPLEMENTATION ********************/
 
 /** 
- * @author Ivan Pusic
+ * @author Ivan Pusic, updated by Vilim Trakoštanec
  * @brief Function that registers a new observer. Observer is added to the list of all observers
  * @param self Observable object instance
  * @param observer Observer object instance
@@ -68,7 +68,7 @@ static inline int AK_register_observer(AK_observable *self, AK_observer *observe
 }
 
 /** 
- * @author Ivan Pusic
+ * @author Ivan Pusic, updated by Vilim Trakoštanec
  * @brief Function that unregisters a observer. Observer will be removed from the list of all observers
  * @param self Observable object instance
  * @param observer Observer object instance
@@ -106,7 +106,7 @@ static inline int AK_unregister_observer(AK_observable *self, AK_observer *obser
 }
 
 /** 
- * @author Ivan Pusic
+ * @author Ivan Pusic, updated by Vilim Trakoštanec
  * @brief Function that notifies a certain observer
  * @param self Observable object instance
  * @param observer Observer object to notify
@@ -154,7 +154,7 @@ static inline int AK_notify_observer(AK_observable *self, AK_observer *observer)
 }
 
 /** 
- * @author Ivan Pusic
+ * @author Ivan Pusic, updated by Vilim Trakoštanec
  * @brief Function that notifies all observers
  * @param self Observable object instance
  * 
@@ -205,7 +205,7 @@ static inline int AK_notify_observers(AK_observable *self)
 }
 
 /** 
- * @author Ivan Pusic
+ * @author Ivan Pusic, updated by Vilim Trakoštanec
  * @brief Function that fetches a observer object from observable type by observer id
  * @param self Observable type instance
  * @param id Observer id
@@ -245,7 +245,7 @@ static inline AK_observer *AK_get_observer_by_id(AK_observable *self, int id)
 }
 
 /** 
- * @author Ivan Pusic
+ * @author Ivan Pusic, updated by Vilim Trakoštanec
  * @brief Function that initializes a observable object
  *
  * @return Pointer to new observable object
@@ -294,7 +294,7 @@ AK_observable * AK_init_observable(void *AK_observable_type, AK_ObservableType_E
 /******************** OBSERVER IMPLEMENTATION ********************/
 
 /** 
- * @author Ivan Pusic
+ * @author Ivan Pusic, updated by Vilim Trakoštanec
  * @brief Function that destroys a observer object
  *
  * @return Exit status
@@ -329,7 +329,7 @@ static inline int AK_destroy_observer(AK_observer *self)
 }
 
 /** 
- * @author Ivan Pusic
+ * @author Ivan Pusic, updated by Vilim Trakoštanec
  * @brief Function that calls event handler for the observer object
  * @param observer AK_observer type instance
  * @param observable_type Custom observable type instance
@@ -362,7 +362,7 @@ static inline int AK_notify(AK_observer *observer, void *observable_type, AK_Obs
 }
 
 /** 
- * @author Ivan Pusic
+ * @author Ivan Pusic, updated by Vilim Trakoštanec
  * @brief Function that initializes the observer object
  * 
  * @return Pointer to new observer object

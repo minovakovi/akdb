@@ -25,7 +25,7 @@
 typedef enum {
     ERROR,
     INFO,
-    WARMING,
+    WARNING,
 } NotifyType;
 
 // Structure that holds message and notify type

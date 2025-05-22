@@ -20,7 +20,12 @@
 #include "observable_custom.h"
 #include <stdio.h>
 
-// Method for getting message from observable custom type
+/**
+ * @author unknown, updated by Vilim Trakoštanec
+ * @brief Method for retrieving message from observable custom type
+ * @param self Pointer to AK_TypeObservable instance
+ * @return char* Message string if available, NULL if error occurs or no message set
+ */
 char * AK_get_message(AK_TypeObservable *self) {
     char *ret;
     AK_PRO;
@@ -46,7 +51,13 @@ char * AK_get_message(AK_TypeObservable *self) {
     return ret;
 }
 
-// Method for adding observer to custom observable type
+/**
+ * @author unknown, updated by Vilim Trakoštanec
+ * @brief Method for registering an observer to custom observable type
+ * @param self Pointer to AK_TypeObservable instance
+ * @param observer Pointer to AK_observer instance to register
+ * @return int Registration status (OBSERVER_REGISTER_SUCCESS on success, NOT_OK on failure)
+ */
 int AK_custom_register_observer(AK_TypeObservable* self, AK_observer* observer) {
     int result;
     AK_PRO;
@@ -74,7 +85,13 @@ int AK_custom_register_observer(AK_TypeObservable* self, AK_observer* observer) 
     return result;
 }
 
-// Method for removing observer from custom observable type
+/**
+ * @author unknown, updated by Vilim Trakoštanec
+ * @brief Method for unregistering an observer from custom observable type
+ * @param self Pointer to AK_TypeObservable instance
+ * @param observer Pointer to AK_observer instance to unregister
+ * @return int Unregistration status (OBSERVER_UNREGISTER_SUCCESS on success, NOT_OK on failure)
+ */
 int AK_custom_unregister_observer(AK_TypeObservable * self, AK_observer* observer) {
     int result;
     AK_PRO;
@@ -102,7 +119,13 @@ int AK_custom_unregister_observer(AK_TypeObservable * self, AK_observer* observe
     return result;
 }
 
-// Helper method for setting notify details
+/**
+ * @author unknown, updated by Vilim Trakoštanec
+ * @brief Helper method for setting notification details in observable
+ * @param self Pointer to AK_TypeObservable instance
+ * @param type Type of notification (ERROR, WARNING, or INFO)
+ * @param message Message string to be set in notification details
+ */
 void AK_set_notify_info_details(AK_TypeObservable *self, NotifyType type, char *message) {
     NotifyDetails *notifyDetails;
     AK_PRO;
@@ -118,7 +141,7 @@ void AK_set_notify_info_details(AK_TypeObservable *self, NotifyType type, char *
     }
 
     // Validate notify type
-    if (type < ERROR || type > WARMING) {
+    if (type < ERROR || type > WARNING) {
         AK_dbg_messg(LOW, GLOBAL, "ERROR: Invalid notify type: %d", type);
         AK_EPI;
         return;
@@ -144,7 +167,12 @@ void AK_set_notify_info_details(AK_TypeObservable *self, NotifyType type, char *
     AK_EPI;
 }
 
-// Custom action implementation
+/**
+ * @author unknown, updated by Vilim Trakoštanec
+ * @brief Custom action implementation for observable pattern
+ * @param data Optional data parameter (currently unused)
+ * @return int Operation status (OK on success)
+ */
 int AK_custom_action(void *data) {
     AK_PRO;
     
@@ -160,7 +188,11 @@ int AK_custom_action(void *data) {
     return OK;
 }
 
-// Initialize observable type
+/**
+ * @author unknown, updated by Vilim Trakoštanec
+ * @brief Initialize and set up a new observable type instance
+ * @return AK_TypeObservable* Pointer to initialized observable type, NULL on failure
+ */
 AK_TypeObservable * init_observable_type() {
     AK_TypeObservable *self;
     AK_PRO;
@@ -192,7 +224,12 @@ AK_TypeObservable * init_observable_type() {
     return self;
 }
 
-// Event handler for AK_TypeObservable type
+/**
+ * @author unknown, updated by Vilim Trakoštanec
+ * @brief Event handler for processing custom type observable events
+ * @param observer Pointer to AK_TypeObserver instance handling the event
+ * @param observable Pointer to AK_TypeObservable instance that triggered the event
+ */
 void handle_AK_custom_type(AK_TypeObserver *observer, AK_TypeObservable *observable) {
     char *message;
     AK_PRO;
@@ -217,7 +254,7 @@ void handle_AK_custom_type(AK_TypeObserver *observer, AK_TypeObservable *observa
             AK_dbg_messg(LOW, GLOBAL, "Error message handled: %s", message);
         }
         break;
-    case WARMING:
+    case WARNING:
         message = observable->AK_get_message(observable);
         if (message) {
             printf("WARNING: %s\n", message);
@@ -236,7 +273,13 @@ void handle_AK_custom_type(AK_TypeObserver *observer, AK_TypeObservable *observa
     AK_EPI;
 }
 
-// Custom observer event handler
+/**
+ * @author unknown, updated by Vilim Trakoštanec
+ * @brief Generic event handler for all observer types
+ * @param observer Pointer to observer instance
+ * @param observable Pointer to observable instance
+ * @param AK_ObservableType_Def Type of the observable event
+ */
 void custom_observer_event_handler(void *observer, void *observable, AK_ObservableType_Enum AK_ObservableType_Def) {
     AK_PRO;
 
@@ -266,7 +309,12 @@ void custom_observer_event_handler(void *observer, void *observable, AK_Observab
     AK_EPI;
 }
 
-// Initialize observer type
+/**
+ * @author unknown, updated by Vilim Trakoštanec
+ * @brief Initialize a new observer type with an associated observable
+ * @param observable Pointer to observable instance to associate with the observer
+ * @return AK_TypeObserver* Pointer to initialized observer type, NULL on failure
+ */
 AK_TypeObserver * init_observer_type(void *observable) {
     AK_TypeObserver *self;
     AK_PRO;
@@ -292,7 +340,11 @@ AK_TypeObserver * init_observer_type(void *observable) {
     return self;
 }
 
-// Initialize observer type without observable instance
+/**
+ * @author unknown, updated by Vilim Trakoštanec
+ * @brief Initialize a new observer type without an associated observable
+ * @return AK_TypeObserver* Pointer to initialized observer type, NULL on failure
+ */
 AK_TypeObserver * init_observer_type_second() {
     AK_TypeObserver_Second *self;
     AK_PRO;
@@ -374,7 +426,7 @@ TestResult AK_custom_observable_test() {
 
         // Test notification types
         { NOTIFY_TYPE, NULL, NULL, ERROR, 1, "ERROR notification handling", "Error message" },
-        { NOTIFY_TYPE, NULL, NULL, WARMING, 1, "WARNING notification handling", "Warning message" },
+        { NOTIFY_TYPE, NULL, NULL, WARNING, 1, "WARNING notification handling", "Warning message" },
         { NOTIFY_TYPE, NULL, NULL, INFO, 1, "INFO notification handling", "Info message" },
         { NOTIFY_TYPE, NULL, NULL, 999, 1, "Invalid notification type handling", "Invalid type message" },
 
