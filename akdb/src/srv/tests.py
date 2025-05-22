@@ -1,7 +1,7 @@
 #Class that contains functions for automatic client-server communication testing 
 #Written by : Marko Vertus
 import sys
-import time
+import datetime
 from colors import bcolors
 import datetime
 
