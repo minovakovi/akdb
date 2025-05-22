@@ -2,6 +2,10 @@
 
 docker-install:
 	docker build -t akdb .
+
+docker-install-docs:
+	docker build --build-arg BUILD_DOCS=true -t akdb-docs .
+
 docker-compose:
 	docker-compose up -d
 	docker-compose exec akdb bash
