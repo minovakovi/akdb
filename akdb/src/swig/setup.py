@@ -3,6 +3,7 @@ from setuptools import setup, Extension
 kalashnikovDB_module = Extension(
     name='_kalashnikovDB',
     sources=['kalashnikovDB_wrap.c'],
+    libraries=['crypto'],
 )
 
 setup(
