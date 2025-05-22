@@ -36,6 +36,10 @@
 #include "rec/redo_log.h"
 #include "projectDetails.h"
 
+//included to use access() and unlink() functions
+#include <unistd.h>
+
+
 /**
 Main program function
 @return EXIT_SUCCESS if successful, EXIT_ERROR otherwise
@@ -62,6 +66,21 @@ int main(int argc, char * argv[])
         AK_inflate_config();
         printf("db_file: %s\n", DB_FILE);
 	    testMode = TEST_MODE_OFF;
+
+    //before each test run: delete the old database file to ensure a clean state
+    if (argc == 3 && !strcmp(argv[1], "test")) {
+        if (access(DB_FILE, F_OK) == 0) {
+            if (unlink(DB_FILE) == 0) {
+                fprintf(stderr, "[INFO] Removed old database '%s'.\n", DB_FILE);
+            } else {
+                fprintf(stderr, "[WARN] Could not remove old database '%s'.\n", DB_FILE);
+            }
+        }
+    }
+
+
+
+
         if( AK_init_disk_manager() == EXIT_SUCCESS )
         {
             if( AK_memoman_init() == EXIT_SUCCESS ) {
@@ -84,6 +103,12 @@ int main(int argc, char * argv[])
     
                 sigset(SIGINT, AK_archive_log);
                 AK_recover_archive_log("../src/rec/rec.bin");  // "../src/rec/rec.bin" needs to be replaced with destination when AK_recover_archive_log is fixed
+                
+                //Declare variables before running the selected test
+                TestResult testResult;         
+                int pickedTest = -1;
+                
+                
                 /* component test area --- begin */
                 if((argc == 2) && !strcmp(argv[1], "test"))
                 {
@@ -96,20 +121,32 @@ int main(int argc, char * argv[])
                 else if((argc == 3) && !strcmp(argv[1], "test"))
                 {
 
-                    int pickedTest;
+                    //int pickedTest;
                     pickedTest = strtol(argv[2], NULL, 10)-1;
 
                     AK_create_test_tables();
                     set_catalog_constraints();
-                    tests[pickedTest].func();
+                    //tests[pickedTest].func();
+                    //Execute the selected test exactly once and store the result
+                    testResult = tests[pickedTest].func();
                 }
                 /*component test area --- end */
                 if ( AK_flush_cache() == EXIT_SUCCESS ){
-                    int pickedTest;
-                    pickedTest = strtol(argv[2], NULL, 10)-1;	
-                    printf("\nTEST:--- %s --- ENDED!\n", tests[pickedTest].name);
+                    //int pickedTest;
+                    //pickedTest = strtol(argv[2], NULL, 10)-1;	
+
+                    // After flushing the cache:
+                    if (pickedTest >= 0) {
+                        printf("\nTEST:--- %s --- ENDED!\n", tests[pickedTest].name);
+                        //ispis rezultata bez ponovnog izvođenja
+                        TEST_output_results(testResult);
+                    }
+
+                    //printf("\nTEST:--- %s --- ENDED!\n", tests[pickedTest].name);
                     printf( "\nEverything was fine!\nBye =)\n" );
-                    TEST_output_results(tests[pickedTest].func());
+                    //TEST_output_results(tests[pickedTest].func());
+
+
                     /* For easyer debugging and GDB usage
                     AK_create_test_tables();
                     AK_view_test();
@@ -132,4 +169,3 @@ int main(int argc, char * argv[])
     AK_EPI;
     return(EXIT_SUCCESS);
 }
-
