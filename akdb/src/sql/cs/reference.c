@@ -93,7 +93,7 @@ AK_ref_item AK_get_reference(char *tableName, char *constraintName) {
 }
 
 /**
- * @author Dejan Frankovic
+ * @author Dejan Frankovic, updated by Vilim Trakoštanec
  * @brief Function that checks referential integrity for one attribute
  * @param child table name
  * @param attribute name (foreign key attribute)
@@ -221,7 +221,7 @@ int AK_reference_check_restricion(struct list_node *lista, int action) {
 }
 
 /**
- * @author Dejan Franković
+ * @author Dejan Franković, updated by Vilim Trakoštanec
  * @brief Function that updates child table entries according to ongoing update of parent table entries.
  * @param list of elements for update
  * @param is action UPDATE or DELETE ?
@@ -504,7 +504,7 @@ int AK_reference_check_entry(struct list_node *lista) {
 }
 
 /**
- * @author Dejan Franković
+ * @author Dejan Franković, updated by Vilim Trakoštanec
  * @brief Function for testing referential integrity.
  * @return No return value
  */
@@ -539,9 +539,9 @@ TestResult AK_reference_test() {
 
     /* shared table‐header for CREATE_TABLE */
     AK_header hdr[] = {
-        { TYPE_INT,     {"FK"},   {0}, {{'\0'}}, {{'\0'}} },
+        { TYPE_INT, {"FK"}, {0}, {{'\0'}}, {{'\0'}} },
         { TYPE_VARCHAR, {"Value"},{0}, {{'\0'}}, {{'\0'}} },
-        { TYPE_VARCHAR, {"Rnd"},  {0}, {{'\0'}}, {{'\0'}} },
+        { TYPE_VARCHAR, {"Rnd"}, {0}, {{'\0'}}, {{'\0'}} },
         { 0 }
     };
 
