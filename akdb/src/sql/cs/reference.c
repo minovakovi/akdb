@@ -585,7 +585,17 @@ TestResult AK_reference_test() {
     }
 
     // Test 9: AK_reference_check_entry - Valid case
-    if (AK_reference_check_entry(row_root) == EXIT_SUCCESS) {
+    // (re)build a list_node for student
+    struct list_node *stu = (struct list_node*)AK_malloc(sizeof *stu);
+    AK_Init_L3(&stu);
+    int student_id = 3;
+    AK_Insert_New_Element(TYPE_INT, &student_id, "student", "mbr", stu);
+    AK_Insert_New_Element(TYPE_VARCHAR, "Test", "student", "firstname", stu);
+    AK_insert_row(stu);
+    AK_DeleteAll_L3(&stu);
+    AK_free(stu);
+
+    if (AK_reference_check_entry(stu) == EXIT_SUCCESS) {
         printf("Test 9 PASSED: Entry check passed for valid data\n");
         passing_tests++;
     } else {
