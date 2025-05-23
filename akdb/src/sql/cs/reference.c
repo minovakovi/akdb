@@ -521,7 +521,7 @@ TestResult AK_reference_test() {
         {0, {'\0'}, {0}, {{'\0'}}, {{'\0'}}}
     };
 
-    // Create test table
+    // Create test table Test 0
     int startAddress = AK_initialize_new_segment("ref_test", SEGMENT_TYPE_TABLE, t_header);
     if (startAddress != EXIT_ERROR) {
         printf("\nTest table 'ref_test' created successfully\n");
