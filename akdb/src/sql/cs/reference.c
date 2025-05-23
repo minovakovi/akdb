@@ -100,7 +100,7 @@ AK_ref_item AK_get_reference(char *tableName, char *constraintName) {
  * @return EXIT ERROR if check failed, EXIT_SUCCESS if referential integrity is ok
  */
 int AK_reference_check_attribute(char *tableName, char *attribute, char *value) {
-    int i;
+    int i = 0;
     int att_index;
 
     struct list_node *list_row, *list_col;
@@ -205,27 +205,37 @@ int AK_reference_check_restricion(struct list_node *lista, int action) {
  * @return EXIT_SUCCESS
  */
 
-int AK_reference_update(struct list_node *lista, int action) {
-    int parent_i, i, j, ref_i, con_num = 0;
+ int AK_reference_update(struct list_node *lista, int action) {
+    int parent_i = 0;
+    int ref_i    = 0;
+    int i        = 0;
+    int j        = 0;
+    int con_num  = 0;
 
-    struct list_node *parent_row;
-    struct list_node *ref_row;
-    struct list_node *temp;
-    struct list_node *tempcell;
-    AK_ref_item reference;
-    char constraints[MAX_CHILD_CONSTRAINTS][MAX_VARCHAR_LENGTH];
-    char child_tables[MAX_CHILD_CONSTRAINTS][MAX_VARCHAR_LENGTH];
+    struct list_node *parent_row = NULL;
+    struct list_node *ref_row    = NULL;
+    struct list_node *temp       = NULL;
+    struct list_node *tempcell   = NULL;
+    AK_ref_item      reference;
+    char             constraints[MAX_CHILD_CONSTRAINTS][MAX_VARCHAR_LENGTH];
+    char             child_tables[MAX_CHILD_CONSTRAINTS][MAX_VARCHAR_LENGTH];
+    char             tempData[MAX_VARCHAR_LENGTH];
 
-    char tempData[MAX_VARCHAR_LENGTH];
     AK_PRO;
 
-    struct list_node *row_root = (struct list_node *) AK_malloc(sizeof (struct list_node));
+    // --- allocate and initialize the working L3 lists ---
+    struct list_node *row_root = (struct list_node *) AK_malloc(sizeof *row_root);
     AK_Init_L3(&row_root);
 
+    struct list_node *expr = (struct list_node *) AK_malloc(sizeof *expr);
+    AK_Init_L3(&expr);
+
+    // --- collect all child constraints for this parent table ---
     while ((ref_row = AK_get_row(ref_i, "AK_reference")) != NULL) {
-        if (strcmp(ref_row->next->next->next->next->data, lista->next->table) == 0) { // we're searching for PARENT table here
+        if (strcmp(ref_row->next->next->next->next->data, lista->next->table) == 0) {
             for (j = 0; j < con_num; j++) {
-                if (strcmp(constraints[j], ref_row->next->next->data) == 0 && strcmp(child_tables[j], ref_row->next->data) == 0) {
+                if (strcmp(constraints[j], ref_row->next->next->data) == 0 &&
+                    strcmp(child_tables[j], ref_row->next->data) == 0) {
                     break;
                 }
             }
@@ -238,108 +248,121 @@ int AK_reference_update(struct list_node *lista, int action) {
         ref_i++;
     }
 
-    struct list_node *expr;
-    AK_Init_L3(&expr);
-
-    // selecting only affected rows in parent table..
+    // --- build selection predicate to find affected parent rows ---
     i = 0;
-
     temp = AK_First_L2(lista);
-    while (temp != NULL) {
+    while (temp) {
         if (action == DELETE || temp->constraint == 1) {
-	  
-	    AK_InsertAtEnd_L3(TYPE_OPERAND, temp->attribute_name, strlen(temp->attribute_name), expr);
+            AK_InsertAtEnd_L3(TYPE_OPERAND, temp->attribute_name, strlen(temp->attribute_name), expr);
             AK_InsertAtEnd_L3(temp->type, temp->data, AK_type_size(temp->type, temp->data), expr);
             AK_InsertAtEnd_L3(TYPE_OPERATOR, "=", 1, expr);
             i++;
         }
-        
-	temp = AK_Next_L2(temp);
+        temp = AK_Next_L2(temp);
     }
     for (j = 0; j < i - 1; j++) {
-    
-	AK_InsertAtEnd_L3(TYPE_OPERAND, "AND", 3, expr);
+        AK_InsertAtEnd_L3(TYPE_OPERAND, "AND", 3, expr);
     }
+
+    // --- select into temporary table ---
     char tempTable[MAX_ATT_NAME];
     sprintf(tempTable, "ref_tmp_%s", lista->next->table);
     
     AK_selection(lista->next->table, tempTable, expr);
-    
+
+    // clear out expr now that selection is done
     AK_DeleteAll_L3(&expr);
+    AK_free(expr);
 
     AK_print_table(tempTable);
 
-    // browsing through affected rows..
+    // --- for each affected parent row, apply the child‐side update/delete ---
     while ((parent_row = AK_get_row(parent_i, tempTable)) != NULL) {
         for (i = 0; i < con_num; i++) {
             reference = AK_get_reference(child_tables[i], constraints[i]);
-            
-	    AK_DeleteAll_L3(&row_root);
+            AK_DeleteAll_L3(&row_root);
 
             for (j = 0; j < reference.attributes_number; j++) {
-		 tempcell = AK_GetNth_L2(AK_get_attr_index(reference.parent, reference.parent_attributes[j]), parent_row); // from the row of parent table, take the value of attribute with name from parent_attribute
-	      
+                tempcell = AK_GetNth_L2(
+                    AK_get_attr_index(reference.parent, reference.parent_attributes[j]),
+                    parent_row
+                );
+
                 memcpy(tempData, tempcell->data, tempcell->size);
                 tempData[tempcell->size] = '\0';
 
-                AK_Update_Existing_Element(tempcell->type, tempData, reference.table, reference.attributes[j], row_root);
+                // first copy the existing PK/FK into the update buffer
+                AK_Update_Existing_Element(
+                    tempcell->type,
+                    tempData,
+                    reference.table,
+                    reference.attributes[j],
+                    row_root
+                );
 
                 switch (reference.type) {
                     case REF_TYPE_CASCADE:
                         if (action == UPDATE) {
-                            
-			    temp = AK_First_L2(lista);
-                            while (temp != NULL) {
-                                if (strcmp(temp->attribute_name, reference.parent_attributes[j]) == 0 && temp->constraint == 0) {
+                            temp = AK_First_L2(lista);
+                            while (temp) {
+                                if (strcmp(temp->attribute_name, reference.parent_attributes[j]) == 0
+                                    && temp->constraint == 0) {
+                                    // re‐insert the new FK value
                                     memcpy(tempData, tempcell->data, tempcell->size);
-                                    //tempData[tempcell->size] == '\0';
-                                    AK_Insert_New_Element(tempcell->type, tempData, reference.table, reference.attributes[j], row_root);
+                                    tempData[tempcell->size] = '\0';
+                                    AK_Insert_New_Element(
+                                        tempcell->type,
+                                        tempData,
+                                        reference.table,
+                                        reference.attributes[j],
+                                        row_root
+                                    );
                                     break;
                                 }
-
-				temp = AK_Next_L2(temp);
+                                temp = AK_Next_L2(temp);
                             }
                         }
                         break;
                     case REF_TYPE_NO_ACTION:
-                        break;
-                        // case REF_TYPE_RESTRICT: // handled by function AK_reference_check_restrict
-                    case REF_TYPE_SET_DEFAULT: // default values are currently unsupported by this DBMS... reserved for future use
+                    case REF_TYPE_SET_DEFAULT:
                         break;
                     case REF_TYPE_SET_NULL:
                         if (action == DELETE) {
                             AK_Insert_New_Element(0, "", reference.table, reference.attributes[j], row_root);
                         } else {
-
-			  temp = AK_First_L2(lista);
-                            while (temp != NULL) {
-                                if (strcmp(temp->attribute_name, reference.parent_attributes[j]) == 0 && temp->constraint == 0) {
+                            temp = AK_First_L2(lista);
+                            while (temp) {
+                                if (strcmp(temp->attribute_name, reference.parent_attributes[j]) == 0
+                                    && temp->constraint == 0) {
                                     AK_Insert_New_Element(0, "", reference.table, reference.attributes[j], row_root);
                                     break;
                                 }
-
-				temp = AK_Next_L2(temp);
+                                temp = AK_Next_L2(temp);
                             }
                         }
                         break;
                 }
             }
 
-            //InsertNewElementForUpdate(tempcell->type, "" ,ref_row->next->data, ref_row->next->next->next->data, row_root,0);
-            if (action == UPDATE || reference.type == REF_TYPE_SET_NULL)
+            // apply the child update or delete
+            if (action == UPDATE || reference.type == REF_TYPE_SET_NULL) {
                 AK_update_row(row_root);
-            else
+            } else {
                 AK_delete_row(row_root);
-
+            }
         }
-
         parent_i++;
     }
 
+    // cleanup the temp table and L3 root
     AK_delete_segment(tempTable, SEGMENT_TYPE_TABLE);
+    AK_DeleteAll_L3(&row_root);
+    AK_free(row_root);
+
     AK_EPI;
     return EXIT_SUCCESS;
 }
+
 
 /**
  * @author Dejan Franković
@@ -590,7 +613,7 @@ TestResult AK_reference_test() {
     AK_Init_L3(&stu);
     int student_id = 3;
     AK_Insert_New_Element(TYPE_INT, &student_id, "student", "mbr", stu);
-    AK_Insert_New_Element(TYPE_VARCHAR, "Test", "student", "firstname", stu);
+    AK_Insert_New_Element(TYPE_VARCHAR, "Test",      "student", "firstname", stu);
     AK_insert_row(stu);
     AK_DeleteAll_L3(&stu);
     AK_free(stu);
@@ -616,6 +639,34 @@ TestResult AK_reference_test() {
         printf("Test 10 FAILED: Invalid entry not rejected\n");
         failing_tests++;
     }
+
+    // Create new list for update tests to avoid using freed memory
+    struct list_node *update_test_list = (struct list_node *) AK_malloc(sizeof(struct list_node));
+    AK_Init_L3(&update_test_list);
+    AK_Insert_New_Element(TYPE_INT, &a, "ref_test", "FK", update_test_list);
+    AK_Insert_New_Element(TYPE_VARCHAR, "UpdateTest", "ref_test", "Value", update_test_list);
+
+    //Test 11: AK_reference_update - Valid case  
+    if(AK_reference_update(update_test_list, UPDATE) == EXIT_SUCCESS) {
+        printf("Test 11 PASSED: Update operation successful\n");
+        passing_tests++;
+    } else {
+        printf("Test 11 FAILED: Update operation failed\n");
+        failing_tests++;
+    }
+    //Test 12: AK_reference_update - Invalid case
+    if(AK_reference_update(update_test_list, DELETE) == EXIT_ERROR) {
+        printf("Test 12 PASSED: Delete operation correctly rejected\n");
+        passing_tests++;
+    } else {
+        printf("Test 12 FAILED: Delete operation not rejected\n");
+        failing_tests++;
+    }
+
+    // Cleanup update test list
+    AK_DeleteAll_L3(&update_test_list);
+    AK_free(update_test_list);
+    // Test cleanup
 
     // Cleanup
     AK_free(att[0]);
