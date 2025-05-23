@@ -116,11 +116,27 @@ int AK_reference_check_attribute(char *tableName, char *attribute, char *value) 
             struct list_node *c = AK_get_column(idx, parentTable);
 
             // Walk the parent‐column until we find a match (or run out)
-            while (c && strcmp(c->data, value) != 0) {
+            while (c) {
+                // Handle different data types appropriately
+                if (c->type == TYPE_INT) {
+                    int parent_val;
+                    memcpy(&parent_val, c->data, sizeof(int));
+                    int check_val = atoi(value);
+                    if (parent_val == check_val) {
+                        AK_EPI;
+                        return EXIT_SUCCESS;
+                    }
+                }
+                else if (c->type == TYPE_VARCHAR) {
+                    if (strcmp(c->data, value) == 0) {
+                        AK_EPI;
+                        return EXIT_SUCCESS;
+                    }
+                }
                 c = c->next;
             }
             AK_EPI;
-            return c ? EXIT_SUCCESS : EXIT_ERROR;
+            return EXIT_ERROR;
         }
     }
 
