@@ -27,15 +27,51 @@
 #include "../auxi/mempro.h"
 #include "../file/filesort.h"
 
+
 /**
- * @author Filip Žmuk
- * @brief Function that implements SELECT relational operator
- * @param srcTable - original table that is used for selection
- * @param destTable - table that contains the result
- * @param condition - condition for selection
- * @param attributes - atributes to be selected
- * @param ordering - atributes for result sorting
- * @return EXIT_SUCCESS if cache result in memory and print table else break 
+ * @brief Structure to hold column name and its alias
  */
-int AK_select(char *srcTable,char *destTable,struct list_node *attributes,struct list_node *condition, struct list_node *ordering);
+struct column_alias {
+    char original_name[MAX_ATT_NAME];
+    char alias_name[MAX_ATT_NAME];
+};
+
+/**
+ * @brief Structure to hold collection of column aliases 
+ */
+struct column_alias_collection {
+    struct column_alias *aliases;
+    int count;
+};
+
+
+/**
+ * @author Filip Žmuk, Edited by: Marko Belusic, Matija Karaula
+ * @brief Function that implements SELECT relational operator
+ * @param src_table original table that is used for selection
+ * @param dest_table table that contains the result
+ * @param attributes attributes to be selected
+ * @param aliases column aliases array
+ * @param alias_count number of aliases
+ * @param condition condition for selection
+ * @param ordering attributes for result sorting
+ * @return EXIT_SUCCESS if successful, EXIT_ERROR otherwise
+ */
+int AK_select(char *src_table, 
+              char *dest_table, 
+              struct list_node *attributes,
+              struct column_alias *aliases,
+              int alias_count,
+              struct list_node *condition,
+              struct list_node *ordering);
+
+
+int AK_select_into(char *src_table, 
+                   char *new_table,
+                   struct list_node *attributes,
+                   struct column_alias *aliases,
+                   int alias_count,
+                   struct list_node *condition, 
+                   struct list_node *ordering);
+
 TestResult AK_select_test();
