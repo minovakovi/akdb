@@ -2,6 +2,7 @@
 CC = gcc -pthread -w
 DEBUG = -g
 CFLAGS = $(DEBUG) -c
+LDFLAGS = -lssl -lcrypto
 
 DISKTARGETS = dm/dbman.o
 MEMORYTARGETS = mm/memoman.o
@@ -31,11 +32,11 @@ all: kalashnikov-db
 
 dev: CFLAGS += -Wall
 dev: $(OBJS)
-	$(CC) $(OBJS) -o $(OUTDIR)/akdb
+	$(CC) $(OBJS) -o $(OUTDIR)/akdb $(LDFLAGS)
 
 kalashnikov-db: CFLAGS += -w
 kalashnikov-db: $(OBJS)
-	$(CC) $(OBJS) -o $(OUTDIR)/akdb
+	$(CC) $(OBJS) -o $(OUTDIR)/akdb $(LDFLAGS)
 
 clean-d:
 	rm -rf *.d auxi/*.d dm/*.d mm/*.d file/*.d trans/*.d file/idx/*.d rec/*.d sql/cs/*.d sql/*.d opti/*.d rel/*.d
@@ -61,7 +62,11 @@ swig-tests:
 	export CFLAGS="-Wno-error"; cd swig&& python -m doctest -v tablePropertiesTests.py && python -m doctest -v selectionTests.py && python -m doctest -v relAlgebraTests.py && cd ..
 docker-install:
 	$(MAKE) -C .. docker-install
-
+	echo "KalashnikovDB installed in docker container you need to run make docker-run"
+	
+docker-run:
+	$(MAKE) -C .. docker-run
+	
 docker-mac:
 	$(MAKE) -C .. docker-mac
 

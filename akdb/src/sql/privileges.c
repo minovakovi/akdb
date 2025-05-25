@@ -18,43 +18,197 @@
  */
 #include "privileges.h"
 #include <unistd.h>
+#include "../auxi/constants.h"
+#include <openssl/sha.h>
+#include <openssl/evp.h>
+#include <openssl/rand.h>
+#include <string.h>
+#include <stdio.h>
+#include <ctype.h>
+
+#define SALT_LEN 16
+#define SALT_HEX_LEN (SALT_LEN * 2)
+#define HASH_HEX_LEN (EVP_MAX_MD_SIZE * 2)
 
 /**
- * @author Kristina Takač, edited by Borna Romić
+ * @author Luka Balažinec
+ * @brief Reads len bytes from /dev/urandom into salt.
+ * @param salt Buffer to receive len random bytes.
+ * @param len Number of bytes to read.
+ * @return 0 on success, -1 on error.
+ */
+static int generate_salt(unsigned char *salt, size_t len) {
+    FILE *f = fopen("/dev/urandom", "rb");
+    if (!f) return -1;
+    if (fread(salt, 1, len, f) != len) {
+        fclose(f);
+        return -1;
+    }
+    fclose(f);
+    return 0;
+}
+
+/**
+ * @author Luka Balažinec
+ * @brief Converts a binary buffer to a hex string.
+ * @param in Input buffer of in_len bytes.
+ * @param in_len Number of bytes in the input buffer.
+ * @param out Buffer to receive the hex string.
+ */
+static void to_hex(const unsigned char *in, size_t in_len, char *out) {
+    for (size_t i = 0; i < in_len; i++)
+        sprintf(out + i*2, "%02x", in[i]);
+    out[in_len*2] = '\0';
+}
+
+/**
+ * @author Luka Balažinec
+ * @brief Hashes a password with a hex-encoded salt using SHA-256.
+ * @param password Plain-text password.
+ * @param salt_hex Hex string of the salt (length SALT_HEX_LEN).
+ * @param out_hash_hex Buffer to receive the resulting hash as a hex string.
+ */
+static void hash_password_with_salt(const char *password, const char *salt_hex, char *out_hash_hex) {
+    unsigned char hash[SHA256_DIGEST_LENGTH];
+    SHA256_CTX ctx;
+
+    SHA256_Init(&ctx);
+    SHA256_Update(&ctx, (unsigned char*)salt_hex, strlen(salt_hex));
+    SHA256_Update(&ctx, (unsigned char*)password,  strlen(password));
+    SHA256_Final(hash, &ctx);
+
+    to_hex(hash, SHA256_DIGEST_LENGTH, out_hash_hex);
+}
+
+/**
+ * @author Luka Balažinec
+ * @brief Validates the strength of a password based on multiple security rules.
+ * @param password The password to validate.
+ * @param username The associated username (used to prevent inclusion in the password).
+ * @return 1 if the password is strong, 0 otherwise. Prints messages for each failed condition.
+ */
+int is_password_strong(const char *password, const char *username) {
+    if (strlen(password) <= 8) {
+        printf("Password must be longer than 8 characters.\n");
+        return 0;
+    }
+
+    int has_lower = 0, has_upper = 0, has_digit = 0, has_special = 0;
+    int repeat_count = 1;
+
+    for (size_t i = 0; password[i]; i++) {
+        if (islower(password[i])) has_lower = 1;
+        else if (isupper(password[i])) has_upper = 1;
+        else if (isdigit(password[i])) has_digit = 1;
+        else if (ispunct(password[i])) has_special = 1;
+
+        if (i > 0 && password[i] == password[i - 1]) {
+            repeat_count++;
+            if (repeat_count > 4) {
+                printf("Password must not contain more than 4 identical consecutive characters.\n");
+                return 0;
+            }
+        } else {
+            repeat_count = 1;
+        }
+    }
+
+    if (!has_lower) {
+        printf("Password must contain at least one lowercase letter.\n");
+        return 0;
+    }
+    if (!has_upper) {
+        printf("Password must contain at least one uppercase letter.\n");
+        return 0;
+    }
+    if (!has_digit) {
+        printf("Password must contain at least one digit.\n");
+        return 0;
+    }
+    if (!has_special) {
+        printf("Password must contain at least one special character.\n");
+        return 0;
+    }
+
+    size_t len = strlen(password);
+    int is_palindrome = 1;
+    for (size_t i = 0; i < len / 2; i++) {
+        if (password[i] != password[len - 1 - i]) {
+            is_palindrome = 0;
+            break;
+        }
+    }
+    if (is_palindrome) {
+        printf("Password must not be a palindrome.\n");
+        return 0;
+    }
+
+    if (strstr(password, username) != NULL) {
+        printf("Password must not contain the username.\n");
+        return 0;
+    }
+
+    const char *sequences[] = {
+        "1234", "abcd", "qwertz", "asdf", "0000", "1111",
+        "password", "admin", NULL
+    };
+    for (int i = 0; sequences[i]; i++) {
+        if (strstr(password, sequences[i]) != NULL) {
+            printf("Password must not contain common or predictable patterns like '%s'.\n", sequences[i]);
+            return 0;
+        }
+    }
+
+    return 1;
+}
+
+/**
+ * @author Kristina Takač, edited by Borna Romić, update by Luka Balažinec
  * @brief  Inserts a new user in the AK_user table 
- * @param *username username of user to be added
- * @param *password password of user to be added
- * @param set_id obj_id of the new user
+ * @param *username Username of the user to be added
+ * @param *password Hashed password of the user to be added (SHA-256 hash as a string)
+ * @param set_id Object ID of the new user
  * @return user_id
  */
-int AK_user_add(char *username, int *password, int set_id) {
-
+int AK_user_add(char *username, char *password, int set_id) {
     char *tblName = "AK_user";
     int usernameCheck;
-    char check = "";
     AK_PRO;
 
     usernameCheck = AK_user_get_id(username);
     if (usernameCheck != EXIT_ERROR) {
         printf("Username '%s' is not available!\n", username);
-        check = "taken";
         AK_EPI;
-        return check;
+        return EXIT_ERROR;
     }
 
-    struct list_node *row_root = (struct list_node *) AK_malloc(sizeof (struct list_node));
+    if (!is_password_strong(password, username)) {
+        return 0;
+    }    
+
+    unsigned char salt_bin[SALT_LEN];
+    char salt_hex[SALT_HEX_LEN + 1] = {0};
+    char hash_hex [HASH_HEX_LEN + 1] = {0};
+
+    if (generate_salt(salt_bin, SALT_LEN) != 0) return EXIT_ERROR;
+    to_hex(salt_bin, SALT_LEN, salt_hex);
+    hash_password_with_salt(password, salt_hex, hash_hex);
+
+    struct list_node *row_root = (struct list_node *) AK_malloc(sizeof(struct list_node));
     AK_Init_L3(&row_root);
 
     int user_id = AK_get_id();
     if (set_id != 0) user_id = set_id;
-    AK_Insert_New_Element(TYPE_INT, &user_id, tblName, "obj_id", row_root);
-    AK_Insert_New_Element(TYPE_VARCHAR, username, tblName, "username", row_root);
-    AK_Insert_New_Element(TYPE_INT, &password, tblName, "password", row_root);
+
+    AK_Insert_New_Element(TYPE_INT,     &user_id, tblName, "obj_id", row_root);
+    AK_Insert_New_Element(TYPE_VARCHAR, username,  tblName, "username", row_root);
+    AK_Insert_New_Element(TYPE_VARCHAR, hash_hex,  tblName, "password_hash", row_root);
+    AK_Insert_New_Element(TYPE_VARCHAR, salt_hex,  tblName, "salt", row_root);
     AK_insert_row(row_root);
+
     printf("\nAdded user '%s' under ID %d!\n\n", username, user_id);
 
     AK_free(row_root);
-
     AK_EPI;
     return user_id;
 }
@@ -83,42 +237,109 @@ int AK_user_get_id(char *username) {
 }
 
 /**
- * @author Fran MIkolić.
- * @brief  Function that checks if there is user with given password
- * @param *username username of user whose password we are checking
- * @param *password password of given username whom we will check
+ * @author Fran Mikolić, update by Luka Balažinec
+ * @brief  Function that checks if a user exists with the given password
+ * @param *username Username of the user whose password we are checking
+ * @param *password Hashed password (SHA-256 hash as a string) of the given username to be checked
  * @return check 0 if false or 1 if true
  */
-int AK_user_check_pass(char *username, int *password) {
-    int i = 0;
-    int check = 0;
-    struct list_node *row;
-    
+int AK_user_check_pass(char *username, char *password) {
     AK_PRO;
 
-    while ((row = (struct list_node *) AK_get_row(i, "AK_user")) != NULL) {
-       struct list_node *elem_in_strcmp = AK_GetNth_L2(2, row);
-        if (strcmp(elem_in_strcmp->data, username) == 0) {                                 
-            elem_in_strcmp = AK_GetNth_L2(3, row);
-                             
-            if (strcmp(elem_in_strcmp->data, &password) == 0) {
-                check = 1;
-                AK_free(elem_in_strcmp);
-                AK_free(row);
-                AK_EPI;                
-                return check;
-            }
-        }   
-             
-        i++;        
+    int user_id = AK_user_get_id(username);
+    if (user_id == EXIT_ERROR) {
+        printf("User '%s' does not exist!\n", username);
+        AK_EPI;
+        return 0;
     }
 
-    AK_free(row);   
+    struct list_node *row = NULL;
+    int i = 0;
+    while ((row = (struct list_node *) AK_get_row(i, "AK_user")) != NULL) {
+        int current_id = *(int *)AK_GetNth_L2(1, row)->data;
+        if (current_id == user_id) break;
+        AK_DeleteAll_L3(&row);
+        AK_free(row);
+        row = NULL;
+        i++;
+    }
+    if (!row) {
+        printf("Error fetching user data for user_id: %d!\n", user_id);
+        AK_EPI;
+        return 0;
+    }
 
+    char *stored_hash = (char *)AK_GetNth_L2(3, row)->data;
+    char *salt_hex = (char *)AK_GetNth_L2(4, row)->data;
+    stored_hash[strcspn(stored_hash, "\n")] = '\0';
+    salt_hex   [strcspn(salt_hex, "\n")] = '\0';
+
+    char hashed_input[HASH_HEX_LEN + 1] = {0};
+    hash_password_with_salt(password, salt_hex, hashed_input);
+
+    int result = (strcmp(stored_hash, hashed_input) == 0) ? 1 : 0;
+    if (result)
+        printf("Login successful!\n");
+    else
+        printf("Incorrect password!\n");
+
+    AK_DeleteAll_L3(&row);
+    AK_free(row);
     AK_EPI;
-    return check;
+    return result;
 }
 
+/**
+ * @author Luka Balažinec
+ * @brief  Changes the password and salt for an existing user.
+ * @param  username Username whose password is to be updated.
+ * @param  new_password New plain-text password.
+ * @return EXIT_SUCCESS on success, EXIT_ERROR on failure.
+ */
+int AK_user_change_password(char *username, char *new_password) {
+    AK_PRO;
+
+    int user_id = AK_user_get_id(username);
+    if (user_id == EXIT_ERROR) {
+        printf("User '%s' does not exist!\n", username);
+        AK_EPI;
+        return EXIT_ERROR;
+    }
+
+    if (!is_password_strong(new_password, username)) {
+        return 0;
+    }
+
+    unsigned char salt_bin[SALT_LEN];
+    char salt_hex[SALT_HEX_LEN + 1] = {0};
+    char hash_hex [HASH_HEX_LEN + 1] = {0};
+
+    if (generate_salt(salt_bin, SALT_LEN) != 0) {
+        AK_EPI;
+        return EXIT_ERROR;
+    }
+    to_hex(salt_bin, SALT_LEN, salt_hex);
+    hash_password_with_salt(new_password, salt_hex, hash_hex);
+
+    struct list_node *row_root = (struct list_node *) AK_malloc(sizeof(struct list_node));
+    AK_Init_L3(&row_root);
+
+    AK_Update_Existing_Element(TYPE_VARCHAR, username, "AK_user", "username", row_root);
+    AK_Insert_New_Element(TYPE_VARCHAR, hash_hex, "AK_user", "password_hash", row_root);
+    AK_Insert_New_Element(TYPE_VARCHAR, salt_hex, "AK_user", "salt", row_root);
+
+    if (AK_update_row(row_root) == EXIT_ERROR) {
+        AK_DeleteAll_L3(&row_root);
+        AK_free(row_root);
+        AK_EPI;
+        return EXIT_ERROR;
+    }
+
+    AK_DeleteAll_L3(&row_root);
+    AK_free(row_root);
+    AK_EPI;
+    return EXIT_SUCCESS;
+}
 
 /**
  * @author Ljubo Barać
@@ -142,20 +363,33 @@ int AK_user_remove_by_name(char *name) {
 }
 
 /**
- * @author Ljubo Barać, update by Lidija Lastavec, update by Marko Flajšek
+ * @author Ljubo Barać, update by Lidija Lastavec, 
+ * update by Marko Flajšek, update by Luka Balažinec
  * @brief Function that renames a given user
  * @param old_name Name of the user to be renamed
  * @param new_name New name of the user
- * @param password Password of the user to be renamed (should be provided)
+ * @param password Password of the user to be renamed (hashed as a string)
  * @return EXIT_SUCCESS or EXIT_ERROR
  */
-int AK_user_rename(char *old_name, char *new_name, int *password) {
+int AK_user_rename(char *old_name, char *new_name, char *password) {
     AK_PRO;
     int result = 0;
     int user_id = AK_user_get_id(old_name);
 
     result = AK_user_remove_by_name(old_name);
+    if (result == EXIT_ERROR) {
+        printf("Failed to remove old user '%s'.\n", old_name);
+        AK_EPI;
+        return result;
+    }
+
     result = AK_user_add(new_name, password, user_id);
+    if (result == EXIT_ERROR) {
+        printf("Failed to add new user '%s'.\n", new_name);
+        AK_EPI;
+        return result;
+    }
+
     printf("Renamed user '%s' to '%s' under ID %d!\n", old_name, new_name, user_id);
 
     AK_EPI;
@@ -980,7 +1214,7 @@ int AK_check_user_privilege(char *user) {
     while ((row = (struct list_node *) AK_get_row(i, "AK_user_right")) != NULL) {
         struct list_node *user_elem = AK_GetNth_L2(2, row);
         if ((int) *user_elem->data == user_id) {
-            privilege = 1;
+            privilege = PRIVILEGE_GRANTED;
             printf("User '%s' under ID %d has some privileges!", user, user_id);
             AK_EPI;
             return EXIT_SUCCESS;
@@ -1055,6 +1289,77 @@ int AK_check_group_privilege(char *group) {
 }
 
 /**
+ * @author Luka Balažinec
+ * @brief List all users that have the specified privilege on any table.
+ * @param  privilege A privilege string like "SELECT" or "INSERT".
+ * @return EXIT_SUCCESS.
+ */
+int AK_list_users_with_privilege(char *privilege) {
+    AK_PRO;
+
+    printf("Users with privilege '%s':\n", privilege);
+
+    int seen_cap = 16;
+    int *seen_ids = malloc(seen_cap * sizeof(*seen_ids));
+    if (!seen_ids) {
+        AK_EPI;
+        return EXIT_ERROR;
+    }
+    int seen_cnt = 0;
+
+    struct list_node *row;
+    int row_idx = 0;
+    while ((row = (struct list_node *)AK_get_row(row_idx++, "AK_user_right")) != NULL) {
+        struct list_node *user_elem  = AK_GetNth_L2(2, row);
+        struct list_node *right_elem = AK_GetNth_L2(4, row);
+
+        if (strcmp((char *)right_elem->data, privilege) == 0) {
+            int user_id = *(int *)user_elem->data;
+
+            int k;
+            for (k = 0; k < seen_cnt; ++k) {
+                if (seen_ids[k] == user_id) break;
+            }
+            if (k == seen_cnt) {
+                if (seen_cnt == seen_cap) {
+                    seen_cap *= 2;
+                    int *tmp = realloc(seen_ids, seen_cap * sizeof(*tmp));
+                    if (!tmp) break;
+                    seen_ids = tmp;
+                }
+                seen_ids[seen_cnt++] = user_id;
+
+                struct list_node *urow;
+                int uidx = 0;
+                while ((urow = (struct list_node *)AK_get_row(uidx++, "AK_user")) != NULL) {
+                    int curr_id = *(int *)AK_GetNth_L2(1, urow)->data;
+                    if (curr_id == user_id) {
+                        char *username = (char *)AK_GetNth_L2(2, urow)->data;
+                        printf("  - %s\n", username);
+                        AK_DeleteAll_L3(&urow);
+                        AK_free(urow);
+                        break;
+                    }
+                    AK_DeleteAll_L3(&urow);
+                    AK_free(urow);
+                }
+            }
+        }
+
+        AK_DeleteAll_L3(&row);
+        AK_free(row);
+    }
+
+    if (seen_cnt == 0) {
+        printf("  (none)\n");
+    }
+
+    free(seen_ids);
+    AK_EPI;
+    return EXIT_SUCCESS;
+}
+
+/**
  * @author Kristina Takač, updated by Tomislav Ilisevic, updated by Lidija Lastavec, updated by Marko Flajšek
  * @brief Function that tests all the previous functions
  * @return no return value                                                     
@@ -1080,19 +1385,52 @@ TestResult AK_privileges_test() {
     printf("\nTest data: user1 1111; user2 2222; user3 3333; user4 4444;\n\n");
     printf("Result:\n\n");
 
-    if (AK_user_add("user1", 1111, NEW_ID) == "taken") {
+    if (AK_user_add("user1", "?Baze2020", NEW_ID) == "taken") {
         printf("Test 1. - Fail!\n\n");
     } else {
         printf("Test 1. - Pass!\n\n");
         successful[0] = 1;
     }
 
-    //adding 3 more users for future tests
-    AK_user_add("user2", 2222, NEW_ID);
-    AK_user_add("user3", 3333, NEW_ID);
-    AK_user_add("user4", 4444, NEW_ID);
-
+    printf("Adding user2 with password '!Sifra2025'...\n");
+    AK_user_add("user2", "!Sifra2025", NEW_ID);
     printf("\n");
+
+    printf("Adding user3 with password '#Lozinka2024'...\n");
+    AK_user_add("user3", "#Lozinka2024", NEW_ID);
+    printf("\n");
+
+    printf("Adding user4 with password '$Pass2023'...\n\n");
+    AK_user_add("user4", "$Pass2023", NEW_ID);
+
+    printf("Adding user10 with password 'Aa1!'...\n");
+    AK_user_add("user10", "Aa1!", NEW_ID);
+    printf("\n");
+
+    printf("Adding user11 with password 'lowercase1]'...\n");
+    AK_user_add("user11", "lowercase1]", NEW_ID);
+    printf("\n");
+
+    printf("Adding user12 with password 'NoDigits!'...\n");
+    AK_user_add("user12", "NoDigits!", NEW_ID);
+    printf("\n");
+
+    printf("Adding user13 with password '4G?racecar?G4'...\n");
+    AK_user_add("user13", "4G?racecar?G4", NEW_ID);
+    printf("\n");
+
+    printf("Adding user14 with password '2023user14X['...\n");
+    AK_user_add("user14", "2023user14X[", NEW_ID);
+    printf("\n");
+
+    printf("Adding user15 with password 'Abc123456!'...\n");
+    AK_user_add("user15", "Abc123456!", NEW_ID);
+    printf("\n");
+
+    printf("Adding user16 with password 'Aaaaaa0011@'...\n");
+    AK_user_add("user16", "Aaaaaa0011@", NEW_ID);
+    printf("\n");
+
     AK_print_table("AK_user");
 
     printf("\n\n||====================================================================|| \n");
@@ -1106,7 +1444,7 @@ TestResult AK_privileges_test() {
     printf("\nTest data: rename user4 to user5\n\n");
     printf("Result:\n\n");
 
-    if (AK_user_rename("user4", "user5", 4444) == EXIT_ERROR) {
+    if (AK_user_rename("user4", "user5", "4444") == EXIT_ERROR) {
         printf("\nTest 2. - Fail!\n");
     } else {
         printf("\nTest 2. - Pass!\n");
@@ -1524,7 +1862,7 @@ TestResult AK_privileges_test() {
     printf("Result:\n\n");
 
 
-    if (AK_user_check_pass("user2", 2222) == 0) {
+    if (AK_user_check_pass("user2", "!Sifra2025") == 0) {
         printf("\n\nTest 19. - Fail!\n");
     } else {
         printf("\n\nTest 19. - Pass!\n");
@@ -1537,12 +1875,49 @@ TestResult AK_privileges_test() {
     printf("\n\n||====================================================================|| \n");
 
 
+    /**************************************/
+    /* 20. AK_user_change_password        */
+    /**************************************/
+    printf("\n20. Test - AK_user_change_password function - Changes the users password\n");
+    printf("Original AK_user table:\n\n");
+    AK_print_table("AK_user");
+
+    printf("\nChanging password for 'user3' from '#Lozinka2024' to '#Lozinka2026'...\n");
+    if (AK_user_change_password("user3", "#Lozinka2026") != EXIT_SUCCESS) {
+        printf("\n\nTest 20. - Fail!\n");
+    } else {
+        printf("\nPassword changed successfully.\n\n");
+        printf("Updated AK_user table:\n\n");
+        AK_print_table("AK_user");
+        printf("\n\nTest 20. - Pass!\n");
+        successful[19] = 1;
+    }
+    
+    printf("\n\n||====================================================================|| \n");
+
+
+    /**************************************/
+    /* 21. AK_list_users_with_privilege   */
+    /**************************************/
+    printf("\n21. Test - AK_list_users_with_privilege for SELECT, INSERT, UPDATE and DELETE privileges\n\n");
+
+    const char *privileges[] = { "SELECT", "INSERT", "UPDATE", "DELETE" };
+    for (int i = 0; i < 4; ++i) {
+        const char *p = privileges[i];
+        AK_list_users_with_privilege((char *)p);
+        printf("\n");
+    }
+    printf("Test 21. - Pass!\n\n");
+    successful[20] = 1;
+
+    printf("||====================================================================||\n");
+
     /* END SUMMARY*/
 
     printf("\nSummary: \n");
     int num = 0;
     int numFail = 0;
-    for (num = 0; num < 19; num++) {
+    for (num = 0; num < 21; num++) {
         printf("%i. Test: %s \n", (num + 1), (successful[num] == 1 ? "Pass" : "Fail"));
         if (successful[num] == 0) numFail++;
     }

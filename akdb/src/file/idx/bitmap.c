@@ -19,6 +19,7 @@
 
 #include "bitmap.h"
 #include "../../auxi/iniparser.h"
+#include "../../auxi/constants.h"
 
 /**
   @author Saša Vukšić

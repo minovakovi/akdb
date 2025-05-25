@@ -648,4 +648,33 @@
  * Used to print a failure message after certain operations.
  */
 
+ #define RENAME_FLAG 1
+
+/**
+ * @def RENAME_FLAG
+ * @brief Flag indicating column will be renamed.
+ * Used to mark a specific column that should be renamed in theta_join.c
+ */
+
+#define COPY_ENABLED 1
+
+/**
+ * @def COPY_ENABLED
+ * @brief Flag indicating memory will be copied
+ */
+
+#define PRIVILEGE_GRANTED 1
+
+/**
+ * @def PRIVILEGE_GRANTED
+ * @brief Flag indicating privilege to something/someone has been granted
+ */
+
+#define VALUE_APPEARS 1
+
+/**
+ * @def VALUE_APPEARS
+ * @brief Flag indicating value appears inside a row
+ */
+
 #endif

@@ -1,28 +1,24 @@
-import time
+from datetime import datetime
+from typing import Union, Optional
 
-# This module contains functions which will check if a given argument 
-# is trully the type which we need it to be
-
-# is_numeric
-# returns int or float value based on input type
-# @param lit the value to be checked
-def is_numeric(lit):
-    # Handle '0'
+def is_numeric(lit: str) -> Optional[Union[int, float]]:
+    """
+    Determines if the input string is a numeric value.
+    Supports int, float, hexadecimal, binary, and octal.
+    """
     if lit == '0':
         return 0
-    # Hex/Binary
-    litneg = lit[1:] if lit[0] == '-' else lit
-    if litneg[0] == '0':
-        if litneg[1] in 'xX':
+    litneg = lit[1:] if lit.startswith('-') else lit
+    if litneg.startswith('0'):
+        if litneg[1:2] in ('x', 'X'):
             return int(lit, 16)
-        elif litneg[1] in 'bB':
+        elif litneg[1:2] in ('b', 'B'):
             return int(lit, 2)
         else:
             try:
                 return int(lit, 8)
             except ValueError:
                 pass
-    # Int/Float
     try:
         return int(lit)
     except ValueError:
@@ -30,84 +26,84 @@ def is_numeric(lit):
     try:
         return float(lit)
     except ValueError:
-        pass
+        return None
 
 
-# is_date
-# returns true if the input value is in date format
-# @param lit the value to be checked
-def is_date(lit):
+def is_date(lit: str) -> bool:
+    """Checks if the string is in YYYY-MM-DD format."""
     try:
-        time.strptime(lit, '%Y-%m-%d')
+        datetime.strptime(lit, '%Y-%m-%d')
         return True
     except ValueError:
         return False
 
 
-# is_datetime
-# returns true if the input value is in datetime format
-# @param lit the value to be checked
-def is_datetime(lit):
+def is_datetime(lit: str) -> bool:
+    """Checks if the string is in YYYY-MM-DD HH:MM:SS format."""
     try:
-        time.strptime(lit, '%Y-%m-%d %H:%M:%S')
+        datetime.strptime(lit, '%Y-%m-%d %H:%M:%S')
         return True
     except ValueError:
         return False
 
 
-# is_time
-# returns true if the input value is in time format
-# @param lit the value to be checked
-def is_time(lit):
+def is_time(lit: str) -> bool:
+    """Checks if the string is in HH:MM:SS format."""
     try:
-        time.strptime(lit, '%H:%M:%S')
+        datetime.strptime(lit, '%H:%M:%S')
         return True
     except ValueError:
         return False
-    
 
-# is_interval
-# returns true if the input value is in interval format
-# @param lit the value to be checked
-def is_interval(lit):
-    isTypeCorrect = False
+
+def is_interval(lit: str) -> bool:
+    """
+    Checks if the string is in a valid interval format:
+    e.g., "1 year 2 months 3 days 4 hours 5 minutes 6 seconds"
+    """
     try:
         parts = lit.split()
-        if len(parts) == 12:
-                    if parts[1] == "year" or parts[1] == "years":
-                        if parts[3] == "month" or parts[3] == "months":
-                            if parts[5] == "day" or parts[5] == "days":
-                                if parts[7] == "hour" or parts[7] == "hours":
-                                    if parts[9] == "minute" or parts[9] == "minutes":
-                                        if parts[11] == "second" or parts[11] == "seconds":
-                                            if int(parts[0]) or int(parts[0]) == 0 and int(parts[2]) or int(parts[2]) == 0 and int(parts[4]) or int(parts[4]) == 0 and int(parts[6]) or int(parts[6]) == 0 and int(parts[8]) or int(parts[8]) == 0 and int(parts[10]) or int(parts[10]) == 0:
-                                                    if 0 <= int(parts[2]) <= 11:
-                                                        if 0 <= int(parts[4]) <= 365:
-                                                            if 0 <= int(parts[6]) <= 23:
-                                                                if 0 <= int(parts[8]) <= 59:
-                                                                    if 0 <= int(parts[10]) <= 59:
-                                                                            isTypeCorrect = True
-        return(isTypeCorrect)                                                                    
-    except Exception:
-        return(isTypeCorrect)
-    
+        if len(parts) != 12:
+            return False
+        
+        labels = [
+            ("year", "years", 0, None),
+            ("month", "months", 0, 11),
+            ("day", "days", 0, 365),
+            ("hour", "hours", 0, 23),
+            ("minute", "minutes", 0, 59),
+            ("second", "seconds", 0, 59),
+        ]
 
-# is_period
-# returns true if the input value is in period format
-# @param lit the value to be checked
-def is_period(lit):
-    try:
-        start_str, end_str = lit.split(" - ")
-        time.strptime(start_str, '%Y-%m-%d %H:%M:%S')
-        time.strptime(end_str, '%Y-%m-%d %H:%M:%S')
+        for i, (singular, plural, min_val, max_val) in enumerate(labels):
+            val = int(parts[i * 2])
+            label = parts[i * 2 + 1].lower()
+            if label not in (singular, plural):
+                return False
+            if max_val is not None and not (min_val <= val <= max_val):
+                return False
+
         return True
-    except ValueError:
+    except Exception:
         return False
 
 
-# is_bool
-# returns true if the input value is boolean
-# @param lit the value to be checked
-def is_bool(lit):
-    return lit.lower() in ("true", "false")
+def is_period(lit: str) -> bool:
+    """
+    Checks if the string is in a period format:
+    'YYYY-MM-DD HH:MM:SS - YYYY-MM-DD HH:MM:SS'
+    """
+    try:
+        start, end = lit.split(' - ')
+        datetime.strptime(start, '%Y-%m-%d %H:%M:%S')
+        datetime.strptime(end, '%Y-%m-%d %H:%M:%S')
+        return True
+    except ValueError:
+        return False
+    except Exception:
+        return False
 
+
+def is_bool(lit: str) -> bool:
+    """Checks if the string represents a boolean value."""
+    return lit.casefold() in ('true', 'false')

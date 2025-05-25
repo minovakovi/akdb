@@ -18,6 +18,7 @@
  17 */
 
 #include "nat_join.h"
+#include "../auxi/constants.h"
 
 /**
  * @author Matija Novak, optimized, and updated to work with AK_list by Dino Laktašić
@@ -48,7 +49,7 @@ void AK_create_join_block_header(int table_address1, int table_address2, char *n
     struct list_node *list_elem;
 	
     while (strcmp(temp_block->header[head].att_name, "") != 0) {
-        s_copy = 1;
+        s_copy = COPY_ENABLED;
 	list_elem = AK_First_L2(att);
 	
         while (list_elem != NULL) {

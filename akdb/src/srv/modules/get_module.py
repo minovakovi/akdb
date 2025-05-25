@@ -9,15 +9,17 @@ import kalashnikovDB as AK47
 # @param value the value to be checked
 def get_attr_type(value):
 
-    integer = type(is_numeric(value)) == int
-    decimal = type(is_numeric(value)) == float
+    numeric_value = is_numeric(value)
+    integer = isinstance(numeric_value, int)
+    decimal = isinstance(numeric_value, float)
     varchar = isinstance(value, str)
-    date = is_date(value.replace("'", ""))
-    datetime = is_datetime(value.replace("'", ""))
-    time = is_time(value.replace("'", ""))
-    interval = is_interval(value.replace("'", ""))
-    period = is_period(value.replace("'", ""))
-    boolean = is_bool(value.replace("'", ""))
+    value_stripped = value.replace("'", "") if isinstance(value, str) else value
+    date = is_date(value_stripped)
+    datetime = is_datetime(value_stripped)
+    time = is_time(value_stripped)
+    interval = is_interval(value_stripped)
+    period = is_period(value_stripped)
+    boolean = is_bool(value_stripped)
     
     if integer:
         return AK47.TYPE_INT
@@ -40,11 +42,10 @@ def get_attr_type(value):
     else:
         print("UNDEFINED")
 
+
 # get_type_name
 # returns type name for supplied type code in AK47 notation defined in constants.c
 # @param code the type code to be checked
-
-
 def get_type_name(code):
 
     if code == AK47.TYPE_INT:
