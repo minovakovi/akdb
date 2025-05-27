@@ -208,26 +208,32 @@ int AK_sequence_next_value(char *name){
  * @param name Name of the sequence
  * @return EXIT_SUCCESS or EXIT_ERROR
  */
-int AK_sequence_get_id(char *name){
-    int i = 0;
-    
-    struct list_node * row;
-    AK_PRO;
-	
-	while ((row = (struct list_node *)AK_get_row(i, "AK_sequence")) != NULL) {
-		if (strcmp( get_row_attr_data(1,row) ,name) == 0) {
-			i = (int) * get_row_attr_data(0,row);
-			AK_free(row);
-			AK_EPI;
-			return i;
-		}
-		i++;
-	}
-	AK_free(row);
-	AK_EPI;
-	return EXIT_ERROR;
-}
+#include <stdio.h>
+#include <string.h>
+#include "sequence.h"
 
+#include <stdio.h>
+#include <string.h>
+#include "sequence.h"
+
+int AK_sequence_get_id(char *name) {
+    int i = 0, id = EXIT_ERROR;
+    struct list_node *row;
+
+    AK_PRO;
+    while ((row = (struct list_node *)AK_get_row(i, "AK_sequence")) != NULL) {
+        char *n = (char *)get_row_attr_data(1, row);
+        if (n != NULL && strcmp(n, name) == 0) {
+            /* dohvati obj_id iz kolone 0 */
+            memcpy(&id, get_row_attr_data(0, row), sizeof(int));
+            AK_EPI;
+            return id;
+        }
+        i++;
+    }
+    AK_EPI;
+    return EXIT_ERROR;
+}
 
 /**
  * @author Boris Kišić
