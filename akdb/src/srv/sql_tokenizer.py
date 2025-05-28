@@ -1,6 +1,6 @@
 # @file sql_tokenizer.py - Parsing commands
 
-import pyparsing
+from pyparsing import *
 import re
 
 
@@ -54,6 +54,9 @@ class sql_tokenizer:
                        Keyword("schema", caseless=True) | Keyword(
             "trigger", caseless=True) | Keyword("role", caseless=True)
         )
+        def upcaseTokens(tokens):
+            return [t.upper() for t in tokens]
+
         onToken = Keyword("on", caseless=True)
         optionalToken1 = Keyword("temporary", caseless=True)
         optionalToken2 = Keyword("if", caseless=True) + \
@@ -129,7 +132,7 @@ class sql_tokenizer:
         print()
         return tokens
 
-    def AK_parse_createIndex(self, string):
+    def AK_parse_create_index(self, string):
         '''
         @autor Domagoj Tulicic 
         @brief sql parsing of CREATE INDEX command
@@ -160,139 +163,93 @@ class sql_tokenizer:
         print()
         return tokens
 
-    def AK_create_sequence(self, string):
+    def AK_parse_create_sequence(self, string):
         '''
         @autor Domagoj Tulicic modified by Danko Sacer
-        @brief sql parsing of CREATE SEQUENCE command
-        @param string sql command as string
-        @return if command is successfully parsed returns list of tokens, else returns error message as string
+        @brief SQL parsing of CREATE SEQUENCE command
+        @param string SQL command as string
+        @return If successfully parsed, returns list of tokens; else returns error message as string
         '''
 
         LPAR, RPAR, COMMA = list(map(Suppress, "(),"))
-        (CREATE, SEQUENCE, AS, START, WITH, INCREMENT, BY, MINVALUE, MAXVALUE,  CACHE) = list(map(CaselessKeyword,
-                                                                                                  """CREATE, SEQUENCE, AS, START, WITH, INCREMENT, BY, MINVALUE, MAXVALUE, CACHE""".replace(",", "").split()))
+        (CREATE, SEQUENCE, AS, START, WITH, INCREMENT, BY, MINVALUE, MAXVALUE, CACHE) = map(CaselessKeyword, 
+            "CREATE SEQUENCE AS START WITH INCREMENT BY MINVALUE MAXVALUE CACHE".split()
+        )
 
-        keyword = MatchFirst((CREATE, SEQUENCE, AS, START,
-                             WITH, INCREMENT, BY, MINVALUE, MAXVALUE, CACHE))
-        cycleToken = Keyword("cycle", caseless=True).setResultsName("cycle")
+        keyword = MatchFirst((CREATE, SEQUENCE, AS, START, WITH, INCREMENT, BY, MINVALUE, MAXVALUE, CACHE))
+        cycleToken = Keyword("cycle", caseless=True)
 
-        identifier = ~keyword + Word(alphas, alphanums+"_")
+        identifier = ~keyword + Word(alphas, alphanums + "_")
         identifier2 = ~keyword + Word(nums)
 
-        sequence_name = identifier.copy().setResultsName("sekvenca")
-        as_value = identifier.copy().setResultsName("as_value")
-        min_value = identifier2.copy().setResultsName("min_value")
-        max_value = identifier2.copy().setResultsName("max_value")
-        start_with = identifier2.copy().setResultsName("start_with")
-        increment_by = identifier2.copy().setResultsName("increment_by")
-        cache_value = identifier2.copy().setResultsName("cache")
+        sequence_name = identifier.copy().setResultsName("seq_name")
+        as_value = identifier.copy()
+        min_value = identifier2.copy()
+        max_value = identifier2.copy()
+        start_with = identifier2.copy()
+        increment_by = identifier2.copy()
+        cache_value = identifier2.copy()
 
         sequence_stmt = Forward()
-        sequence_stmt << (CREATE + SEQUENCE + sequence_name +
-                          (Optional((AS), default=AS) + Optional((as_value), default="bigint")) +
-                          (Optional((START), default=START) + Optional((WITH), default=WITH) +
-                              Optional((start_with), default="no start")) +
-                          (Optional((INCREMENT), default=INCREMENT) + Optional((BY), default=BY) +
-                              Optional((increment_by), default="1")) +
-                          (Optional((MINVALUE), default=MINVALUE) +
-                              Optional((min_value), default="no minvalue")) +
-                          (Optional((MAXVALUE), default=MAXVALUE) +
-                              Optional((max_value), default="no maxvalue")) +
-                          (Optional((CACHE), default=CACHE) +
-                              Optional((cache_value), default="15")) +
-                          Optional((cycleToken), default="no cycle"))
+        sequence_stmt <<= (
+            Suppress(CREATE) + Suppress(SEQUENCE) + sequence_name +
+            Optional(Suppress(AS) + as_value).setResultsName("as_value") +
+            Optional(Suppress(START) + Suppress(WITH) + start_with).setResultsName("start_with") +
+            Optional(Suppress(INCREMENT) + Suppress(BY) + increment_by).setResultsName("increment_by") +
+            Optional(Suppress(MINVALUE) + min_value).setResultsName("min_value") +
+            Optional(Suppress(MAXVALUE) + max_value).setResultsName("max_value") +
+            Optional(Suppress(CACHE) + cache_value).setResultsName("cache") +
+            Optional(cycleToken.setParseAction(lambda: 1)).setResultsName("cycle")
+        )
 
         try:
             tokens = sequence_stmt.parseString(string)
         except ParseException as err:
-            return " "*err.loc + "^\n" + err.msg
-        print()
+            return " " * err.loc + "^\n" + err.msg
 
-        if(tokens.cycle == "cycle"):
-            tokens.cycle = 1
-        else:
-            tokens.cycle = 0
-        # definiranje min, max i start default vrijednosti na temelju tipa sequence
-        if(tokens.as_value[0] == "smallint"):
-            if(tokens.min_value == "no minvalue"):
-                tokens.min_value = "-32768"
-                if(tokens.start_with == "no start"):
-                    tokens.start_with = tokens.min_value
-                else:
-                    tokens.start_with = tokens.start_with[0]
-            else:
-                tokens.min_value = tokens.min_value[0]
-                if(tokens.start_with == "no start"):
-                    tokens.start_with = tokens.min_value[0]
-                else:
-                    tokens.start_with = tokens.start_with[0]
-            if(tokens.max_value == "no maxvalue"):
-                tokens.max_value = "32767"
-            else:
-                tokens.max_value = tokens.max_value[0]
+        # Normalize optional values with defaults
+        tokens["as_value"] = tokens.get("as_value", ["bigint"])[0]
+        tokens["start_with"] = tokens.get("start_with", ["no start"])[0]
+        tokens["increment_by"] = tokens.get("increment_by", ["1"])[0]
+        tokens["min_value"] = tokens.get("min_value", ["no minvalue"])[0]
+        tokens["max_value"] = tokens.get("max_value", ["no maxvalue"])[0]
+        tokens["cache"] = tokens.get("cache", ["15"])[0]
+        tokens["cycle"] = tokens.get("cycle", 0)
 
-        elif(tokens.as_value[0] == "int"):
-            if(tokens.min_value == "no minvalue"):
-                tokens.min_value = "-2147483648"
-                if(tokens.start_with == "no start"):
-                    tokens.start_with = tokens.min_value
-                else:
-                    tokens.start_with = tokens.start_with[0]
-            else:
-                tokens.min_value = tokens.min_value[0]
-                if(tokens.start_with == "no start"):
-                    tokens.start_with = tokens.min_value[0]
-                else:
-                    tokens.start_with = tokens.start_with[0]
-            if(tokens.max_value == "no maxvalue"):
-                tokens.max_value = "2147483647"
-            else:
-                tokens.max_value = tokens.max_value[0]
+        # Set type-based defaults
+        type_defaults = {
+            "smallint": ("-32768", "32767"),
+            "int": ("-2147483648", "2147483647"),
+            "bigint": ("-9223372036854775808", "9223372036854775807"),
+            "tinyint": ("0", "255"),
+            "numeric": ("0", "255"),
+            "decimal": ("0", "255"),
+        }
 
-        elif(tokens.as_value[0] == "bigint" or tokens.as_value == "bigint"):
-            if(tokens.min_value == "no minvalue"):
-                tokens.min_value = "-9223372036854775808"
-                if(tokens.start_with == "no start"):
-                    tokens.start_with = tokens.min_value
-                else:
-                    tokens.start_with = tokens.start_with[0]
-            else:
-                tokens.min_value = tokens.min_value[0]
-                if(tokens.start_with == "no start"):
-                    tokens.start_with = tokens.min_value[0]
-                else:
-                    tokens.start_with = tokens.start_with[0]
-            if(tokens.max_value == "no maxvalue"):
-                tokens.max_value = "9223372036854775807"
-            else:
-                tokens.max_value = tokens.max_value[0]
+        seq_type = tokens.as_value.lower()
+        if seq_type in type_defaults:
+            default_min, default_max = type_defaults[seq_type]
 
-        elif(tokens.as_value[0] == "tinyint" or tokens.as_value[0] == "numeric" or tokens.as_value[0] == "decimal"):
-            if(tokens.min_value == "no minvalue"):
-                tokens.min_value = "0"
-                if(tokens.start_with == "no start"):
-                    tokens.start_with = tokens.min_value
-                else:
-                    tokens.start_with = tokens.start_with[0]
-            else:
-                tokens.min_value = tokens.min_value[0]
-                if(tokens.start_with == "no start"):
-                    tokens.start_with = tokens.min_value[0]
-                else:
-                    tokens.start_with = tokens.start_with[0]
-            if(tokens.max_value == "no maxvalue"):
-                tokens.max_value = "255"
-            else:
-                tokens.max_value = tokens.max_value[0]
+            if tokens.min_value == "no minvalue":
+                tokens.min_value = default_min
+            if tokens.start_with == "no start":
+                tokens.start_with = tokens.min_value
+            if tokens.max_value == "no maxvalue":
+                tokens.max_value = default_max
 
-        if(tokens.cache != "15"):
-            tokens.cache = tokens.cache[0]
-        if(tokens.increment_by != "1"):
-            tokens.increment_by = tokens.increment_by[0]
-        if(tokens.as_value != "bigint"):
-            tokens.as_value = tokens.as_value[0]
+        print("Parsed values:")
+        print("Sequence name:", tokens.seq_name)
+        print("AS type:", tokens.as_value)
+        print("Start with:", tokens.start_with)
+        print("Increment by:", tokens.increment_by)
+        print("Min value:", tokens.min_value)
+        print("Max value:", tokens.max_value)
+        print("Cache:", tokens.cache)
+        print("Cycle:", tokens.cycle)
 
         return tokens
+
+
 
     def AK_parse_where(self, string):
         '''
@@ -528,18 +485,18 @@ class sql_tokenizer:
         E = CaselessLiteral("e")
         arithSign = Word("+-", exact=1)
         realNum = Combine(Optional(arithSign)+(Word(nums)+"."+Optional(Word(nums))
-                          | ("."+Word(nums)))+Optional(E+Optional(arithSign)+Word(nums)))
+                            | ("."+Word(nums)))+Optional(E+Optional(arithSign)+Word(nums)))
         intNum = Combine(Optional(arithSign)+Word(nums) +
-                         Optional(E+Optional("+")+Word(nums)))
+                        Optional(E+Optional("+")+Word(nums)))
         value = quotedString | realNum | intNum
         valuesList = Group(delimitedList(value))
         values = lBracket+valuesList+rBracket
 
-        # types
-        dataSize = lBracket+intNum+rBracket
+        # data types
+        dataSize = lBracket + intNum + rBracket
         floatType = CaselessKeyword("float")
         integerType = CaselessKeyword("int")
-        varcharType = CaselessKeyword("varchar")+dataSize
+        varcharType = Combine(CaselessKeyword("varchar") + Optional(lBracket + intNum + rBracket))
         textType = CaselessKeyword("text")
 
         # predicate(limited)
@@ -562,7 +519,7 @@ class sql_tokenizer:
         pkUniqueEConstraint = pkUnique + columns
         foreignKeyEConstraint = foreignKeyToken+columnName + \
             referencesToken+tableName+lBracket+columnName+rBracket
-        checkEConstraint = "ERROR"
+        checkEConstraint = checkToken + lBracket + predicate + rBracket
         endConstraint = Group(CaselessKeyword("CONSTRAINT")+identifier +
                               (pkUniqueEConstraint | checkEConstraint | foreignKeyEConstraint))
 
