@@ -9,7 +9,7 @@ from modules.get_module import *
 # create sequence
 # developd by Danko Sacer
 class Create_sequence_command:
-    create_seq_regex = r"^(?i)create sequence(\s([a-zA-Z0-9_]+))+?$"
+    create_seq_regex = r"(?i)^create\s+sequence\s+([a-zA-Z_][a-zA-Z0-9_]*)"
     pattern = None
     matcher = None
 
@@ -19,12 +19,11 @@ class Create_sequence_command:
         print("Trying to match sequance regex")
         self.pattern = re.compile(self.create_seq_regex)
         self.matcher = self.pattern.match(input)
-        if (self.matcher is not None):
-            message = self.matcher
-        else:
-            message = None
+        if self.matcher:
+            self.seq_name = self.matcher.group(1)
+            return True
+        return False
 
-        return message
 
     # executes the create sequence expression
     # neded revision in sequence.c in function AK_sequence_add which receives
@@ -33,7 +32,7 @@ class Create_sequence_command:
     def execute(self, input):
         print("start parsing..")
         pars = sql_tokenizer()
-        tok = pars.AK_create_sequence(input)
+        tok = pars.AK_parse_create_sequence(input)
         # isinstance needs revision for swig
         '''
             if isinstance(tok, str):
@@ -41,6 +40,8 @@ class Create_sequence_command:
                 print string
                 print tok
                 return False
+        '''
+
         '''
         print("\nSequence name: ", tok.seq_name)
         print("'AS' definition: ", tok.as_value)
@@ -50,6 +51,7 @@ class Create_sequence_command:
         print("'MaxValue' value: ", tok.max_value)
         print("'Cache' value: ", tok.cache)
         print("'Cycle' value: ", tok.cycle)
+        '''
 
         # Check for sequence name, if already exists in database return false
         # Needs more revision for swig after buffer overflow is handled
@@ -74,7 +76,7 @@ class Create_sequence_command:
 # create table command
 # @author Franjo Kovacic
 class Create_table_command:
-    create_table_regex = r"^(?i)create table(\s([a-zA-Z0-9_\(\),'\.]+))+?"
+    create_table_regex = r"(?i)^create\s+table\s+.*"
     pattern = None
     matcher = None
     expr = None
@@ -91,57 +93,91 @@ class Create_table_command:
             return None
 
     # executes the create table expression
-    def execute(self, expression):
+    def execute(self, expression=None):
+        if expression:
+            self.expr = expression
+
         parser = sql_tokenizer()
         token = parser.AK_parse_create_table(self.expr)
-        # checking syntax
+
         if isinstance(token, str):
             print("Error: syntax error in expression")
             print(self.expr)
             print(token)
             return False
-        # get table name
-        
+
         table_name = str(token.tableName)
-        
-        # table should not exist yet
-        if (AK47.AK_table_exist(table_name) == 1):
-                print("Error: table'" + table_name + "' already exist")
-                return "Table'" + table_name + "' already exist"
-           
-        '''
-            For some reason, AK_table_exist won't work, it always just exits here, so it's commented out
-            
-        '''
-        # get attributes
-        '''
-            Create table in table.c currently takes only name and type of attributes.
-            Parsing works for other attribute properties as well, so it should be added here when possible.
-        '''
-        
+
+        if AK47.AK_table_exist(table_name) == 1:
+            print("Error: table'" + table_name + "' already exist")
+            return "Table'" + table_name + "' already exist"
+
+        sql_to_ak_type = {
+            "int": AK47.TYPE_INT,
+            "integer": AK47.TYPE_INT,
+            "float": AK47.TYPE_FLOAT,
+            "varchar": AK47.TYPE_VARCHAR,
+            "text": AK47.TYPE_VARCHAR,
+        }
+
         create_table_attributes = []
-        # print(len(token.attributes))
+
         for attribute in token.attributes:
-            create_table_attributes.append(
-                [{'name': str(attribute[0])}, {'type': str(attribute[1])}])
-            # print(create_table_attributes)
-        # print(create_table_attributes)
+            attr_name = str(attribute[0])
+            attr_type_raw = attribute[1]
+
+            # Determine the attribute type
+            if isinstance(attr_type_raw, str):
+                attr_type = attr_type_raw.lower()
+            elif hasattr(attr_type_raw, "asList"):
+                attr_type = attr_type_raw[0].lower()
+            elif isinstance(attr_type_raw, list):
+                attr_type = attr_type_raw[0].lower()
+            else:
+                attr_type = str(attr_type_raw).lower()
+
+            attr_type_base = re.match(r'^\w+', attr_type)
+            if attr_type_base:
+                ak_type = sql_to_ak_type.get(attr_type_base.group(0))
+            else:
+                ak_type = None
+            if ak_type is None:
+                print(f"Unsupported SQL type: {attr_type}")
+                return f"Error. Unsupported SQL type: {attr_type}"
+
+            constraints = [str(c).upper() for c in attribute[2:]] if len(attribute) > 2 else []
+
+            #print(f"Attribute: {attr_name}, Type: {ak_type}, Constraints: {constraints}")
+
+            create_table_attributes.append({
+                'name': attr_name,
+                'type': ak_type,
+                'constraints': constraints  # Pass constraints for future use
+            })
+
+        '''
+        print(f"Received attributes for {table_name}:")
+        for attr in create_table_attributes:
+            print(f" - {attr['name']} (type {attr['type']})")
+        '''
         attribute_count = len(create_table_attributes)
-        # executing
+
         try:
-            AK47.AK_create_table(
-                table_name, create_table_attributes, attribute_count)
+            AK47.AK_create_table(table_name, create_table_attributes, attribute_count)
             result = "Table created"
-        except:
+        except Exception as e:
+            print("Exception while creating table:", e)
             result = "Error. Creating table failed."
+
         return result
+
 
 # create index command
 # @author Franjo Kovacic
 
 
 class Create_index_command:
-    create_table_regex = r"^(?i)create index(\s([a-zA-Z0-9_]+))+?$"
+    create_table_regex = r"(?i)^create\s+index\s+\w+\s+on\s+\w+\s*\(\s*[\w\s,]+\)\s+using\s+\w+"
     pattern = None
     matcher = None
     expr = None
@@ -158,9 +194,10 @@ class Create_index_command:
             return None
 
     # executes the create index expression
-    def execute(self):
+    def execute(self, command):
+        self.expr = command
         parser = sql_tokenizer()
-        token = parser.AK_parse_createIndex(self.expr)
+        token = parser.AK_parse_create_index(command)
         # checking syntax
         if isinstance(token, str):
             print("Error: syntax error in expression")
@@ -179,12 +216,18 @@ class Create_index_command:
         # get index name
         index = str(token.IndexIme)
         # get other expression tokens
-        args = AK47.list_node()
-        args.attribute_name = token.stupci[0]
-        for stupac in token.stupci[1:]:
-            next = AK47.list_node()
-            next.attribute_name = stupac
-            args.next = next
+        args = None
+        last = None
+
+        for stupac in token.stupci:
+            node = AK47.list_node()
+            node.attribute_name = stupac
+            node.next = None
+            if args is None:
+                args = node
+            else:
+                last.next = node
+            last = node
 
         try:
             AK47.AK_create_Index_Table(table_name, args)
@@ -199,7 +242,7 @@ class Create_index_command:
 
 
 class Create_trigger_command:
-    create_trigger_regex = r"^(?i)create trigger(\s([a-zA-Z0-9_]+))+?$"
+    create_trigger_regex = r"(?i)^create\s+trigger\b.*"
     pattern = None
     matcher = None
     expr = None
@@ -217,13 +260,13 @@ class Create_trigger_command:
             return None
 
     # executes the create trigger expression
-    def execute(self):
+    def execute(self, expr):
         parser = sql_tokenizer()
-        token = parser.AK_parse_trigger(self.expr)
+        token = parser.AK_parse_trigger(expr)
         # checking syntax
         if isinstance(token, str):
             print("Error: syntax error in expression")
-            print(self.expr)
+            print(expr)
             print(token)
             return False
         # get table name

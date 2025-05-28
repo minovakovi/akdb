@@ -15,7 +15,8 @@ from modules.sql_error_module import *
 # Insert into
 class Insert_into_command:
 
-    insert_into_regex = r"^(?i)insert into(\s([a-zA-Z0-9_]+))+?$"
+    #insert_into_regex = r"^(?i)insert into(\s([a-zA-Z0-9_]+))+?$"
+    insert_into_regex = r"(?i)^insert\s+into\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*(\([^)]*\))?\s*values\s*\([^)]*\)"
     #insert_into_regex = r"insert\s+into\s+([a-zA-Z_][a-zA-Z0-9_]*)*\s*\(.*\)\s*values\s*\((.*)\)"
     pattern = None
     matcher = None
@@ -26,7 +27,8 @@ class Insert_into_command:
         print(self.matcher)
         return self.matcher if self.matcher is not None else None
 
-    def execute(self):
+    def execute(self, command):
+        expr = command
         expr = self.matcher.group(0)
         parser = sql_tokenizer()
         token = parser.AK_parse_insert_into(expr)
@@ -268,7 +270,7 @@ class Select_command:
 # @parama expr the expression to be executed
 class Update_command:
 
-    update_command_regex = r"^(?i)update(\s([a-zA-Z0-9_]+))+?$"
+    update_command_regex = r"(?i)^update(\s([a-zA-Z0-9_]+))+?$"
     pattern = None
     matcher = None
 
@@ -385,7 +387,7 @@ class Update_command:
 #@author Filip Sostarec
 class Drop_command:
 
-    drop_regex = r"^(?i)drop(\s([a-zA-Z0-9_\(\),'\.]+))+?$"
+    drop_regex = r"(?i)^drop(\s([a-zA-Z0-9_\(\),'\.]+))+?$"
     pattern = None
     matcher = None
     expr = None
@@ -411,9 +413,9 @@ class Drop_command:
         else:
             return None
 
-    def execute(self):
+    def execute(self, command):
         parser = sql_tokenizer()
-        token = parser.AK_parse_drop(self.expr)
+        token = parser.AK_parse_drop(command)
         print(f"{token=}")
         if isinstance(token, str):
             print("Error: syntax error in expression")
@@ -431,5 +433,6 @@ class Drop_command:
         if (AK47.AK_table_exist(table_name) == 0):
             print("Error: table '" + table_name + "' does not exist")
             return False
-        
+
         AK47.AK_drop(self._dropType[objekt], drop_args)
+        return True
