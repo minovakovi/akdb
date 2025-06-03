@@ -85,6 +85,7 @@ int main(int argc, char * argv[])
                 sigset(SIGINT, AK_archive_log);
                 AK_recover_archive_log("../src/rec/rec.bin");  // "../src/rec/rec.bin" needs to be replaced with destination when AK_recover_archive_log is fixed
                 /* component test area --- begin */
+                TestResult testResult;
                 if((argc == 2) && !strcmp(argv[1], "test"))
                 {
                     choose_test();
@@ -101,7 +102,7 @@ int main(int argc, char * argv[])
 
                     AK_create_test_tables();
                     set_catalog_constraints();
-                    tests[pickedTest].func();
+                    testResult = tests[pickedTest].func();
                 }
                 /*component test area --- end */
                 if ( AK_flush_cache() == EXIT_SUCCESS ){
@@ -109,7 +110,7 @@ int main(int argc, char * argv[])
                     pickedTest = strtol(argv[2], NULL, 10)-1;	
                     printf("\nTEST:--- %s --- ENDED!\n", tests[pickedTest].name);
                     printf( "\nEverything was fine!\nBye =)\n" );
-                    TEST_output_results(tests[pickedTest].func());
+                    TEST_output_results(testResult);
                     /* For easyer debugging and GDB usage
                     AK_create_test_tables();
                     AK_view_test();

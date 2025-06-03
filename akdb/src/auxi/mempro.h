@@ -73,7 +73,7 @@ memory wrappers and debug mode of Kalashnikov DB.
   * @def AK_DEBMOD_PAGES_NUM
   * @brief Defines the total available memory pages for allocation
   */
-#define AK_DEBMOD_PAGES_NUM 8192
+#define AK_DEBMOD_PAGES_NUM 16384
 
 /**
   * @def AK_DEBMOD_MAX_WRITE_DETECTIONS
