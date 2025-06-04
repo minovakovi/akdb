@@ -48,7 +48,8 @@ class Table_exists_command:
 
     # execute method
     # defines what is called when table_exists command is invoked
-    def execute(self):
+    # added cmd to correctly get called by executor
+    def execute(self, cmd):
         if AK47.AK_table_exist(self.matcher.group(1)) == 0:
             result = "Table does not exist."
         else:

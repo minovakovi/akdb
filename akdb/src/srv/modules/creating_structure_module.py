@@ -141,7 +141,7 @@ class Create_table_command:
 
 
 class Create_index_command:
-    create_table_regex = r"^(?i)create index(\s([a-zA-Z0-9_]+))+?$"
+    create_table_regex = r"(?i)^create\s+index\s+\w+\s+on\s+\w+\s*\(\s*[\w\s,]+\)(\s+using\s+\w+)?"
     pattern = None
     matcher = None
     expr = None
