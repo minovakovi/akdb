@@ -289,8 +289,11 @@ void AK_printout_redolog(){
     int x = redoLog->number;
     int i = 0;
     for (i = 0; i < x; i++){
-        printf("%d. %s %s %s\n", i, redoLog->command_recovery[i].table_name,
-                redoLog->command_recovery[i].operation, redoLog->command_recovery[i].arguments);
+        printf("%d. %s %d %s\n", 
+		i, 
+		redoLog->command_recovery[i].table_name ? redoLog->command_recovery[i].table_name : "(null)",
+                redoLog->command_recovery[i].operation, 
+		redoLog->command_recovery[i].arguments ? redoLog->command_recovery[i].arguments: "(null)");
     }
     AK_EPI;
 }
