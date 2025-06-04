@@ -591,7 +591,7 @@ TestResult AK_drop_test() {
     AK_print_table("AK_function_arguments");
 
     printf("\n-----DROP USER-----\n");
-    AK_user_add("user_drop_test",1234,1);
+    AK_user_add("user_drop_test","1234",1);
     drop_arguments->value = "user_drop_test";
     drop_arguments->next = (AK_drop_arguments *)AK_malloc(sizeof (AK_drop_arguments));
     drop_arguments->next->value = "CASCADE";
