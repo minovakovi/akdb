@@ -58,9 +58,19 @@ class Sql_executor:
     # execute method
     # called when a new command is received (from client)
     def execute(self, command):
-        #tmp = self.commands_for_input(command)
-        #print(f"{tmp=}")
+    # Provjera za "\t <ime_tabele>?" komandu
+        if isinstance(command, str) and command.startswith("\\t ") and command.endswith("?"):
+            tablename = command[3:-1].strip()
+            exists = AK47.AK_table_exist(tablename)
+            if exists:
+                return ("TableExistsCommand", f"✔ Table '{tablename}' exists.")
+            else:
+                return ("TableExistsCommand", f"✖ Table '{tablename}' does NOT exist.")
+
+    # Sve ostale naredbe idu normalno
         return self.commands_for_input(command)
+
+
 
     # insert
     # executes the insert expression
