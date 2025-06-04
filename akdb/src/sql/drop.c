@@ -512,6 +512,16 @@ TestResult AK_drop_test() {
     drop_arguments->next->value = NULL;
     drop_arguments->next->next->value = NULL;
 
+    
+AK_create_table_parameter parameters[2];
+
+strcpy(parameters[0].name, "id_department");
+parameters[0].type = TYPE_INT;
+
+strcpy(parameters[1].name, "manager");
+parameters[1].type = TYPE_VARCHAR;
+
+AK_create_table("department", parameters, 2);
 
     printf("\n-----DROP TABLE-----\n");
     AK_print_table("AK_relation");
