@@ -183,17 +183,17 @@ int AK_aggregation(AK_agg_input *input, char *source_table, char *agg_table) {
                 break;
             case AGG_TASK_SUM:
                 sprintf(agg_h_name, "Sum(%s)", att_root[i].att_name);
-                if (agg_h_type != TYPE_INT && agg_h_type != TYPE_FLOAT && agg_h_type != TYPE_NUMBER)
+                if (agg_h_type != TYPE_INT & agg_h_type != TYPE_FLOAT & agg_h_type != TYPE_NUMBER)
                     agg_h_type = TYPE_INT;
                 break;
             case AGG_TASK_MAX:
                 sprintf(agg_h_name, "Max(%s)", att_root[i].att_name);
-                if (agg_h_type != TYPE_INT && agg_h_type != TYPE_FLOAT && agg_h_type != TYPE_NUMBER)
+                if (agg_h_type != TYPE_INT & agg_h_type != TYPE_FLOAT & agg_h_type != TYPE_NUMBER)
                     agg_h_type = TYPE_INT;
                 break;
             case AGG_TASK_MIN:
                 sprintf(agg_h_name, "Min(%s)", att_root[i].att_name);
-                if (agg_h_type != TYPE_INT && agg_h_type != TYPE_FLOAT && agg_h_type != TYPE_NUMBER)
+                if (agg_h_type != TYPE_INT & agg_h_type != TYPE_FLOAT & agg_h_type != TYPE_NUMBER)
                     agg_h_type = TYPE_INT;
                 break;
             case AGG_TASK_AVG:
@@ -246,9 +246,11 @@ int AK_aggregation(AK_agg_input *input, char *source_table, char *agg_table) {
     AK_mem_block *mem_block;
 
 
-	rowroot_struct rowroot_table = {.row_root = (struct list_node*) AK_malloc(sizeof(struct list_node))};
+	struct list_node *row_root = (struct list_node*) AK_malloc(sizeof(struct list_node));
+	assert(row_root != NULL);
 
-    AK_Init_L3(&rowroot_table);
+    AK_Init_L3(&row_root);
+	assert(row_root != NULL);
 
 
     i = 0;
@@ -380,7 +382,8 @@ int AK_aggregation(AK_agg_input *input, char *source_table, char *agg_table) {
 					sresult = AK_search_unsorted(new_table, search_parameters, agg_group_number);
 
 					if (sresult.iNum_tuple_addresses == 0) {
-						AK_DeleteAll_L3(&rowroot_table);
+						AK_DeleteAll_L3(&row_root);
+						assert(row_root != NULL);
 
 						for (l = 0; l < num_aggregations; l++) {
 							switch (needed_values[l].agg_task) {
@@ -424,7 +427,8 @@ int AK_aggregation(AK_agg_input *input, char *source_table, char *agg_table) {
 									//promijenjeno
 									*((int*)needed_values[m].data) = counter;
 									((char*)needed_values[m].data)[sizeof(int)] = '\0';
-									AK_Insert_New_Element(agg_head[l].type, needed_values[l].data, new_table, agg_head[l].att_name, rowroot_table.row_root);
+									AK_Insert_New_Element(agg_head[l].type, needed_values[l].data, new_table, agg_head[l].att_name, &row_root);
+									assert(row_root != NULL);
 									break;
 
 								case AGG_TASK_AVG:
@@ -440,12 +444,14 @@ int AK_aggregation(AK_agg_input *input, char *source_table, char *agg_table) {
 								case AGG_TASK_AVG_SUM:
 									//no break is intentional
 								default:
-									AK_Insert_New_Element(agg_head[l].type, needed_values[l].data, new_table, agg_head[l].att_name, rowroot_table.row_root);
+									AK_Insert_New_Element(agg_head[l].type, needed_values[l].data, new_table, agg_head[l].att_name, &row_root);
+									assert(row_root != NULL);
 							}
 
 						}
                         //FILE  -  fix this!
-						AK_insert_row(rowroot_table.row_root);
+						AK_insert_row(&row_root);
+						assert(row_root != NULL);
 
 					} else {
 						mem_block = AK_get_block(sresult.aiBlocks[0]);
@@ -558,7 +564,7 @@ int AK_aggregation(AK_agg_input *input, char *source_table, char *agg_table) {
 													floattemp = *((float*) (mem_block->block->data + mem_block->block->tuple_dict[sresult.aiTuple_addresses[i] + o].address));
 												}
 
-												if (inttemp != -1 && doubletemp != -1)
+												if (inttemp != -1 & doubletemp != -1)
 													break;
 											}
 											floattemp = floattemp / (float) inttemp;
@@ -573,17 +579,19 @@ int AK_aggregation(AK_agg_input *input, char *source_table, char *agg_table) {
 						}
 						AK_deallocate_search_result(sresult);
 						
-						AK_DeleteAll_L3(&rowroot_table);
+						AK_DeleteAll_L3(&row_root);
+						assert(row_root != NULL);
 
 						for (l = 0; l<num_aggregations;l++) {
 							if (needed_values[l].agg_task == AGG_TASK_GROUP)
 							   inttemp = 1;
 							else
 								inttemp = 0;
-							AK_Insert_New_Element_For_Update(agg_head[l].type, needed_values[l].data, new_table, agg_head[l].att_name, rowroot_table.row_root, inttemp);
+							AK_Insert_New_Element_For_Update(agg_head[l].type, needed_values[l].data, new_table, agg_head[l].att_name, &row_root, inttemp);
 						}
 
-						//AK_update_delete_row_from_block(mem_block->block, row_root, 0);
+						//AK_update_delete_row_from_block(mem_block->block, &row_root, 
+						// assert(row_root != NULL);0);
                         AK_mem_block_modify(mem_block, BLOCK_DIRTY);
 					}
 				}
@@ -612,7 +620,8 @@ int AK_aggregation(AK_agg_input *input, char *source_table, char *agg_table) {
 			printf("\nTABLE %s CREATED!\n", agg_table);
 
     	
-	AK_DeleteAll_L3(&rowroot_table);
+	AK_DeleteAll_L3(&row_root);
+	assert(row_root != NULL);
 
 		for (l = 0; l < num_aggregations; l++) 
 		{
@@ -641,11 +650,13 @@ int AK_aggregation(AK_agg_input *input, char *source_table, char *agg_table) {
 				case AGG_TASK_SUM:
 					//no break is intentional
 				default:
-					AK_Insert_New_Element(agg_head[l].type, needed_values[l].data, agg_table, agg_head[l].att_name, rowroot_table.row_root);
+					AK_Insert_New_Element(agg_head[l].type, needed_values[l].data, agg_table, agg_head[l].att_name, &row_root);
+					assert(row_root != NULL);
 					break;
 			}
 		}
-		AK_insert_row(rowroot_table.row_root);
+		AK_insert_row(&row_root);
+		assert(row_root != NULL);
     }
     else
 	{
@@ -686,7 +697,8 @@ int AK_aggregation(AK_agg_input *input, char *source_table, char *agg_table) {
 	for (i = 0; i < num_aggregations; i++)
 		AK_free(agg_head_ptr[i]);
     AK_free(needed_values);
-    AK_free(rowroot_table.row_root);
+    AK_free(&row_root);
+	assert(row_root != NULL);
     AK_free(temp);
 	AK_free(addresses);
     AK_EPI;
@@ -1066,7 +1078,10 @@ TestResult AK_aggregation_having_test() {
 		AK_InsertAtEnd_L3(TYPE_OPERATOR, "AND", sizeof("AND"), having_expr);
 		printf("\nQUERY: SELECT * FROM student GROUP BY year HAVING AVG(weight) > 100 AND COUNT(id_student) > 1;\n\n");
 
-	    AK_aggregation_having(&aggregation, src_table, "agg_haivng", having_expr);
+	    AK_aggregation_having(&aggregation, src_table, "agg_having", having_expr);
+
+		AK_FreeList_L3(having_expr);
+		free(having_expr);
     }
 
     AK_print_table("agg_having");
