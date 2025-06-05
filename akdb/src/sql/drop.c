@@ -326,27 +326,32 @@ int AK_drop_group(AK_drop_arguments *drop_arguments){
 #define AK_CONSTRAINT_BETWEEN_SYS_TABLE "AK_constraints_between"
 #define AK_CONSTRAINT_CHECK_SYS_TABLE "AK_constraints_check_constraint"
 int AK_drop_constraint(AK_drop_arguments *drop_arguments){
+    // Extract arguments from linked list
     char* table_name = (char*) drop_arguments->value;
     char* constraint_name = (char*) drop_arguments->next->next->value;
     char* constraint_type = drop_arguments->next->next->next->value;
     
     int result = EXIT_ERROR;
 
+    // If the constraint type is 'unique', delete from AK_constraints_unique
     if (strcmp(constraint_type, "unique") == 0) {
         result = AK_delete_constraint_unique(AK_CONSTRAINT_UNIQUE_SYS_TABLE, constraint_name);
         if (result == EXIT_SUCCESS) {
             printf("Unique constraint %s dropped from table %s.\n", constraint_name, table_name);
         }
+    // If the constraint type is 'not_null', delete from AK_constraints_not_null
     } else if (strcmp(constraint_type, "not_null") == 0) {
         result = AK_delete_constraint_not_null(AK_CONSTRAINT_NOT_NULL_SYS_TABLE, constraint_name);
         if (result == EXIT_SUCCESS) {
             printf("Not null constraint %s dropped from table %s.\n", constraint_name, table_name);
         }
+    // If the constraint type is 'between', delete from AK_constraints_between
     } else if (strcmp(constraint_type, "between") == 0) {
         result = AK_delete_constraint_between(AK_CONSTRAINT_BETWEEN_SYS_TABLE, constraint_name);
         if (result == EXIT_SUCCESS) {
             printf("Between constraint %s dropped from table %s.\n", constraint_name, table_name);
         }
+    // If the constraint type is 'check', delete from AK_constraints_check_constraint
     } else if (strcmp(constraint_type, "check") == 0) {
         result = AK_delete_check_constraint(AK_CONSTRAINT_CHECK_SYS_TABLE, constraint_name);
         if (result == EXIT_SUCCESS) {
@@ -370,6 +375,7 @@ void AK_drop_help_function(char *tblName, char *sys_table) {
 
     table_addresses *addresses;
     AK_PRO;
+    // Get addresses for the table to be dropped
     addresses = (table_addresses*) AK_get_table_addresses(tblName);
 
     AK_mem_block *mem_block;
@@ -378,6 +384,7 @@ void AK_drop_help_function(char *tblName, char *sys_table) {
 
     #define MAX_EXTENTS 100
 
+    // Loop through all extents and mark associated blocks as free
     for (j = 0; j < MAX_EXTENTS; j++) {
         if (addresses->address_from != 0) {
             from = addresses->address_from[j];
@@ -388,6 +395,7 @@ void AK_drop_help_function(char *tblName, char *sys_table) {
                 mem_block = (AK_mem_block *) AK_get_block(i);
                 mem_block->block->type = BLOCK_TYPE_FREE;
 
+                // Mark all tuples and data as free in this block
                 for (c = 0; c < DATA_BLOCK_SIZE; c++) {
                     mem_block->block->tuple_dict[c].type = FREE_INT;
                     mem_block->block->data[c] = FREE_CHAR;
@@ -402,6 +410,7 @@ void AK_drop_help_function(char *tblName, char *sys_table) {
     int address_sys;
     char name_sys[MAX_ATT_NAME];
 
+    // Read block 0 to find system table address
     AK_mem_block *mem_block2 = (AK_mem_block *) AK_get_block(0);	
     for (i = 0; i < DATA_BLOCK_SIZE; i++) {
         
@@ -411,6 +420,7 @@ void AK_drop_help_function(char *tblName, char *sys_table) {
             break;
         }
 
+        // Extract system table name
         data_adr = mem_block2->block->tuple_dict[i].address;
         data_size = mem_block2->block->tuple_dict[i].size;
 
@@ -420,23 +430,27 @@ void AK_drop_help_function(char *tblName, char *sys_table) {
         data_adr = mem_block2->block->tuple_dict[i].address;
         data_size = mem_block2->block->tuple_dict[i].size;
 
+        // Extract address for that system table
         memcpy(&address_sys, mem_block2->block->data + data_adr, data_size);
-
-       if (strncmp(name_sys, sys_table, MAX_ATT_NAME) == 0) {
-           break;
-       }
+        
+        // Stop if the matching system table is found
+        if (strncmp(name_sys, sys_table, MAX_ATT_NAME) == 0) {
+            break;
+        }
     }
 
+    // Load system catalog block
     mem_block2 = (AK_mem_block *) AK_get_block(address_sys);
+    
+    // Reset the extents for the dropped table
     table_addresses *addresses2;
-
     addresses2 = (table_addresses*) AK_get_table_addresses(tblName);
-
     memset(addresses2->address_from, 0, sizeof(addresses2->address_from));
     memset(addresses2->address_to, 0, sizeof(addresses2->address_to));
 
     char name[MAX_VARCHAR_LENGTH];
 
+     // Locate and invalidate entries for the dropped table in the system catalog block
     for (i = 0; i < DATA_BLOCK_SIZE; i++) {
         if (mem_block2->block->tuple_dict[i].type == FREE_INT)
             break;
@@ -451,6 +465,7 @@ void AK_drop_help_function(char *tblName, char *sys_table) {
         }
     }
 
+    // Prepare and delete corresponding row from system table
     struct list_node *row_root = (struct list_node *) AK_malloc(sizeof(struct list_node));
     AK_Init_L3(&row_root);
     AK_DeleteAll_L3(&row_root);
@@ -513,16 +528,14 @@ TestResult AK_drop_test() {
     drop_arguments->next->next->value = NULL;
 
     
-AK_create_table_parameter parameters[2];
+    AK_create_table_parameter parameters[2];
+    strcpy(parameters[0].name, "id_department");
+    parameters[0].type = TYPE_INT;
+    strcpy(parameters[1].name, "manager");
+    parameters[1].type = TYPE_VARCHAR;
+    AK_create_table("department", parameters, 2);
 
-strcpy(parameters[0].name, "id_department");
-parameters[0].type = TYPE_INT;
-
-strcpy(parameters[1].name, "manager");
-parameters[1].type = TYPE_VARCHAR;
-
-AK_create_table("department", parameters, 2);
-
+    // Test 0: DROP regular table
     printf("\n-----DROP TABLE-----\n");
     AK_print_table("AK_relation");
     drop_arguments->value = "department";
@@ -530,11 +543,13 @@ AK_create_table("department", parameters, 2);
     AK_print_table("AK_relation");
     AK_print_table("department");
 
+    // Test 1: DROP system catalog table should fail and be considered a success
     printf("\n-----DROP CATALOG TABLE-----\n");
     drop_arguments->value = "AK_attribute";
     results[1] = !AK_drop(DROP_TABLE, drop_arguments);
     AK_print_table("AK_relation");
 
+    // Test 2: DROP VIEW
     printf("\n-----DROP VIEW-----\n");
     AK_view_add("view_drop_test","SELECT firstname FROM profesor", "profesor;firstname;", 0);
     AK_print_table("AK_view");
@@ -542,6 +557,7 @@ AK_create_table("department", parameters, 2);
     results[2] = AK_drop(DROP_VIEW, drop_arguments);
     AK_print_table("AK_view");
 
+    // Test 3: DROP HASH INDEX
     // Sql index (create index) is not implemented yet
     printf("\n-----DROP HASH INDEX-----\n");
     drop_arguments->value = "student_hash_index";
@@ -549,6 +565,7 @@ AK_create_table("department", parameters, 2);
     results[3] = AK_drop(DROP_INDEX, drop_arguments);
     AK_print_table("AK_index");
 
+    // Test 4: DROP BITMAP INDEX
     // Sql index (create index) is not implemented yet
     printf("\n-----DROP BITMAP INDEX-----\n");
     drop_arguments->value = "assistantfirstname_bmapIndex";
@@ -556,6 +573,7 @@ AK_create_table("department", parameters, 2);
     results[4] = AK_drop(DROP_INDEX, drop_arguments);
     AK_print_table("AK_index");
 
+    // Test 5: DROP SEQUENCE
     // "AK_sequence_add" function is called before attempting to drop the sequence. This ensures that the sequence with the name "seq_drop_test" exists before attempting to drop it.
     printf("\n-----DROP SEQUENCE-----\n");
     AK_print_table("AK_sequence");
@@ -565,8 +583,8 @@ AK_create_table("department", parameters, 2);
     results[5] = AK_drop(DROP_SEQUENCE, drop_arguments);
     AK_print_table("AK_sequence");
 
+    // Test 6: DROP TRIGGER
     printf("\n-----DROP TRIGGER-----\n");
-
     struct list_node *argument_list_function = (struct list_node *) AK_malloc(sizeof (struct list_node));
     AK_Init_L3(&argument_list_function);
     AK_function_add("function_drop_trigger", 1, argument_list_function);
@@ -590,7 +608,7 @@ AK_create_table("department", parameters, 2);
     AK_free(argument_list_function);
     AK_free(expr);
 
-
+    // Test 7: DROP FUNCTION
     printf("\n-----DROP FUNCTION-----\n");
     AK_print_table("AK_function");
     AK_print_table("AK_function_arguments");
@@ -600,6 +618,7 @@ AK_create_table("department", parameters, 2);
     AK_print_table("AK_function");
     AK_print_table("AK_function_arguments");
 
+    // Test 8: DROP USER with CASCADE
     printf("\n-----DROP USER-----\n");
     AK_user_add("user_drop_test","1234",1);
     drop_arguments->value = "user_drop_test";
@@ -615,17 +634,7 @@ AK_create_table("department", parameters, 2);
 
     // The value is set for the drop group to an empty string to avoid any potential issues
     drop_arguments->next->value = "";
-    printf("\n-----DROP GROUP-----\n");
-    AK_group_add("group_drop_test", 1);
-    AK_print_table("AK_group");
-    AK_print_table("AK_user_group");
-    AK_print_table("AK_group_right");
-    results[9] = AK_drop(DROP_GROUP, drop_arguments);
-    AK_print_table("AK_group");
-    AK_print_table("AK_user_group");
-    AK_print_table("AK_group_right");
-
-
+    // Test 9: DROP GROUP
     printf("\n-----DROP GROUP-----\n");
     AK_group_add("group_drop_test",1);
     drop_arguments->value = "group_drop_test";
@@ -639,6 +648,7 @@ AK_create_table("department", parameters, 2);
 
     printf("\n-----DROP CONSTRAINT-----\n");
     
+    // Test 10: DROP CONSTRAINT - UNIQUE
     printf("\n-----UNIQUE-----\n");
     char* tableName_1 = "student";
     char* attName_1 = "year";
@@ -656,7 +666,7 @@ AK_create_table("department", parameters, 2);
     results[10] = AK_drop(DROP_CONSTRAINT, drop_arguments);
     AK_print_table("AK_constraints_unique");
     
-    
+    // Test 11: DROP CONSTRAINT - NOT NULL
     printf("\n-----NOT NULL-----\n");
     char* tableName_2 = "student";
     char* attName_2 = "firstname";
@@ -673,7 +683,7 @@ AK_create_table("department", parameters, 2);
     results[11] = AK_drop(DROP_CONSTRAINT, drop_arguments);
     AK_print_table("AK_constraints_not_null");
     
-    
+    // Test 12: DROP CONSTRAINT - BETWEEN
     printf("\n-----BETWEEN-----\n");
     char* tableName_3 = "department";
     char* attName_3 = "manager";
@@ -692,6 +702,7 @@ AK_create_table("department", parameters, 2);
     results[12] = AK_drop(DROP_CONSTRAINT, drop_arguments);
     AK_print_table("AK_constraints_between");
 
+     // Test 13: DROP CONSTRAINT - CHECK
     printf("\n-----CHECK-----\n");
     char* tableName_4 = "department";
     char* attName_4 = "id_department";
@@ -708,7 +719,7 @@ AK_create_table("department", parameters, 2);
     results[13] = AK_drop(DROP_CONSTRAINT, drop_arguments);
     AK_print_table("AK_constraints_check_constraint");
     
-
+    // Evaluate and report results
     int success=0;
     int failed=0;
     printf("======================END_DROP_TEST======================\n");
