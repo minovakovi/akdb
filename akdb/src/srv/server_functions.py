@@ -18,7 +18,8 @@ cursor = connection.cursor()
 #cursor.execute("DELETE FROM quiz_questions")
 
 # Kreiranje tablice example s jedinstvenim ključem na stupcu usr
-cursor.execute("CREATE TABLE IF NOT EXISTS example (id INTEGER, usr TEXT UNIQUE, pas_hash TEXT)")  
+cursor.execute("CREATE TABLE IF NOT EXISTS example (id INTEGER, usr TEXT UNIQUE, pas_hash TEXT)")
+#cursor.execute("CREATE TABLE IF NOT EXISTS test (redak varchar(20))")
 
 # Umetanje korisnika u tablicu example
 cursor.execute("INSERT OR IGNORE INTO example VALUES (1, 'testingUser', ?)", (hashlib.sha256("testingPass".encode()).hexdigest(),))
@@ -126,25 +127,33 @@ class Connection:
 
     def send_data(self, data):
         try:
-            if data[1].startswith('Error'):
-                self.channel.send(self.pack_output({"success": False, "error_msg": data[1]}))
-            elif data[1] is False:
+            msg = str(data[1]) if not isinstance(data[1], str) else data[1]
+            if msg.startswith('Error'):
+                self.channel.send(self.pack_output({"success": False, "error_msg": msg}))
+            elif msg is False:
                 self.channel.send(self.pack_output({"success": False, "error_msg": "There was an error in your command."}))
             elif data[0] == "Select_command":
-                self.select_protocol(data[1])
+                self.select_protocol(msg)
             else:
-                self.channel.send(self.pack_output({"success": True, "result": data[1]}))
+                self.channel.send(self.pack_output({"success": True, "result": msg}))
+        except (BrokenPipeError, ConnectionResetError, OSError) as e:
+            print("[-] Socket connection lost:", e)
+            self.cleanup_channel()  # Optional: shut down the channel cleanly here
         except Exception as e:
             print("[-] Failed to send data:", e)
 
     def recv_data(self):
         try:
-            data = self.unpack_input(self.channel.recv(1024))
+            raw = self.channel.recv(1024)
+            if not raw:
+                print("[*] Client disconnected (no data)")
+                return False
+            data = self.unpack_input(raw)
             if isinstance(data, dict):
-                if "command" in data:
-                    return data["command"]
-                elif "continue" in data:
-                    return data["continue"]
+                return data.get("command") or data.get("continue", False)
+            return False
+        except (ConnectionResetError, OSError) as e:
+            print("[-] recv_data socket error:", e)
             return False
         except Exception as e:
             print("[-] Failed while unpacking data:", e)
@@ -179,11 +188,16 @@ class Connection:
                     "success": True,
                     "packed_data": True
                 }
-                self.channel.send(self.pack_output(data))
-                print(f"Sent {endrow}/{len(l)} rows to {self.addr[0]}")
+                try:
+                    self.channel.send(self.pack_output(data))
+                    print(f"Sent {endrow}/{len(l)} rows to {self.addr[0]}")
+                except Exception as e:
+                    print("[-] Failed to send data:", e)
+                    break
+
                 res = self.recv_data()
                 if not res:
-                    print("Interrupted by client.")
+                    print("[-] Interrupted by client or socket closed.")
                     break
         else:
             data = {
@@ -191,7 +205,17 @@ class Connection:
                 "result": table,
                 "success": True
             }
-            self.channel.send(self.pack_output(data))
+            try:
+                self.channel.send(self.pack_output(data))
+            except Exception as e:
+                print("[-] Failed to send data:", e)
 
     def is_alive(self):
         return self.channel is not None and self.transport.is_active()
+
+    def cleanup_channel(self):
+        try:
+            self.channel.shutdown(socket.SHUT_RDWR)
+            self.channel.close()
+        except Exception as e:
+            print("[-] Error during channel cleanup:", e)
