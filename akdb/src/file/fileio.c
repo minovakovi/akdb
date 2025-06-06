@@ -17,6 +17,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor Boston, MA 02110-1301,  USA
  17 */
 #include "fileio.h"
+#include "../opti/rel_eq_projection.h"
+
 
 //START SPECIAL FUNCTIONS FOR WORK WITH row_element_structure
 

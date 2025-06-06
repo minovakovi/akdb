@@ -1,73 +1,34 @@
-/**
-@file rel_eq_assoc.h Header file that provides data structures, functions and defines for relational equivalences regarding associativity
- */
-/*
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- * 
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Library General Public License for more details.
- * 
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor Boston, MA 02110-1301,  USA
- */
+#ifndef REL_EQ_ASSOC_H
+#define REL_EQ_ASSOC_H
 
-#ifndef REL_EQ_ASSOC
-#define REL_EQ_ASSOC
-
-#include "../auxi/test.h"
-#include "../file/table.h"
-#include "../auxi/mempro.h"
 #include "../auxi/auxiliary.h"
+#include "../auxi/test.h"
 
 /**
- * @author Dino Laktašić
- * @struct cost_eval_t
- * @brief Stucture for cost estimation on relations. It contains value (number of rows in table) and data (used to store table name)
- * 
+ * @brief Applies associativity transformation on relational algebra expressions.
+ *        Transforms ((A⋈B)⋈C) into (A⋈(B⋈C)) if pattern is matched.
+ * @param list_rel_eq Pointer to pointer to list of relational algebra expressions.
+ * @return Pointer to a new list of transformed expressions.
  */
-struct cost_eval_t {
-    int value;
-    char data[MAX_VARCHAR_LENGTH];
-};
-
-typedef struct cost_eval_t cost_eval;
+struct list_node* AK_rel_eq_assoc(struct list_node** list_rel_eq);
 
 /**
- * @author Dino Laktašić
- * @brief Function for Struct cost_eval comparison 
- * @param *a first value
- * @param *b second value
- * @return returns result of comparison
+ * @brief Unit test for associative transformation.
+ *        Verifies transformation of ((A⋈B)⋈C) into (A⋈(B⋈C)).
+ * @return TestResult indicating success or failure.
  */
-int AK_compare(const void *a, const void *b) ;
+TestResult AK_rel_eq_assoc_test(void);
 
 /**
- * @author Dino Laktašić.
- * @brief Main function for generation of RA expresion according to associativity equivalence rules 
- * @param *list_rel_eq RA expresion as the struct list_node
- * @return optimised RA expresion as the struct list_node
+ * @brief Unit test for cases where no associative transformation is expected.
+ * @return TestResult indicating success or failure.
  */
-struct list_node *AK_rel_eq_assoc(struct list_node *list_rel_eq) ;
+TestResult AK_rel_eq_assoc_nochange_test();
 
 /**
- * @author Dino Laktašić.
- * @brief Function for printing RA expresion struct list_node
- * @param *list_rel_eq RA expresion as the struct list_node
- * @return optimised RA expresion as the struct list_node
+ * @brief Pokreće sve testove asocijativnosti unutar jedne funkcije s ispisom rezultata.
+ * @return TestResult s brojem uspješnih i neuspješnih testova.
  */
-void AK_print_rel_eq_assoc(struct list_node *list_rel_eq) ;
+TestResult AK_rel_eq_assoc_all_tests(void);
 
-/**
- * @author Dino Laktašić.
- * @brief Function for testing relational equivalences regarding associativity
- * @return No return value
- */
-TestResult AK_rel_eq_assoc_test();
-
-#endif
+#endif // REL_EQ_ASSOC_H

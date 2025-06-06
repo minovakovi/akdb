@@ -19,6 +19,8 @@
  */
 
 #include "recovery.h"
+#include "../opti/rel_eq_projection.h"
+
 
 
 /** 
