@@ -1195,3 +1195,26 @@ EXIT_FAILURE;
 
 }
 */
+
+#include "auxiliary.h"
+#include <stdlib.h>
+#include <string.h>
+
+/**
+ * @brief Oslobađa L2 listu.
+ * @author Antonio Brković
+ * @param list Pokazivač na listu koju treba osloboditi.
+ */
+void AK_FreeList_L2(struct list_node **list) {
+    if (!list || !*list) return;
+
+    struct list_node* current = *list;
+    while (current) {
+        struct list_node* next = current->next;
+        if (current->data) free(current->data);
+        free(current);
+        current = next;
+    }
+
+    *list = NULL;
+}

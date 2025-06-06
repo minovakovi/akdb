@@ -26,6 +26,12 @@
 #include "file/idx/bitmap.h"
 // Query processing
 #include "opti/query_optimization.h"
+#include "opti/rel_eq_assoc.h"
+#include "opti/rel_eq_comut.h"
+#include "opti/rel_eq_projection.h"
+
+
+
 // Relational operators
 #include "rel/difference.h"
 #include "rel/intersect.h"
@@ -102,10 +108,10 @@ Test tests[] = {
 //2+21=23 total
 //opti:
 //---------
-{"opti: AK_rel_eq_assoc", &AK_rel_eq_assoc_test}, //opti/rel_eq_assoc.c
-{"opti: AK_rel_eq_comut", &AK_rel_eq_comut_test}, //opti/rel_eq_comut.c
-{"opti: AK_rel_eq_selection", &AK_rel_eq_selection_test}, //opti/rel_eq_selection.c
-{"opti: AK_rel_eq_projection", &AK_rel_eq_projection_test}, //opti/rel_eq_projection.c
+{"opti: AK_rel_eq_assoc_all_tests", &AK_rel_eq_assoc_all_tests}, //opti/rel_eq_assoc.c
+{"opti: AK_rel_eq_comut", &AK_rel_eq_comut_all_tests},//opti/rel_eq_comut.c
+{"opti: AK_rel_eq_selection", &AK_rel_eq_selection_all_tests}, //opti/rel_eq_selection.c
+{"opti: AK_rel_eq_projection", &AK_rel_eq_projection_all_tests}, //opti/rel_eq_projection.c
 {"opti: AK_query_optimization", &AK_query_optimization_test}, //opti/query_optimization.c //old 25, new 28
 //5+23=28 total
 //rel:

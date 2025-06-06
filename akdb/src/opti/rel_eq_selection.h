@@ -1,5 +1,10 @@
 /**
-@file rel_eq_selection.h Header file that provides data structures, functions and defines for relational equivalences in selection
+ * @file rel_eq_selection.h
+ * @brief Header file that provides function declarations for optimizing
+ *        relational algebra expressions using selection equivalences.
+ *
+ * This module defines transformation functions for merging chained selection
+ * operations into a single selection with a combined predicate.
  */
 /*
  * This program is free software; you can redistribute it and/or modify
@@ -14,80 +19,19 @@
  * 
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor Boston, MA 02110-1301,  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA
  */
 
-#ifndef REL_EQ_SELECTION
-#define REL_EQ_SELECTION
+#ifndef REL_EQ_SELECTION_H
+#define REL_EQ_SELECTION_H
 
+#include "../auxi/auxiliary.h"
 #include "../auxi/test.h"
-#include "../file/table.h"
-#include "../auxi/mempro.h"
 
+struct list_node* AK_rel_eq_selection(struct list_node* expression_list);
 
-/**
- * @author Dino Laktašić.
- * @brief Function that checks if some set of attributes is subset of larger set
- * @param *set set array 
- * @param *subset subset array 
- * @return EXIT_SUCCESS if some set of attributes is subset of larger set, else returns EXIT_FAILURE
- */
-int AK_rel_eq_is_attr_subset(char *set, char *subset) ;
-
-/**
- * @author Dino Laktašić.
- * @brief Function that fetches attributes for a given table and store them to the char array 
- * @param *tblName name of the table
- * @result pointer to char array 
- */
-char *AK_rel_eq_get_atrributes_char(char *tblName) ;
-
-/**
- * @author Dino Laktašić.
- * @brief Function for filtering and returning attributes from condition 
- * @param *cond condition array that contains condition data
- * @result pointer to array that contains attributes for a given condition
- */
-char *AK_rel_eq_cond_attributes(char *cond) ;
-
-/**
- * @author Dino Laktašić.
- * @brief Function that checks if two sets share one or more of it's attributes
- * @param *set first set of attributes delimited by ";" (ATTR_DELIMITER)
- * @param *subset second set of attributes delimited by ";" (ATTR_DELIMITER)
- * @result EXIT_SUCCESS if set and subset share at least one attribute, else returns EXIT_FAILURE 
- */
-int AK_rel_eq_share_attributes(char *set, char *subset) ;
-
-
-/**
- * @author Dino Laktašić.
- * @brief Break conjunctive conditions to individual conditions 
- * @param *cond condition expression
- * @result conditions list
- */
-struct list_node *AK_rel_eq_split_condition(char *cond) ;
-/**
- * @author Dino Laktašić.
- * @brief Main function for generating RA expresion according to selection equivalence rules 
- * @param *list_rel_eq RA expresion as the struct list_node
- * @return optimised RA expresion as the struct list_node
- */
-struct list_node *AK_rel_eq_selection(struct list_node *list_rel_eq);
-
-/**
- * @author Dino Laktašić.
- * @brief Function for printing struct list_node to the screen 
- * @param *list_rel_eq RA expresion as the struct list_node
- * @return void
- */
-void AK_print_rel_eq_selection(struct list_node *list_rel_eq) ;
-/**
- * @author Dino Laktašić.
- * @brief Function for testing rel_eq_selection
- * @return No return value
- */
 TestResult AK_rel_eq_selection_test();
+TestResult AK_rel_eq_selection_single_test();
+TestResult AK_rel_eq_selection_all_tests();  // Dodano za grupno testiranje
 
 #endif
-
