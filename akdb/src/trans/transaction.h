@@ -30,6 +30,15 @@
 #include "../file/fileio.h"
 #include <string.h>
 #include "../auxi/mempro.h"
+#include <stdbool.h>
+
+
+
+void AK_init_wait_for_graph(void);
+void AK_add_wait_edge(pthread_t from, pthread_t to);
+void AK_remove_wait_edges(pthread_t tx);
+bool AK_detect_deadlock(pthread_t *cycle, int *cycle_size);
+void AK_abort_transaction(pthread_t tx);
 
 /**
  * @author Ivan Pusic
