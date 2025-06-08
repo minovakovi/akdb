@@ -19,6 +19,12 @@
  */
 #include "transaction.h"
 #include "../auxi/ptrcontainer.h"
+#include <stdint.h>
+#include <stdbool.h>
+#include <stdlib.h>
+#include <stdio.h>
+#include <time.h>
+#include <unistd.h>
 
 AK_transaction_list LockTable[NUMBER_OF_KEYS];
 
@@ -30,9 +36,175 @@ pthread_mutex_t endTransationTestLockMutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t cond_lock  = PTHREAD_COND_INITIALIZER;
 PtrContainer observable_transaction;
 pthread_t activeThreads[MAX_ACTIVE_TRANSACTIONS_COUNT];
+pthread_mutex_t wfg_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 int activeTransactionsCount = 0;
 int transactionsCount = 0;
+
+
+
+static bool wfg[MAX_ACTIVE_TRANSACTIONS_COUNT][MAX_ACTIVE_TRANSACTIONS_COUNT];
+static int tarjan_idx[MAX_ACTIVE_TRANSACTIONS_COUNT];
+static int tarjan_low[MAX_ACTIVE_TRANSACTIONS_COUNT];
+static bool tarjan_onstack[MAX_ACTIVE_TRANSACTIONS_COUNT];
+static int tarjan_stack[MAX_ACTIVE_TRANSACTIONS_COUNT];
+static int tarjan_stack_top;
+static int tarjan_time;
+
+
+/**
+ * @author Petar Knezovic
+ * @brief Reset the wait-for graph by clearing all existing wait edges.
+ */
+void AK_init_wait_for_graph(void) {
+    memset(wfg, 0, sizeof(wfg));
+}
+
+
+/**
+ * @author Petar Knezovic
+ * @brief Add a directed edge to the wait-for graph indicating that one transaction is waiting on another.
+ * @param from The thread ID of the transaction that is waiting.
+ * @param to The thread ID of the transaction being waited on.
+ */
+ void AK_add_wait_edge(pthread_t from, pthread_t to) {
+     AK_PRO;
+     int i, j;
+     pthread_mutex_lock(&wfg_mutex);
+
+     for (i = 0; i < MAX_ACTIVE_TRANSACTIONS_COUNT; ++i)
+         if (activeThreads[i] == from) break;
+     for (j = 0; j < MAX_ACTIVE_TRANSACTIONS_COUNT; ++j)
+         if (activeThreads[j] == to) break;
+     if (i < MAX_ACTIVE_TRANSACTIONS_COUNT && j < MAX_ACTIVE_TRANSACTIONS_COUNT)
+         wfg[i][j] = true;
+     pthread_mutex_unlock(&wfg_mutex);
+     AK_EPI;
+ }
+
+/**
+ * @author Petar Knezovic
+ * @brief Remove all outgoing wait edges from a given transaction in the wait-for graph.
+ * @param tx The thread ID of the transaction whose outgoing edges should be cleared.
+ */
+ void AK_remove_wait_edges(pthread_t tx) {
+     AK_PRO;
+     int i;
+     pthread_mutex_lock(&wfg_mutex);
+
+     for (i = 0; i < MAX_ACTIVE_TRANSACTIONS_COUNT; ++i)
+         if (activeThreads[i] == tx) break;
+     if (i == MAX_ACTIVE_TRANSACTIONS_COUNT) {
+        pthread_mutex_unlock(&wfg_mutex);
+         return;
+     }
+     for (int j = 0; j < MAX_ACTIVE_TRANSACTIONS_COUNT; ++j)
+         wfg[i][j] = false;
+     pthread_mutex_unlock(&wfg_mutex);
+     AK_EPI;
+ }
+
+/**
+ * @author Petar Knezovic
+ * @brief Recursive helper function for Tarjan’s algorithm to find strongly connected components in the wait-for graph.
+ * @param v The index of the current vertex in the graph being explored.
+ * @param cycle Pointer to an array where detected cycle thread IDs will be stored.
+ * @param cycle_size Pointer to an integer where the size of the detected cycle will be recorded.
+ * @param found Pointer to a boolean flag set to true when a cycle (deadlock) is found.
+ */
+static void AK_strongconnect(int v, pthread_t *cycle, int *cycle_size, bool *found) {
+    AK_PRO;
+    tarjan_idx[v] = tarjan_low[v] = tarjan_time++;
+    tarjan_stack[tarjan_stack_top++] = v;
+    tarjan_onstack[v] = true;
+    for (int w = 0; w < MAX_ACTIVE_TRANSACTIONS_COUNT; ++w) {
+        if (!wfg[v][w]) continue;
+        if (tarjan_idx[w] < 0) {
+            AK_strongconnect(w, cycle, cycle_size, found);
+            tarjan_low[v] = tarjan_low[v] < tarjan_low[w] ? tarjan_low[v] : tarjan_low[w];
+        } else if (tarjan_onstack[w]) {
+            tarjan_low[v] = tarjan_low[v] < tarjan_idx[w] ? tarjan_low[v] : tarjan_idx[w];
+        }
+    }
+    if (tarjan_low[v] == tarjan_idx[v]) {
+        int count = 0, w;
+        do {
+            w = tarjan_stack[--tarjan_stack_top];
+            tarjan_onstack[w] = false;
+            cycle[count++] = activeThreads[w];
+        } while (w != v);
+        if (count > 1) {
+            *cycle_size = count;
+            *found = true;
+        }
+    }
+    AK_EPI;
+}
+
+/**
+ * @author Petar Knezovic
+ * @brief Detect whether there is a deadlock (cycle) in the current wait-for graph.
+ * @param cycle Pointer to an array that will be populated with the thread IDs forming the detected cycle.
+ * @param cycle_size Pointer to an integer where the number of threads in the detected cycle will be stored.
+ * @return true if a deadlock cycle is found; false otherwise.
+ */
+bool AK_detect_deadlock(pthread_t *cycle, int *cycle_size) {
+    AK_PRO;
+    tarjan_time = 0;
+    tarjan_stack_top = 0;
+    for (int i = 0; i < MAX_ACTIVE_TRANSACTIONS_COUNT; ++i) {
+        tarjan_idx[i] = -1;
+        tarjan_low[i] = 0;
+        tarjan_onstack[i] = false;
+    }
+    bool found = false;
+    for (int i = 0; i < MAX_ACTIVE_TRANSACTIONS_COUNT && !found; ++i)
+        if (tarjan_idx[i] < 0)
+            AK_strongconnect(i, cycle, cycle_size, &found);
+    return found;
+    AK_EPI;
+}
+
+/**
+ * @author Petar Knezovic
+ * @brief Abort a transaction by removing it from the active list, clearing its wait-for edges, deleting its acquired locks, and waking any waiting threads.
+ * @param tx The thread ID of the transaction to abort.
+ */
+void AK_abort_transaction(pthread_t tx) {
+    AK_PRO;
+    int idx = -1;
+    for (int i = 0; i < MAX_ACTIVE_TRANSACTIONS_COUNT; ++i) {
+        if (pthread_equal(activeThreads[i], tx)) {
+            idx = i;
+            break;
+        }
+    }
+
+    if (idx >= 0) {
+        for (int j = 0; j < MAX_ACTIVE_TRANSACTIONS_COUNT; ++j) {
+            wfg[idx][j] = false;   
+            wfg[j][idx] = false;  
+        }
+    }
+
+    for (int h = 0; h < NUMBER_OF_KEYS; ++h) {
+        AK_transaction_elem_P elem = LockTable[h].DLLHead;
+        if (!elem) continue;
+        AK_transaction_lock_elem_P l = elem->DLLLocksHead;
+        if (!l) continue;
+        AK_transaction_lock_elem_P tmp = l;
+        do {
+            if (pthread_equal(tmp->TransactionId, tx))
+                AK_delete_lock_entry_list(elem->address, tx);
+            tmp = tmp->nextLock;
+        } while (tmp != l);
+    }
+
+    AK_remove_transaction_thread(tx);
+
+    pthread_cond_broadcast(&cond_lock);
+    AK_EPI;
+}
 
 /**
  * @author Frane Jakelić
@@ -42,12 +214,18 @@ int transactionsCount = 0;
  * @return integer containing the hash value of the passed memory address
  */
 int AK_memory_block_hash(int blockMemoryAddress) {
-    int ret;
     AK_PRO;
-    ret = blockMemoryAddress % NUMBER_OF_KEYS;
+    uint32_t h = (uint32_t)blockMemoryAddress;
+    h ^= h >> 16;
+    h *= 0x85ebca6b;
+    h ^= h >> 13;
+    h *= 0xc2b2ae35;
+    h ^= h >> 16;
+    int ret = (int)(h % NUMBER_OF_KEYS);
     AK_EPI;
     return ret;
 }
+
 
 /**
  * @author Frane Jakelić
@@ -357,18 +535,27 @@ int AK_acquire_lock(int memoryAddress, int type, pthread_t transactionId) {
     AK_transaction_lock_elem_P lock = AK_create_lock(memoryAddress, type, transactionId);
     pthread_mutex_unlock(&accessLockMutex);
     int counter = 0;
-    if(!lock->isWaiting){
-    	//TODO Add deadlock test, partial implementation of tarjan test available in auxiliary.c
+    
+  AK_transaction_elem_P tmp = AK_search_existing_link_for_hook(memoryAddress);
+if (lock->isWaiting == WAIT_FOR_UNLOCK) {
+    pthread_t owner = tmp->DLLLocksHead->TransactionId; 
+    AK_add_wait_edge(transactionId, owner);
+
+    pthread_t cycle[MAX_ACTIVE_TRANSACTIONS_COUNT];
+    int cycle_size = 0;
+    if (AK_detect_deadlock(cycle, &cycle_size)) {
+        AK_abort_transaction(cycle[cycle_size - 1]);
     }
 
-    AK_transaction_elem_P tmp = AK_search_existing_link_for_hook(memoryAddress);
-
-    while (!lock->isWaiting) {
+    while (lock->isWaiting == WAIT_FOR_UNLOCK) {
         pthread_mutex_lock(&acquireLockMutex);
         pthread_cond_wait(&cond_lock, &acquireLockMutex);
         pthread_mutex_unlock(&acquireLockMutex);
         lock->isWaiting = AK_isLock_waiting(tmp, type, transactionId, lock);
     }
+
+    AK_remove_wait_edges(transactionId);
+}
     
     if (counter > 0) {
 
@@ -800,10 +987,46 @@ AK_observer_lock * AK_init_observer_lock() {
     return self;
 }
 
+
+/** 
+ * @author Petar Knezovic
+ * @brief Function that computes the integer square root of a number using Heron's method
+ */
+
+static unsigned isqrt(unsigned long n) {
+    unsigned long x = n;
+    unsigned long y = (x + 1) >> 1;
+    while (y < x) {
+        x = y;
+        y = (x + n / x) >> 1;
+    }
+    return (unsigned)x;
+}
+
+/** 
+ * @author Petar Knezovic
+ * @brief Function that approximates the 95% critical value for chi-square distribution
+ */
+
+static double chi2_crit95(int df) {
+    return df + 2u * isqrt(2u * df);
+}
+
+
 TestResult AK_test_Transaction() {
     AK_PRO;
     int successfulTest = 0;
     int failedTest = 0;
+    srand((unsigned)time(NULL));   
+    int sample_min = 0;
+    int sample_max = 0;
+    double sample_avg = 0.0;
+    double sample_chi2 = 0.0;
+    double sample_crit = 0.0;
+    int sample_passed = 0;
+    
+    double avalanche_avg_dist = 0.0;
+    int    avalanche_passed   = 0;
     printf("***Test Transaction***\n");
     pthread_mutex_lock(&endTransationTestLockMutex);
     pthread_mutex_lock(&newTransactionLockMutex);
@@ -820,6 +1043,170 @@ TestResult AK_test_Transaction() {
     
     memset(LockTable, 0, NUMBER_OF_KEYS * sizeof (struct transaction_list_head));
 
+    /**************** HASH UNIFORMITY TEST ******************/
+{
+    const int sampleSize = 100000;
+    int counts[NUMBER_OF_KEYS] = {0};
+
+    for (int i = 0; i < sampleSize; ++i) {
+        int blockAddr = i;
+        int h = AK_memory_block_hash(blockAddr);
+        counts[h]++;
+    }
+
+
+    int min = counts[0], max = counts[0];
+    for (int b = 1; b < NUMBER_OF_KEYS; ++b) {
+        if (counts[b] < min) min = counts[b];
+        if (counts[b] > max) max = counts[b];
+    }
+
+    double expected_uniform = (double)sampleSize / NUMBER_OF_KEYS;
+
+
+    double chi2 = 0.0;
+    for (int b = 0; b < NUMBER_OF_KEYS; ++b) {
+        double diff = counts[b] - expected_uniform;
+        chi2 += (diff * diff) / expected_uniform;
+    }
+
+    int df = NUMBER_OF_KEYS - 1;
+    double crit = chi2_crit95(df);
+
+
+    sample_min    = min;
+    sample_max    = max;
+    sample_avg    = expected_uniform;
+    sample_chi2   = chi2;
+    sample_crit   = crit;
+    sample_passed = (chi2 < crit);
+    
+     if (sample_chi2 < sample_crit) {
+        successfulTest++;
+    } else {
+        failedTest++;
+    }
+    
+}
+
+
+    /**************** AVALANCHE TEST ******************/
+{
+    const int N = 1000;      
+    const int B = 32;        
+    long total_dist = 0;    
+    srand((unsigned)time(NULL));
+    #define POPCNT(x) __builtin_popcount((x))
+
+
+    uint32_t murmur32(uint32_t h) {
+        h ^= h >> 16;
+        h *= 0x85ebca6b;
+        h ^= h >> 13;
+        h *= 0xc2b2ae35;
+        h ^= h >> 16;
+        return h;
+    }
+
+    for (int i = 0; i < N; ++i) {
+        uint32_t x  = (uint32_t)rand();
+        uint32_t h1 = murmur32(x);
+        for (int b = 0; b < B; ++b) {
+            uint32_t x2 = x ^ (1u << b);
+            uint32_t h2 = murmur32(x2);
+            total_dist += POPCNT(h1 ^ h2);
+        }
+    }
+
+    avalanche_avg_dist = (double)total_dist / (N * B);
+
+
+    if (avalanche_avg_dist > B*0.5*0.75 && avalanche_avg_dist < B*0.5*1.25) {
+        avalanche_passed = 1;
+        successfulTest++;
+    } else {
+        avalanche_passed = 0;
+        failedTest++;
+    }
+}
+
+ /************ DEADLOCK SYSTEM TESTS ************/
+
+{
+    pthread_t cycle[MAX_ACTIVE_TRANSACTIONS_COUNT];
+    int cycle_size = 0;
+    bool all_passed = true;
+
+    AK_init_wait_for_graph();
+    activeTransactionsCount = 2;
+    activeThreads[0] = (pthread_t)1;
+    activeThreads[1] = (pthread_t)2;
+
+    AK_add_wait_edge(activeThreads[0], activeThreads[1]);
+    AK_add_wait_edge(activeThreads[1], activeThreads[0]);
+    if (!(AK_detect_deadlock(cycle, &cycle_size) && cycle_size == 2)) all_passed = false;
+
+    AK_abort_transaction(activeThreads[1]);
+    if (AK_detect_deadlock(cycle, &cycle_size)) all_passed = false;
+
+    AK_init_wait_for_graph();
+    activeTransactionsCount = 3;
+    activeThreads[0] = (pthread_t)1;
+    activeThreads[1] = (pthread_t)2;
+    activeThreads[2] = (pthread_t)3;
+
+    AK_add_wait_edge(activeThreads[0], activeThreads[1]);
+    AK_add_wait_edge(activeThreads[1], activeThreads[2]);
+    AK_add_wait_edge(activeThreads[2], activeThreads[0]);
+    if (!(AK_detect_deadlock(cycle, &cycle_size) && cycle_size == 3)) all_passed = false;
+
+    if (all_passed) successfulTest++;
+    else failedTest++;
+}
+
+{
+    pthread_t cycle[MAX_ACTIVE_TRANSACTIONS_COUNT];
+    int cycle_size = 0;
+    bool all_passed = true;
+
+    AK_init_wait_for_graph();
+    activeTransactionsCount = 3;
+    activeThreads[0] = (pthread_t)1;
+    activeThreads[1] = (pthread_t)2;
+    activeThreads[2] = (pthread_t)3;
+
+    AK_add_wait_edge(activeThreads[0], activeThreads[1]);
+    AK_add_wait_edge(activeThreads[1], activeThreads[2]);
+    AK_abort_transaction(activeThreads[2]);
+    if (AK_detect_deadlock(cycle, &cycle_size)) all_passed = false;
+
+    AK_init_wait_for_graph();
+    activeTransactionsCount = 3;
+    activeThreads[0] = (pthread_t)10;
+    activeThreads[1] = (pthread_t)20;
+    activeThreads[2] = (pthread_t)30;
+
+    AK_add_wait_edge(activeThreads[0], activeThreads[1]);
+    AK_add_wait_edge(activeThreads[1], activeThreads[2]);
+    if (AK_detect_deadlock(cycle, &cycle_size)) all_passed = false;
+
+    AK_init_wait_for_graph();
+    activeTransactionsCount = 2;
+    activeThreads[0] = (pthread_t)100;
+    activeThreads[1] = (pthread_t)200;
+
+    AK_add_wait_edge(activeThreads[0], activeThreads[1]);
+    AK_add_wait_edge(activeThreads[0], activeThreads[0]);
+    AK_remove_wait_edges(activeThreads[0]);
+
+    int idx = 0, j;
+    for (j = 0; j < MAX_ACTIVE_TRANSACTIONS_COUNT; ++j) {
+        if (wfg[idx][j]) { all_passed = false; break; }
+    }
+
+    if (all_passed) successfulTest++;
+    else failedTest++;
+}
     /**************** INSERT AND UPDATE COMMAND TEST ******************/
     char *tblName = "student";
     struct list_node *row_root_insert = (struct list_node *) AK_malloc(sizeof (struct list_node));
@@ -927,6 +1314,27 @@ TestResult AK_test_Transaction() {
     
     printf("***End test Transaction***\n");
     AK_EPI;
+
+
+    printf("\n========== HASH UNIFORMITY TEST SUMMARY ==========\n");
+printf("Sample size: %d\n", 10000);
+printf("Result: %s\n", sample_passed ? "PASSED" : "FAILED");
+printf("  min  = %d\n", sample_min);
+printf("  max  = %d\n", sample_max);
+printf("  avg  = %.2f\n", sample_avg);
+printf("  chi2 = %.2f\n", sample_chi2);
+printf("  crit = %.2f\n", sample_crit);
+printf("===============================================\n\n");
+
+
+printf("\n====== AVALANCHE TEST ======\n");
+printf("Samples: %d  Bits flipped/test: %d\n", 1000, 32);
+printf("Avg Hamming distance: %.2f  (ideal ~%d)\n",
+       avalanche_avg_dist, 32/2);
+printf("Result: %s\n", avalanche_passed ? "PASSED" : "FAILED");
+printf("============================\n\n");
+
+
 
     return TEST_result(successfulTest,failedTest);
 }
