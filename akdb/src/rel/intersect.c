@@ -190,7 +190,7 @@ int AK_intersect(char *srcTable1, char *srcTable2, char *dstTable) {
  * @brief  Function for intersect operator testing
  * @return No return value
  */
-TestResult AK_op_intersect_test() {
+/*TestResult AK_op_intersect_test() {
     AK_PRO;
     char *sys_table = "AK_relation";
     char *destTable = "intersect_test";
@@ -224,6 +224,66 @@ TestResult AK_op_intersect_test() {
     
     AK_EPI;
     return TEST_result(success,failed);
+}*/
+
+
+/**
+ * @author Tea Radić
+ * @brief  Runs intersect operator tests, including basic, schema‐mismatch and empty‐table scenarios
+ */
+TestResult AK_op_intersect_test() {
+    AK_PRO;
+
+    int passed = 0, failed = 0;
+
+    AK_create_test_table_schema_mismatch();  
+    AK_create_test_table_empty();           
+
+    printf("\n********** INTERSECT TEST **********\n\n");
+
+    if (AK_intersect("professor", "assistant", "intersect_test") == EXIT_SUCCESS) {
+        AK_print_table("intersect_test");
+        printf("Basic intersect test succeeded!\n\n");
+        passed++;
+    } else {
+        printf("Basic intersect test failed!\n\n");
+        failed++;
+    }
+
+    printf("\n********** SCHEMA MISMATCH TEST **********\n\n");
+    if (AK_intersect("professor", "UT_mismatch", "intersect_mismatch_test") != EXIT_SUCCESS) {
+        printf("OK: intersect s različitim shemama je ispravno odbijen.\n\n");
+        passed++;
+    } else {
+        printf("ERROR: intersect s različitim shemama je neočekivano uspio.\n\n");
+        failed++;
+    }
+
+    printf("\n********** INTERSECT WITH EMPTY TABLE **********\n\n");
+    int rc1 = AK_intersect("UT_empty",   "assistant",      "intersect_empty1");
+    int rc2 = AK_intersect("professor",  "UT_empty",       "intersect_empty2");
+
+    if (rc1 == EXIT_SUCCESS) {
+        printf("OK: intersect(empty, assistant) uspješan (treba biti prazan rezultat).\n");
+        passed++;
+    } else {
+        printf("ERROR: intersect(empty, assistant) nije uspio.\n");
+        failed++;
+    }
+    if (rc2 == EXIT_SUCCESS) {
+        printf("OK: intersect(professor, empty) uspješan (treba biti prazan rezultat).\n\n");
+        passed++;
+    } else {
+        printf("ERROR: intersect(professor, empty) nije uspio.\n\n");
+        failed++;
+    }
+
+    AK_print_table("intersect_empty1");  
+    AK_print_table("intersect_empty2");  
+
+    AK_EPI;
+    return TEST_result(passed, failed);
 }
+
 
 
