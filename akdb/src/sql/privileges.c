@@ -333,7 +333,8 @@ int AK_group_rename(char *old_name, char *new_name) {
 }
 
 /**
- * @author Kristina Takač, updated by Mario Peroković, inserting user id instead of username in AK_user_right, updated by Marko Flajšek
+ * @author Kristina Takač, updated by Mario Peroković, inserting user id instead of username in AK_user_right, updated by Marko Flajšek,
+ * updated by Marko Kir - inserting user id instead of name in AK_user_right
  * @brief Function that grants a specific privilege to the desired user on a given table
  * @param *username username of user to whom we want to grant privilege
  * @param *table name of table on which privilege will be granted to user
@@ -341,8 +342,8 @@ int AK_group_rename(char *old_name, char *new_name) {
  * @return privilege_id or EXIT_ERROR if table or user aren't correct
  */
 int AK_grant_privilege_user(char *username, char *table, char *right) {
-    int privilege_id;
     AK_PRO;
+    int privilege_id;
     int table_id = AK_get_table_obj_id(table);
     int user_id = AK_user_get_id(username);
 
@@ -366,8 +367,8 @@ int AK_grant_privilege_user(char *username, char *table, char *right) {
             privilege_id = AK_get_id();
 
             AK_Insert_New_Element(TYPE_INT, &privilege_id, "AK_user_right", "obj_id", row_root);
-            AK_Insert_New_Element(TYPE_INT, &user_id, "AK_user_right", "name", row_root);
-            AK_Insert_New_Element(TYPE_INT, &table_id, "AK_user_right", "artifact_id ", row_root);
+            AK_Insert_New_Element(TYPE_INT, &user_id, "AK_user_right", "user_id", row_root);
+            AK_Insert_New_Element(TYPE_INT, &table_id, "AK_user_right", "artifact_id", row_root);
             AK_Insert_New_Element(TYPE_VARCHAR, &rights[i * 10], "AK_user_right", "right_type", row_root);
             AK_insert_row(row_root);
             printf("\nGranted privilege to %s data for user '%s' under ID %d on table '%s'!\n\n", right, username, user_id, table);
@@ -380,7 +381,7 @@ int AK_grant_privilege_user(char *username, char *table, char *right) {
 
         privilege_id = AK_get_id();
         AK_Insert_New_Element(TYPE_INT, &privilege_id, "AK_user_right", "obj_id", row_root);
-        AK_Insert_New_Element(TYPE_INT, &user_id, "AK_user_right", "name", row_root);
+        AK_Insert_New_Element(TYPE_INT, &user_id, "AK_user_right", "user_id", row_root);
         AK_Insert_New_Element(TYPE_INT, &table_id, "AK_user_right", "artifact_id", row_root);
         AK_Insert_New_Element(TYPE_VARCHAR, right, "AK_user_right", "right_type", row_root);
         AK_insert_row(row_root);
@@ -394,9 +395,8 @@ int AK_grant_privilege_user(char *username, char *table, char *right) {
 }
 
 /**
- * NOTICE: Test 12 isn't currently revoking a privilege since the obj_id in the AK_group_right table is passing the value of 127.
-     Once the issue #87 on GitHub concerning the data type is solved, the test should be working as expected.
- * @author Kristina Takač, updated by Mario Peroković - added comparing by table id, and use of user_id in AK_user_right
+ * @author Kristina Takač, updated by Mario Peroković - added comparing by table id, and use of user_id in AK_user_right,
+ * updated by Marko Kir - fixed the issue with removing rows from table
  * @brief Function that revokes users privilege on the given table
  * @param *username username of user to whom we want to grant privilege
  * @param *table name of table on which privilege will be revoked from user
@@ -407,7 +407,7 @@ int AK_revoke_privilege_user(char *username, char *table, char *right) {
     AK_PRO;
     int table_id = AK_get_table_obj_id(table);
     int user_id = AK_user_get_id(username);
-    int result;
+    int result = EXIT_ERROR;
 
     if (table_id == EXIT_ERROR || user_id == EXIT_ERROR) {
         printf("Invalid table name or username!\n");
@@ -423,13 +423,12 @@ int AK_revoke_privilege_user(char *username, char *table, char *right) {
         struct list_node *row;
 
         while ((row = (struct list_node *) AK_get_row(i, "AK_user_right")) != NULL) {
-            struct list_node *obj_id = AK_GetNth_L2(1, row);
             struct list_node *user_elem = AK_GetNth_L2(2, row);
             struct list_node *table_elem = AK_GetNth_L2(3, row);
 
             if (((int) *user_elem->data == user_id) && ((int) *table_elem->data == table_id)) {
-                int id = (int) * obj_id->data;
-                AK_Update_Existing_Element(TYPE_INT, &id, "AK_user_right", "obj_id", row_root);
+                int obj_id = *(int *)AK_GetNth_L2(1, row)->data;
+                AK_Update_Existing_Element(TYPE_INT, &obj_id, "AK_user_right", "obj_id", row_root);
                 result = AK_delete_row(row_root);
             }
             i++;
@@ -442,39 +441,50 @@ int AK_revoke_privilege_user(char *username, char *table, char *right) {
         struct list_node *row_root = (struct list_node *) AK_malloc(sizeof (struct list_node));
         AK_Init_L3(&row_root);
         int i = 0;
+
         struct list_node *row;
 
         while ((row = (struct list_node *) AK_get_row(i, "AK_user_right")) != NULL) {
-            struct list_node *obj_id = AK_GetNth_L2(1, row);
             struct list_node *user_elem = AK_GetNth_L2(2, row);
             struct list_node *table_elem = AK_GetNth_L2(3, row);
             struct list_node *right_elem = AK_GetNth_L2(4, row);
 
-            if (((int) * user_elem->data == user_id) && (table_id == (int) * table_elem->data) && strcmp(right_elem->data, right) == 0) {
-                int id = (int) * obj_id->data;
-                AK_Update_Existing_Element(TYPE_INT, &id, "AK_user_right", "obj_id", row_root);
+            printf("Checking row: user_id=%d, table_id=%d, right='%s'\n",
+               *(int *)user_elem->data, *(int *)table_elem->data, (char *)right_elem->data);
+
+            if (*(int *)user_elem->data == user_id && 
+                *(int *)table_elem->data == table_id && 
+                strcmp((char *)right_elem->data, right) == 0) {
+                int obj_id = *(int *)AK_GetNth_L2(1, row)->data;
+                AK_Update_Existing_Element(TYPE_INT, &obj_id, "AK_user_right", "obj_id", row_root);
                 result = AK_delete_row(row_root);
+                if (result == EXIT_SUCCESS) {
+                printf("Revoked privilege to %s data for group '%s' under ID %d on table '%s' under ID %d!\n", right, 
+                    username, user_id, table, table_id);
+                } else {
+                    printf("Failed to revoke privilege %s data for group '%s' under ID %d on table '%s' under ID %d!\n", right, 
+                        username, user_id, table, table_id);
+                }
+                break; // Exit loop after finding the matching row
             }
             i++;
 
             AK_DeleteAll_L3(&row_root);
             AK_free(row);
         }
-        printf("Revoked privilege to %s data for user '%s' under ID %d on table '%s'!\n", right, username, user_id, table);
-    }
 
-    if (result == EXIT_ERROR) {
+        if (result == EXIT_ERROR) {
+            printf("User '%s' does not have privilege '%s' on table '%s'!\n", username, right, table);
+        }
+
+        AK_free(row_root);
         AK_EPI;
-        printf("User '%s' under ID %d doesn't have any privileges on table '%s'!\n", username, user_id, table);
-        return EXIT_ERROR;
+        return result;
     }
-
-    AK_EPI;
-    return EXIT_SUCCESS;
 }
 
 /**
- * @author Jurica Hlevnjak, updated by Marko Flajšek
+ * @author Jurica Hlevnjak, updated by Marko Flajšek, updated by Marko Kir - fixed the issue with removing rows from table
  * @brief Function that revokes ALL user's privileges on ALL tables (for DROP user)
  * @param username name of user from whom we want to revoke all privileges
  * @return EXIT_SUCCESS if privilege is revoked, EXIT_ERROR if it isn't
@@ -500,6 +510,7 @@ int AK_revoke_all_privileges_user(char *username) {
         struct list_node *user = AK_GetNth_L2(2, row);
         if ((int) *user->data == user_id) {
             AK_Update_Existing_Element(TYPE_INT, &user_id, "AK_user_right", "user_id", row_root);
+            printf("Revoked all privileges for user '%s' under ID %d!\n", username, user_id);
             result = AK_delete_row(row_root);
         }
         i++;
@@ -508,11 +519,9 @@ int AK_revoke_all_privileges_user(char *username) {
         AK_free(row);
     }
 
-    printf("Revoked all privileges for user '%s' under ID %d!\n", username, user_id);
-
     if (result == EXIT_ERROR) {
-        printf("User '%s' under ID %d doesn't have any privileges!\n", username, user_id);
         AK_EPI;
+        printf("User '%s' under ID %d doesn't have any privileges!\n", username, user_id);
         return EXIT_ERROR;
     }
 
@@ -581,23 +590,21 @@ int AK_grant_privilege_group(char *groupname, char *table, char *right) {
 }
 
 /**
- * NOTICE: Test 9 isn't currently revoking a privilege since the obj_id in the AK_group_right table is passing the value of 127.
-     Once the issue #87 on GitHub concerning the data type is solved, the test should be working as expected.
- * @author Kristina Takač, updated by Mario Peroković - added comparing by table id
+ * @author Kristina Takač, updated by Mario Peroković - added comparing by table id, updated by Marko Kir - fixed the issue 
+ * with removing rows from table
  * @brief Function that revokes a groups privilege on the given table 
  * @param *grounamep name of group which user belongs to
  * @param *table name of table on which privilege will be granted to group
  * @param *right type of privilege which will be granted to group on a given table
  * @return EXIT_SUCCESS if privilege is revoked, EXIT_ERROR if it isn't
  */
-int AK_revoke_privilege_group(char *groupname, char *table, char *right) {
-    int table_id, group_id;
+int AK_revoke_privilege_group(char *group_name, char *table, char *right) {
     AK_PRO;
-    group_id = AK_group_get_id(groupname);
-    table_id = AK_get_table_obj_id(table);
-    int result;
+    int table_id = AK_get_table_obj_id(table);
+    int group_id = AK_group_get_id(group_name);
+    int result = EXIT_ERROR;
 
-    if (table_id == EXIT_ERROR || group_id == EXIT_ERROR) {
+    if (group_id == EXIT_ERROR || table_id == EXIT_ERROR) {
         printf("Invalid table name or group name!\n");
         AK_EPI;
         return EXIT_ERROR;
@@ -611,13 +618,12 @@ int AK_revoke_privilege_group(char *groupname, char *table, char *right) {
         struct list_node *row;
 
         while ((row = (struct list_node *) AK_get_row(i, "AK_group_right")) != NULL) {
-            struct list_node *obj_id = AK_GetNth_L2(1, row);
             struct list_node *group_elem = AK_GetNth_L2(2, row);
             struct list_node *table_elem = AK_GetNth_L2(3, row);
 
-            if (((int) *group_elem->data == group_id) && ((int) *table_elem->data == table_id)) {
-                int id = (int) * obj_id->data;
-                AK_Update_Existing_Element(TYPE_INT, &id, "AK_group_right", "obj_id", row_root);
+            if ((*(int *)group_elem->data == group_id) && (*(int *)table_elem->data == table_id)) {
+                int obj_id = *(int *)AK_GetNth_L2(1, row)->data;
+                AK_Update_Existing_Element(TYPE_INT, &obj_id, "AK_group_right", "obj_id", row_root);
                 result = AK_delete_row(row_root);
             }
 
@@ -626,7 +632,8 @@ int AK_revoke_privilege_group(char *groupname, char *table, char *right) {
             AK_DeleteAll_L3(&row_root);
             AK_free(row);
         }
-        printf("Revoked all privileges for group '%s' under ID %d on table '%s' under ID %d!\n", groupname, group_id, table, table_id);
+        printf("Revoked all privileges for group '%s' under ID %d on table '%s' under ID %d!\n", group_name, group_id, table, table_id);
+        AK_free(row_root);
     } else {
         struct list_node *row_root = (struct list_node *) AK_malloc(sizeof (struct list_node));
         AK_Init_L3(&row_root);
@@ -635,33 +642,42 @@ int AK_revoke_privilege_group(char *groupname, char *table, char *right) {
         struct list_node *row;
 
         while ((row = (struct list_node *) AK_get_row(i, "AK_group_right")) != NULL) {
-            struct list_node *obj_id = AK_GetNth_L2(1, row);
             struct list_node *group_elem = AK_GetNth_L2(2, row);
             struct list_node *table_elem = AK_GetNth_L2(3, row);
             struct list_node *right_elem = AK_GetNth_L2(4, row);
 
-            if (((int) * group_elem->data == group_id) && (table_id == (int) * table_elem->data) && strcmp(right_elem->data, right) == 0) {
-                int id = (int) * obj_id->data;
-                AK_Update_Existing_Element(TYPE_INT, &id, "AK_group_right", "obj_id", row_root);
-                result = AK_delete_row(row_root);
-            }
+            printf("Checking row: group_id=%d, table_id=%d, right='%s'\n",
+                   *(int *)group_elem->data, *(int *)table_elem->data, (char *)right_elem->data);
 
+            if (*(int *)group_elem->data == group_id &&
+                *(int *)table_elem->data == table_id &&
+                strcmp((char *)right_elem->data, right) == 0) {
+                int obj_id = *(int *)AK_GetNth_L2(1, row)->data;
+                AK_Update_Existing_Element(TYPE_INT, &obj_id, "AK_group_right", "obj_id", row_root);
+                result = AK_delete_row(row_root);
+                if (result == EXIT_SUCCESS) {
+                printf("Revoked privilege to %s data for group '%s' under ID %d on table '%s' under ID %d!\n", right, 
+                    group_name, group_id, table, table_id);
+                } else {
+                    printf("Failed to revoke privilege %s data for group '%s' under ID %d on table '%s' under ID %d!\n", right, 
+                        group_name, group_id, table, table_id);
+                }
+                break; // Exit loop after finding the matching row
+            }
             i++;
 
-            AK_DeleteAll_L3(&row_root);
+            AK_DeleteAll_L3(&row_root); // Clear row_root for the next iteration
             AK_free(row);
         }
-        printf("Revoked privilege to %s data for group '%s' under ID %d on table '%s' under ID %d!\n", right, groupname, group_id, table, table_id);
-    }
 
-    if (result == EXIT_ERROR) {
+        if (result == EXIT_ERROR) {
+            printf("Group '%s' does not have privilege '%s' on table '%s'!\n", group_name, right, table);
+        }
+
+        AK_free(row_root);
         AK_EPI;
-        printf("Group '%s' doesn't have any privileges!\n", groupname);
-        return EXIT_ERROR;
+        return result;
     }
-
-    AK_EPI;
-    return EXIT_SUCCESS;
 }
 
 /**
@@ -1262,6 +1278,35 @@ int AK_assign_role_to_user(char *username, char *role_name) {
 
 /**
  * @author Marko Kir
+ * @brief Assigns a role to a group
+ * @param group_name Name of the group
+ * @param role_name Name of the role
+ * @return EXIT_SUCCESS or EXIT_ERROR
+ */
+int AK_assign_role_to_group(char *group_name, char *role_name) {
+    int group_id = AK_group_get_id(group_name);
+    int role_id = AK_role_get_id(role_name);
+
+    if (group_id == EXIT_ERROR || role_id == EXIT_ERROR) {
+        printf("Invalid group name or role name!\n");
+        return EXIT_ERROR;
+    }
+
+    struct list_node *row_root = (struct list_node *) AK_malloc(sizeof(struct list_node));
+    AK_Init_L3(&row_root);
+
+    AK_Insert_New_Element(TYPE_INT, &group_id, "AK_group_role", "group_id", row_root);
+    AK_Insert_New_Element(TYPE_INT, &role_id, "AK_group_role", "role_id", row_root);
+    AK_insert_row(row_root);
+
+    printf("Assigned role '%s' to group '%s'!\n", role_name, group_name);
+
+    AK_free(row_root);
+    return EXIT_SUCCESS;
+}
+
+/**
+ * @author Marko Kir
  * @brief Checks if a user has a specific privilege via roles
  * @param username Name of the user
  * @param table Name of the table
@@ -1305,6 +1350,54 @@ int AK_check_user_privilege_via_roles(char *username, char *table, char *privile
     }
 
     printf("User '%s' does not have privilege '%s' on table '%s' via roles!\n", username, privilege, table);
+    return EXIT_ERROR;
+}
+
+/**
+ * @author Marko Kir
+ * @brief Checks if a group has a specific privilege via roles
+ * @param group_name Name of the group
+ * @param table Name of the table
+ * @param privilege Privilege to check
+ * @return EXIT_SUCCESS if the group has the privilege, otherwise EXIT_ERROR
+ */
+int AK_check_group_privilege_via_roles(char *group_name, char *table, char *privilege) {
+    int group_id = AK_group_get_id(group_name);
+    int table_id = AK_get_table_obj_id(table);
+
+    if (group_id == EXIT_ERROR || table_id == EXIT_ERROR) {
+        printf("Invalid group name or table name!\n");
+        return EXIT_ERROR;
+    }
+
+    struct list_node *row;
+    int i = 0;
+
+    while ((row = (struct list_node *) AK_get_row(i, "AK_group_role")) != NULL) {
+        struct list_node *group_elem = AK_GetNth_L2(1, row);
+        struct list_node *role_elem = AK_GetNth_L2(2, row);
+
+        // Check data types before comparing
+        if (group_elem->type == TYPE_INT && role_elem->type == TYPE_INT) {
+            if (*(int *)group_elem->data == group_id) {
+                int role_id = *(int *)role_elem->data;
+
+                if (AK_check_role_privilege(role_id, table_id, privilege) == EXIT_SUCCESS) {
+                    printf("Group '%s' has privilege '%s' on table '%s' via role ID %d.\n",
+                           group_name, privilege, table, role_id);
+                    AK_free(row);
+                    return EXIT_SUCCESS;
+                }
+            }
+        } else {
+            printf("Data type mismatch in AK_group_role table: group_id or role_id is of unexpected type.\n");
+        }
+
+        i++;
+        AK_free(row);
+    }
+
+    printf("Group '%s' does not have privilege '%s' on table '%s' via roles!\n", group_name, privilege, table);
     return EXIT_ERROR;
 }
 
@@ -1387,9 +1480,9 @@ int AK_revoke_privilege_role(char *role_name, char *table, char *right) {
             AK_Update_Existing_Element(TYPE_INT, &obj_id, "AK_role_right", "obj_id", row_root);
             result = AK_delete_row(row_root); // Attempt to delete the row
             if (result == EXIT_SUCCESS) {
-                printf("Revoked privilege '%s' for role '%s' on table '%s'!\n", right, role_name, table);
+                printf("Revoked privilege to %s data for role '%s' under ID %d on table '%s' under ID %d!\n", right, role_name, role_id, table, table_id);
             } else {
-                printf("Failed to revoke privilege '%s' for role '%s' on table '%s'!\n", right, role_name, table);
+                printf("Failed to revoke privilege %s data for role '%s' under ID %d on table '%s' under ID %d!\n", right, role_name, role_id, table, table_id);
             }
             break; // Exit loop after finding the matching row
         }
@@ -1467,6 +1560,64 @@ int AK_remove_role_from_user(char *username, char *role_name) {
 }
 
 /**
+ * @author Marko Kir
+ * @brief Removes a role assigned to a group
+ * @param group_name Name of the group
+ * @param role_name Name of the role to be removed
+ * @return EXIT_SUCCESS or EXIT_ERROR
+ */
+int AK_remove_role_from_group(char *group_name, char *role_name) {
+    int group_id = AK_group_get_id(group_name);
+    int role_id = AK_role_get_id(role_name);
+
+    if (group_id == EXIT_ERROR || role_id == EXIT_ERROR) {
+        printf("Invalid group name or role name!\n");
+        return EXIT_ERROR;
+    }
+
+    struct list_node *row_root = (struct list_node *) AK_malloc(sizeof(struct list_node));
+    AK_Init_L3(&row_root);
+
+    int i = 0;
+    struct list_node *row;
+    int result = EXIT_ERROR;
+
+    while ((row = (struct list_node *) AK_get_row(i, "AK_group_role")) != NULL) {
+        struct list_node *group_elem = AK_GetNth_L2(1, row); // group_id column
+        struct list_node *role_elem = AK_GetNth_L2(2, row); // role_id column
+
+        // Check data types before comparing
+        if (group_elem->type == TYPE_INT && role_elem->type == TYPE_INT) {
+            if (*(int *)group_elem->data == group_id && *(int *)role_elem->data == role_id) {
+                AK_Update_Existing_Element(TYPE_INT, &group_id, "AK_group_role", "group_id", row_root);
+                result = AK_delete_row(row_root);
+
+                if (result == EXIT_SUCCESS) {
+                    printf("Removed role '%s' from group '%s'!\n", group_name, group_name);
+                } else {
+                    printf("Failed to remove role '%s' from group '%s'!\n", role_name, group_name);
+                }
+
+                AK_free(row);
+                break;
+            }
+        } else {
+            printf("Data type mismatch in AK_group_role table: group_id or role_id is not TYPE_INT.\n");
+        }
+
+        AK_free(row);
+        i++;
+    }
+
+    if (result == EXIT_ERROR) {
+        printf("Group '%s' does not have role '%s'!\n", group_name, role_name);
+    }
+
+    AK_free(row_root);
+    return result;
+}
+
+/**
  * @author Kristina Takač, updated by Tomislav Ilisevic, updated by Lidija Lastavec, updated by Marko Flajšek
  * @brief Function that tests all the previous functions
  * @return no return value                                                     
@@ -1474,7 +1625,7 @@ int AK_remove_role_from_user(char *username, char *role_name) {
 TestResult AK_privileges_test() {
     AK_PRO;
 
-    int successful[27] = {0};
+    int successful[29] = {0};
 
     printf("\n\n");
     printf("||====================================================================|| \n");
@@ -2114,12 +2265,71 @@ TestResult AK_privileges_test() {
 
     printf("\n\n||====================================================================|| \n");
 
+    /********************************************/
+    /* 28. AK_assign_role_to_group */
+    /********************************************/
+
+    printf("\n28. Test - AK_assign_role_to_group function - Assigns a role to a group\n");
+    printf("\nTest data: assign role1 to group1\n\n");
+    printf("Result:\n\n");
+
+    if (AK_assign_role_to_group("group1", "role1") == EXIT_ERROR) {
+        printf("\nTest 28. - Fail!\n\n");
+    } else {
+        printf("\nTest 28. - Pass!\n\n");
+        successful[27] = 1;
+    }
+
+    AK_assign_role_to_group("group2", "role2");
+
+    printf("\n");
+    AK_print_table("AK_group_role");
+
+    printf("\n\n||====================================================================|| \n");
+
+    /********************************************/
+    /* 29. AK_remove_role_from_group */
+    /********************************************/
+
+    printf("\n29. Test - AK_remove_role_from_group function - Removes a role from a group\n");
+    printf("\nTest data: remove role2 from group2\n\n");
+    printf("Result:\n\n");
+
+    if (AK_remove_role_from_group("group2", "role2") == EXIT_ERROR) {
+        printf("\nTest 29. - Fail!\n\n");
+    } else {
+        printf("\nTest 29. - Pass!\n\n");
+        successful[28] = 1;
+    }
+
+    printf("\n");
+    AK_print_table("AK_group_role");
+
+    printf("\n\n||====================================================================|| \n");
+
+    /********************************************/
+    /* 30. AK_check_group_privilege_via_roles */
+    /********************************************/
+
+    printf("\n30. Test - AK_check_group_privilege_via_roles function - Checks if a group has a specific privilege via roles\n");
+    printf("\nTest data: check if group1 has UPDATE privilege on student via roles\n\n");
+    printf("Result:\n\n");
+
+    if (AK_check_group_privilege_via_roles("group1", "student", "UPDATE") == EXIT_ERROR) {
+        printf("\nTest 30. - Fail!\n\n");
+    } else {
+        printf("\nTest 30. - Pass!\n\n");
+        successful[29] = 1;
+    }
+
+    printf("\n\n||====================================================================|| \n");
+
     /* END SUMMARY*/
 
     printf("\nSummary: \n");
     int num = 0;
     int numFail = 0;
-    for (num = 0; num < 27; num++) {
+    for (num = 0; num < 30; num++) {
         printf("%i. Test: %s \n", (num + 1), (successful[num] == 1 ? "Pass" : "Fail"));
         if (successful[num] == 0) numFail++;
     }

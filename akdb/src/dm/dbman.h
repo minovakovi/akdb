@@ -256,10 +256,14 @@ int AK_new_segment(char *name, int type, AK_header *header);
 AK_header *AK_create_header(char *name, int type, int integrity, char *constr_name, char *contr_code);
 void AK_insert_entry(AK_block *block_address, int type, void *entry_data, int i);
 int AK_init_system_tables_catalog(int relation, int attribute, int index, int view, int sequence, int function, int function_arguments,
-                                  int trigger, int trigger_conditions, int db, int db_obj, int user, int group, int user_group, int user_right, int group_right, int role, int role_right, int user_role, int constraint, int constraintNull, int constraintCheck, int constraintUnique, int reference);
+                                  int trigger, int trigger_conditions, int db, int db_obj, int user, int group, int user_group, int user_right, 
+                                  int group_right, int role, int role_right, int user_role, int group_role, int constraint, int constraintNull, 
+                                  int constraintCheck, int constraintUnique, int reference);
 void AK_memset_int(void *block, int value, size_t num);
 int AK_register_system_tables(int relation, int attribute, int index, int view, int sequence, int function, int function_arguments,
-                              int trigger, int trigger_conditions, int db, int db_obj, int user, int group, int user_group, int user_right, int group_right, int role, int role_right, int user_role, int constraint, int constraintNull, int constraintCheck, int constraintUnique, int reference);
+                              int trigger, int trigger_conditions, int db, int db_obj, int user, int group, int user_group, int user_right, 
+                              int group_right, int role, int role_right, int user_role, int group_role, int constraint, int constraintNull, 
+                              int constraintCheck, int constraintUnique, int reference);
 int AK_init_system_catalog();
 int AK_delete_block(int address);
 int AK_delete_extent(int begin, int end);
