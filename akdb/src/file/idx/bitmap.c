@@ -183,9 +183,12 @@
                     }
                     //ADDITIONAL ATTRIBTE IS PRESENT FOR BLOCK ADDRESS
                     tempHeader = (AK_header*) AK_create_header("addBlock", TYPE_INT, FREE_INT, FREE_CHAR, FREE_CHAR);
-                    memcpy(t_header, tempHeader, sizeof ( AK_header));
+                        memcpy(t_header, tempHeader, sizeof ( AK_header));
                     tempHeader = (AK_header*) AK_create_header("indexTd", TYPE_INT, FREE_INT, FREE_CHAR, FREE_CHAR);
                     memcpy(t_header + 1, tempHeader, sizeof ( AK_header));
+                        AK_free(tempHeader);
+                        tempHeader = NULL;
+                    }
 
                     for (z = brr; z < MAX_ATTRIBUTES; z++)
                     {
