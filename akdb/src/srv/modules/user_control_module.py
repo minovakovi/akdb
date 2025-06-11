@@ -1,3 +1,8 @@
+import sys
+import os
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../../swig')))
+
 import re
 from sql_tokenizer import *
 import kalashnikovDB as AK47
@@ -8,6 +13,15 @@ import kalashnikovDB as AK47
 # grant command
 # @author Zvonimir Kapes
 class Grant_command:
+    """
+    Handles 'grant' SQL commands.
+
+    >>> cmd = Grant_command()
+    >>> cmd.matches('grant select on students to user1') is not None
+    True
+    >>> cmd.execute() # doctest: +SKIP
+    # Output depends on C extension and parser
+    """
     table_details_regex = r"^grant\s+"
     pattern = None
     matcher = None
@@ -55,3 +69,7 @@ class Grant_command:
                             else:
                                 print("ERROR: User or table does not exsist: " + str(user) + str(table))
         return result
+
+if __name__ == "__main__":
+    import doctest
+    doctest.testmod()

@@ -15,19 +15,19 @@ def CreateTableTest():
 
 #Test for listing out all the commands currently supported
 def AllCommandsTest():
-    return "\?"
+    return r"\?"
 
 #Test for printing out details on a given table
 def TableDetailsTest():
-    return "\d test"
+    return r"\\d test"
 
 #Test for printing out the table
 def PrintTableTest():
-    return "\p test"
+    return r"\\p test"
 
 #Test for checking if the table exists or not
 def TableExistsTest():
-    return "\t test?"
+    return r"\\t test?"
 
 #Test for creating a new index on a table
 #Currently not really supported/implemented
@@ -146,12 +146,12 @@ def Help():
     print(f"    {bcolors.RED}testme{bcolors.ENDC}  - Executes all tests                         {bcolors.OKGREEN}Radi{bcolors.ENDC} |")
     print(f"    {bcolors.RED}quiz{bcolors.ENDC}    - Play the quiz                              {bcolors.OKGREEN}Radi{bcolors.ENDC} |")
     print(f"    {bcolors.RED}time{bcolors.ENDC}    - Look at the time                           {bcolors.OKGREEN}Radi{bcolors.ENDC} |")
-    print(f"    {bcolors.RED}\p{bcolors.ENDC}      - print table command                             |")
-    print(f"    {bcolors.RED}\ps{bcolors.ENDC}     - print system table command                      |")
-    print(f"    {bcolors.RED}\d{bcolors.ENDC}      - table details command                           |")
-    print(f"    {bcolors.RED}\_t{bcolors.ENDC}     - table details command                           |")
+    print(f"    {bcolors.RED}\\p{bcolors.ENDC}      - print table command                             |")
+    print(f"    {bcolors.RED}\\ps{bcolors.ENDC}     - print system table command                      |")
+    print(f"    {bcolors.RED}\\d{bcolors.ENDC}      - table details command                           |")
+    print(f"    {bcolors.RED}\\_t{bcolors.ENDC}     - table details command                           |")
     print(f"    {bcolors.RED}?{bcolors.ENDC}       - Help will appear, with instructions             |")
-    print(f"    {bcolors.RED}\q{bcolors.ENDC}      - Disconnect from the server and quit akdb client |")
+    print(f"    {bcolors.RED}\\q{bcolors.ENDC}      - Disconnect from the server and quit akdb client |")
     print(f"    {bcolors.RED}select{bcolors.ENDC}  - select * from test                              |")
     print(f"    {bcolors.RED}grant{bcolors.ENDC}   - grant update on test to public                  |")
     print(f"    {bcolors.RED}create_table{bcolors.ENDC} - create table test(name varchar(50))        |")

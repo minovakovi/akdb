@@ -97,6 +97,11 @@ int AK_product(char *srcTable1, char *srcTable2, char *dstTable)
 			}
 		}
 
+		/* Add TYPE_INTERNAL terminator to header */
+		if (num_att1 + num_att2 < MAX_ATTRIBUTES) {
+			header[num_att1 + num_att2].type = TYPE_INTERNAL;
+		}
+
 		/* initializing new table with header */
 		AK_initialize_new_segment(dstTable, SEGMENT_TYPE_TABLE, header);
 
@@ -148,7 +153,12 @@ void AK_product_procedure(char *srcTable1, char *srcTable2, char *dstTable, AK_h
 	// will be needed later as a place to hold cell data
 	char celldata[MAX_VARCHAR_LENGTH];
 
-	struct list_node *row_root = (struct list_node *)AK_malloc(sizeof(struct list_node));
+	struct list_node *row_root = (struct list_node *)AK_calloc(1, sizeof(struct list_node)); 
+	if (row_root == NULL) {
+		printf("AK_product: ERROR. Cannot allocate memory for row_root\n");
+		AK_EPI;
+		return EXIT_ERROR;
+	}
 	AK_Init_L3(&row_root);
 	
 	register j, k, l, m, n, o, u;

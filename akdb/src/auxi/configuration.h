@@ -44,7 +44,8 @@
   * @def MAX_DB_FILE_BLOCKS
   * @brief Constant declaring total blocks in DB file (for the given DB_FILE size)
  */
-#define DB_FILE_BLOCKS_NUM (1024 * 1024 * DB_FILE_SIZE / sizeof(AK_block))
+// Use a cast to unsigned int to avoid overflow and ensure correct calculation
+#define DB_FILE_BLOCKS_NUM ((unsigned int)(1024 * 1024 * DB_FILE_SIZE / sizeof(AK_block)))
 /**
   * @def INITIAL_EXTENT_SIZE
   * @brief Constant declaring initial extent size in blocks

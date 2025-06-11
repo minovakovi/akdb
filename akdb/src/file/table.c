@@ -984,7 +984,7 @@ void AK_print_table_to_file(char *tblName) {
                         }
                         break;
                     case TYPE_FLOAT:
-                        length = AK_chars_num_from_number(*((float *) (el)->data), 10);
+                        length = AK_chars_num_from_float(*((float *) (el)->data));
                         if (len[i] < length) {
                             len[i] = length;
                         }
