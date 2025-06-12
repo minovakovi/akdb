@@ -24,6 +24,37 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
 #include "drop.h"
+#include <string.h>
+#include <stdlib.h>
+
+static int has_dependencies(const char *table_name) {
+    struct list_node *row;
+    int table_id = AK_get_table_obj_id((char*)table_name);
+
+    /* 1) Traži FK reference u AK_reference (obj_id 21). */
+    while ((row = AK_get_row(21, "AK_reference")) != NULL) {
+        /* četvrti element je parent table */
+        if (strcmp(row->next->next->next->next->data, table_name) == 0)
+            return EXIT_ERROR;
+    }
+
+    /* 2) Traži trigger-e u AK_trigger (obj_id 8). */
+    while ((row = AK_get_row(8, "AK_trigger")) != NULL) {
+        /* šesti element je on (relation obj_id) */
+        if (atoi(row->next->next->next->next->next->data) == table_id)
+            return EXIT_ERROR;
+    }
+
+    /* 3) Traži view-ove u AK_view (obj_id 4). */
+    while ((row = AK_get_row(4, "AK_view")) != NULL) {
+        /* treći element je SQL query */
+        if (strstr(row->next->next->data, table_name) != NULL)
+            return EXIT_ERROR;
+    }
+
+    return EXIT_SUCCESS;
+}
+
 
 // an array that stores the names of system catalog tables --- TEST BROJ 41 
 char *system_catalog[NUM_SYS_TABLES] = {
@@ -100,25 +131,52 @@ int AK_drop(int type, AK_drop_arguments *drop_arguments) {
  * @brief Drop function that deletes specific table
  * @param drop_arguments arguments of DROP command
  */
-int AK_drop_table(AK_drop_arguments *drop_arguments){
+int AK_drop_table(AK_drop_arguments *drop_arguments) {
     char *sys_table = "AK_relation";
-    char* name = (char*) drop_arguments->value;
+    char *name      = (char*) drop_arguments->value;
 
+    /* 1) Provjera postoji li tablica u katalogu */
     if (AK_if_exist(name, sys_table) == 0) {
         printf("Table %s does not exist!\n", name);
         return EXIT_ERROR;
     }
-        for (int i = 0; i < NUM_SYS_TABLES; i++) {
-            if (strcmp(name, system_catalog[i]) == 0) {
-                printf("Table %s is a System Catalog Table and can't be dropped!\n", name);
-                return EXIT_ERROR;
-            }
+
+    /* 2) Ne dopuštamo brisanje sistemskih tablica */
+    for (int i = 0; i < NUM_SYS_TABLES; i++) {
+        if (strcmp(name, system_catalog[i]) == 0) {
+            printf("Table %s is a System Catalog Table and can't be dropped!\n", name);
+            return EXIT_ERROR;
         }
-        
-        AK_drop_help_function(name, sys_table);
-        printf("Table %s dropped!\n", name);
-        return EXIT_SUCCESS;    
+    }
+
+    /* 3) Detekcija CASCADE opcije */
+    int cascade = 0;
+    if (drop_arguments->next
+        && drop_arguments->next->value
+        && strcmp(drop_arguments->next->value, "CASCADE") == 0) {
+        cascade = 1;
+    }
+
+    /* 4) Ako nema CASCADE, provjeri ovisnosti */
+    if (!cascade) {
+        printf("Checking dependencies for table %s...\n", name);
+        if (has_dependencies(name) != EXIT_SUCCESS) {
+            printf(
+                "Cannot drop table %s: it has dependent objects. "
+                "Use CASCADE to drop.\n",
+                name
+            );
+            return EXIT_ERROR;
+        }
+        printf("No dependencies found for table %s, proceeding with drop.\n", name);
+    }
+
+    /* 5) Konačno brisanje iz kataloga */
+    AK_drop_help_function(name, sys_table);
+    printf("Table %s dropped!\n", name);
+    return EXIT_SUCCESS;
 }
+
 
 /**
  * @author Fran Turković, updated by Andrej Hrebak Pajk
