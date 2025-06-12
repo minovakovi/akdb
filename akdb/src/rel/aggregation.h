@@ -33,7 +33,6 @@
 #define AGG_TASK_MAX 4
 #define AGG_TASK_MIN 5
 #define AGG_TASK_AVG 6
-#define TYPE_DOUBLE 3
 #define AGG_TASK_AVG_COUNT 10 //used internaly
 #define AGG_TASK_AVG_SUM 11 //used internaly
 
@@ -57,17 +56,6 @@ typedef struct {
 } Record;
 
 typedef struct {
-    int address;
-    int size;
-    int is_null; 
-} AK_tuple_dict;
-
-typedef struct list_node {
-    void *value;
-    struct list_node *next;
-} list_node;
-
-typedef struct {
     Record records[MAX_RECORDS];
     int count;
 } Table;
@@ -86,7 +74,6 @@ typedef struct {
 typedef struct {
     char att_name[MAX_ATT_NAME];
     char data[ MAX_VARCHAR_LENGTH ];
-    int type;
     int agg_task;
 } AK_agg_value;
 /**
