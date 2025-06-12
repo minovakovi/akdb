@@ -38,13 +38,52 @@ of Kalashnikov DB
 // #define false 0
 // #define true  !false
 
-#define BITMASK(b) (1 << ((b) % CHAR_BIT))
+void akdb_set_bittable_simd(unsigned char *bittable, size_t size);
+int akdb_test_bittable_all_set(unsigned char *bittable, size_t size);
+void akdb_clear_bittable_simd(unsigned char *bittable, size_t size);
+int popcnt_soft(uint8_t b);
+int ffs_soft(uint8_t b);
+void AK_visualize_bittable();
+void akdb_threadsafe_bitset(uint8_t* bittable, int bitIndex);
+
+static const unsigned char BITMASKS[8] = {
+    0x01, 0x02, 0x04, 0x08,
+    0x10, 0x20, 0x40, 0x80
+};
+
+#define BITMASK(b) (BITMASKS[(b) % CHAR_BIT])
 #define BITSLOT(b) ((int)((b) / CHAR_BIT))
 #define BITSET(a, b) ((a)[BITSLOT(b)] |= BITMASK(b))
 #define BITCLEAR(a, b) ((a)[BITSLOT(b)] &= ~BITMASK(b))
 #define BITTEST(a, b) ((a)[BITSLOT(b)] & BITMASK(b))
 #define BITNSLOTS(nb) ((int)(nb + CHAR_BIT - 1) / CHAR_BIT)
 #define SEGMENTLENGTH() (BITNSLOTS(DB_FILE_BLOCKS_NUM) + 2 * sizeof(int))
+
+#define SAFE_BITSET(bittable, b) \
+    do { \
+        if ((b) >= 0 && (b) < DB_FILE_BLOCKS_NUM) \
+            BITSET((bittable), (b)); \
+        else \
+            fprintf(stderr, "[ERROR] BITSET out of bounds: %d\n", (b)); \
+    } while(0)
+
+#define SAFE_BITCLEAR(bittable, b) \
+    do { \
+        if ((b) >= 0 && (b) < DB_FILE_BLOCKS_NUM) \
+            BITCLEAR((bittable), (b)); \
+        else \
+            fprintf(stderr, "[ERROR] BITCLEAR out of bounds: %d\n", (b)); \
+    } while(0)
+
+#define SAFE_BITTEST(bittable, b) \
+    (((b) >= 0 && (b) < DB_FILE_BLOCKS_NUM) ? BITTEST((bittable), (b)) : (fprintf(stderr, "[ERROR] BITTEST out of bounds: %d\n", (b)), 0))
+
+
+typedef enum {
+    FIRST_FIT,
+    BEST_FIT,
+    NEXT_FIT
+} AK_AllocStrategy;
 
 /**
  * @author Markus Schatten
@@ -144,6 +183,8 @@ typedef struct {
     int last_allocated;
     int last_initialized;
     int prepared;
+    AK_AllocStrategy strategy;
+    int next_fit_cursor;
     time_t ltime;
 } AK_blocktable;
 
