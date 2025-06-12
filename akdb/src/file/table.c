@@ -37,7 +37,7 @@ AK_create_table_parameter* AK_create_create_table_parameter(int type, char* name
 }
 
 /**
- * @author Unknown, updated by Josip Šušnjara (chained blocks support)
+ * @author Unknown, updated by Josip Šušnjara (chained blocks support), edited by Matija Karaula
  * @brief Creates a table
  * @param tblName the name of the table
  * @param parameters table parameters array (each parameter contains name and type)
@@ -46,36 +46,60 @@ AK_create_table_parameter* AK_create_create_table_parameter(int type, char* name
  */
 void AK_create_table(char* tblName, AK_create_table_parameter* parameters, int attribute_count) {
     AK_header* temp;
-    AK_header t_header[attribute_count + 1];
     int startAddress;
     AK_PRO;
     
+    // Calculate number of blocks needed
+    int blocks_needed = (attribute_count - 1) / MAX_ATTRIBUTES + 1;
+    AK_header* t_header = (AK_header*)AK_malloc(sizeof(AK_header) * (attribute_count + 1));
+    
+    // Create headers for all attributes
     for (int i = 0; i < attribute_count; i++) {
-		    switch (parameters[i].type) {
-		        case TYPE_INT:
-		            temp = (AK_header*) AK_create_header(parameters[i].name, TYPE_INT, FREE_INT, FREE_CHAR, FREE_CHAR);
-		            memcpy(t_header + i, temp, sizeof ( AK_header));
-		            break;
-		        case TYPE_VARCHAR:
-		            temp = (AK_header*) AK_create_header(parameters[i].name, TYPE_VARCHAR, FREE_INT, FREE_CHAR, FREE_CHAR);
-		            memcpy(t_header + i, temp, sizeof ( AK_header));
-		            break;
-		        case TYPE_FLOAT:
-		            temp = (AK_header*) AK_create_header(parameters[i].name, TYPE_FLOAT, FREE_INT, FREE_CHAR, FREE_CHAR);
-		            memcpy(t_header + i, temp, sizeof ( AK_header));
-		            break;
-		    }
-		}
-	temp = (AK_header*) AK_create_header("", TYPE_INTERNAL, FREE_INT, FREE_CHAR, FREE_CHAR);
-	memcpy(t_header + attribute_count, temp, sizeof ( AK_header));
-	startAddress = AK_initialize_new_segment(tblName, SEGMENT_TYPE_TABLE, t_header);
+        switch (parameters[i].type) {
+            case TYPE_INT:
+                temp = (AK_header*) AK_create_header(parameters[i].name, TYPE_INT, FREE_INT, FREE_CHAR, FREE_CHAR);
+                memcpy(t_header + i, temp, sizeof(AK_header));
+                break;
+            case TYPE_VARCHAR:
+                temp = (AK_header*) AK_create_header(parameters[i].name, TYPE_VARCHAR, FREE_INT, FREE_CHAR, FREE_CHAR);
+                memcpy(t_header + i, temp, sizeof(AK_header));
+                break;
+            case TYPE_FLOAT:
+                temp = (AK_header*) AK_create_header(parameters[i].name, TYPE_FLOAT, FREE_INT, FREE_CHAR, FREE_CHAR);
+                memcpy(t_header + i, temp, sizeof(AK_header));
+                break;
+        }
+    }
+
+    // Add end marker
+    temp = (AK_header*) AK_create_header("", TYPE_INTERNAL, FREE_INT, FREE_CHAR, FREE_CHAR);
+    memcpy(t_header + attribute_count, temp, sizeof(AK_header));
+    
+    // Initialize first segment
+    startAddress = AK_initialize_new_segment(tblName, SEGMENT_TYPE_TABLE, t_header);
 
     if (startAddress != EXIT_ERROR) {
         printf("\nTABLE %s CREATED!\n", tblName);
+        
+        // Set up block chaining if needed
+        if (blocks_needed > 1) {
+            AK_mem_block *current_block = AK_get_block(startAddress);
+            
+            for(int i = 1; i < blocks_needed; i++) {
+                // Create new block and chain it
+                int new_block_address = AK_initialize_new_segment(tblName, SEGMENT_TYPE_TABLE, 
+                    t_header + (i * MAX_ATTRIBUTES));
+                current_block->block->chained_with = new_block_address;
+                AK_mem_block_modify(current_block, BLOCK_DIRTY);
+                
+                current_block = AK_get_block(new_block_address);
+            }
+        }
     } else {
         printf("\nERROR: Failed to create table %s\n", tblName);
     }
 
+    AK_free(t_header);
     AK_EPI;
 }
 
@@ -1089,18 +1113,40 @@ void AK_print_table_to_file(char *tblName) {
 }
 
 /**
- * @author Matija Šestak.
+ * @author Matija Šestak, updated by Matija Karaula to support chained blocks
  * @brief  Function that checks whether the table is empty
  * @param *tblName table name
- * @return true/false
+ * @return true if table is empty, false otherwise
  */
 int AK_table_empty(char *tblName) {
     AK_PRO;
-    table_addresses *addresses = (table_addresses*) AK_get_table_addresses(tblName);
-    AK_mem_block *temp = (AK_mem_block*) AK_get_block(addresses->address_from[0]);
+    table_addresses *addresses = (table_addresses*)AK_get_table_addresses(tblName);
+    AK_mem_block *temp = (AK_mem_block*)AK_get_block(addresses->address_from[0]);
+    
+    // Get number of attributes to calculate blocks per row
+    int num_attr = AK_num_attr(tblName);
+    int blocks_per_row = (num_attr - 1) / MAX_ATTRIBUTES + 1;
+    int i = 0;
+    
+    // Check all blocks in first row
+    while(i < blocks_per_row) {
+        if(temp->block->last_tuple_dict_id != 0) {
+            AK_free(addresses);
+            AK_EPI;
+            return 0; // Not empty
+        }
+        
+        if(temp->block->chained_with != NOT_CHAINED) {
+            temp = (AK_mem_block*)AK_get_block(temp->block->chained_with);
+            i++;
+        } else {
+            break;
+        }
+    }
+    
     AK_free(addresses);
     AK_EPI;
-    return (temp->block->last_tuple_dict_id == 0) ? 1 : 0;
+    return 1; // Empty
 }
 
 /**
@@ -1131,7 +1177,7 @@ int AK_get_table_obj_id(char *table) {
 }
 
 /**
- * @author Dino Laktašić, abstracted from difference.c for use in difference.c, intersect.c and union.c by Tomislav Mikulček
+ * @author Dino Laktašić, abstracted from difference.c for use in difference.c, intersect.c and union.c by Tomislav Mikulček. Updated by Matija Karaula to support chained blocks.
  * @brief  Function that checks if tables have the same relation schema
  * @param tbl1_temp_block first cache block of the first table
  * @param tbl2_temp_block first cache block of the second table
@@ -1139,47 +1185,100 @@ int AK_get_table_obj_id(char *table) {
  * @return if success returns num of attributes in schema, else returns EXIT_ERROR
  */
 int AK_check_tables_scheme(AK_mem_block *tbl1_temp_block, AK_mem_block *tbl2_temp_block, char *operator_name) {
-    int i;
     int num_att1 = 0;
     int num_att2 = 0;
     AK_PRO;
-    for (i = 0; i < MAX_ATTRIBUTES; i++) {
-        if (strcmp(tbl1_temp_block->block->header[i].att_name, "\0") != 0) {
+    
+    // Get first blocks for both tables
+    AK_mem_block *temp_block1 = tbl1_temp_block;
+    AK_mem_block *temp_block2 = tbl2_temp_block;
+    
+    // Count attributes in first table while traversing chained blocks
+    while(1) {
+        for(int i = 0; i < MAX_ATTRIBUTES; i++) {
+            if(strcmp(temp_block1->block->header[i].att_name, "\0") == 0) {
+                break;
+            }
             num_att1++;
+        }
+        if(temp_block1->block->chained_with != NOT_CHAINED) {
+            temp_block1 = (AK_mem_block*)AK_get_block(temp_block1->block->chained_with);
         } else {
             break;
-        }
-
-        if (strcmp(tbl2_temp_block->block->header[i].att_name, "\0") != 0) {
-            num_att2++;
-        } else {
-            break;
-        }
-
-        if (strcmp(tbl1_temp_block->block->header[i].att_name, tbl2_temp_block->block->header[i].att_name) != 0) {
-            printf("%s ERROR: Relation shemas are not the same! \n", operator_name);
-	    AK_EPI;
-            return EXIT_ERROR;
-        }
-
-        if (tbl1_temp_block->block->header[i].type != tbl2_temp_block->block->header[i].type) {
-            printf("%s ERROR: Attributes are not of the same type!", operator_name);
-            AK_EPI;
-            return EXIT_ERROR;
         }
     }
-
+    
+    // Count attributes in second table while traversing chained blocks
+    while(1) {
+        for(int i = 0; i < MAX_ATTRIBUTES; i++) {
+            if(strcmp(temp_block2->block->header[i].att_name, "\0") == 0) {
+                break;
+            }
+            num_att2++;
+        }
+        if(temp_block2->block->chained_with != NOT_CHAINED) {
+            temp_block2 = (AK_mem_block*)AK_get_block(temp_block2->block->chained_with);
+        } else {
+            break;
+        }
+    }
+    
+    // Check if tables have same number of attributes
     if (num_att1 != num_att2) {
         printf("%s ERROR: Not same number of the attributes! \n", operator_name);
         AK_EPI;
         return EXIT_ERROR;
     }
+    
+    // Reset blocks to start for comparison
+    temp_block1 = tbl1_temp_block;
+    temp_block2 = tbl2_temp_block;
+    int curr_att = 0;
+    
+    // Compare attributes across all chained blocks
+    while(curr_att < num_att1) {
+        int block1_idx = curr_att / MAX_ATTRIBUTES;
+        int att1_idx = curr_att % MAX_ATTRIBUTES;
+        int block2_idx = curr_att / MAX_ATTRIBUTES;
+        int att2_idx = curr_att % MAX_ATTRIBUTES;
+        
+        // Navigate to correct blocks
+        for(int i = 0; i < block1_idx; i++) {
+            if(temp_block1->block->chained_with != NOT_CHAINED) {
+                temp_block1 = (AK_mem_block*)AK_get_block(temp_block1->block->chained_with);
+            }
+        }
+        for(int i = 0; i < block2_idx; i++) {
+            if(temp_block2->block->chained_with != NOT_CHAINED) {
+                temp_block2 = (AK_mem_block*)AK_get_block(temp_block2->block->chained_with);
+            }
+        }
+        
+        // Compare attribute names
+        if(strcmp(temp_block1->block->header[att1_idx].att_name, 
+                 temp_block2->block->header[att2_idx].att_name) != 0) {
+            printf("%s ERROR: Relation schemas are not the same! \n", operator_name);
+            AK_EPI;
+            return EXIT_ERROR;
+        }
+        
+        // Compare attribute types
+        if(temp_block1->block->header[att1_idx].type != 
+           temp_block2->block->header[att2_idx].type) {
+            printf("%s ERROR: Attributes are not of the same type!\n", operator_name);
+            AK_EPI;
+            return EXIT_ERROR;
+        }
+        
+        curr_att++;
+    }
+
     AK_EPI;
     return num_att1;
 }
 
 /**
- * @author Mislav Čakarić edited by Ljubo Barać
+ * @author Mislav Čakarić edited by Ljubo Barać. Refactored by Matija Karaula to support chained blocks.
  * @brief Function for renaming table and/or attribute in table (moved from rename.c)
  * @param old_table_name old name of the table
  * @param new_table_name new name of the table
@@ -1189,17 +1288,17 @@ int AK_check_tables_scheme(AK_mem_block *tbl1_temp_block, AK_mem_block *tbl2_tem
  */
 int AK_rename(char *old_table_name, char *old_attr, char *new_table_name, char *new_attr) {
     AK_PRO;
-    table_addresses *adresses = (table_addresses *) AK_get_table_addresses(old_table_name);
+    table_addresses *addresses = (table_addresses *) AK_get_table_addresses(old_table_name);
     int tab_addresses[MAX_NUM_OF_BLOCKS];
     int num_extents = 0, num_blocks = 0;
     register int i, j;
     AK_mem_block *mem_block;
 
     if (strcmp(old_attr, new_attr) != 0) {
-        //SEARCH FOR ALL BLOCKS IN SEGMENT
+        // Get all blocks
         i = 0;
-        while (adresses->address_from[i]) {
-            for (j = adresses->address_from[i]; j <= adresses->address_to[i]; j++) {
+        while (addresses->address_from[i]) {
+            for (j = addresses->address_from[i]; j <= addresses->address_to[i]; j++) {
                 tab_addresses[num_blocks] = j;
                 num_blocks++;
             }
@@ -1207,58 +1306,109 @@ int AK_rename(char *old_table_name, char *old_attr, char *new_table_name, char *
             i++;
         }
 
-        AK_header newHeader[MAX_ATTRIBUTES];
+        // Get total number of attributes across chained blocks
+        int num_attr = AK_num_attr(old_table_name);
+        int blocks_per_row = (num_attr - 1) / MAX_ATTRIBUTES + 1;
+        AK_header *newHeader = (AK_header*)AK_malloc(sizeof(AK_header) * num_attr);
+        
+        // Get first block and set up for chain traversal
         mem_block = (AK_mem_block *) AK_get_block(tab_addresses[0]);
-        memcpy(&newHeader, mem_block->block->header, sizeof (mem_block->block->header));
+        AK_mem_block *temp_block = mem_block;
+        int curr_attr = 0;
 
-        for (i = 0; i < MAX_ATTRIBUTES; i++) {
-            if (strcmp(newHeader[i].att_name, old_attr) == 0) {
-                AK_dbg_messg(HIGH, REL_OP, "AK_rename: the attribute names are the same at position %d!\n", i);
-                memset(&newHeader[i].att_name, 0, MAX_ATT_NAME);
-                memcpy(&newHeader[i].att_name, new_attr, strlen(new_attr));
+        // Copy headers from all chained blocks
+        while(1) {
+            for(i = 0; i < MAX_ATTRIBUTES && curr_attr < num_attr; i++) {
+                if(strcmp(temp_block->block->header[i].att_name, "\0") == 0) {
+                    break;
+                }
+                newHeader[curr_attr] = temp_block->block->header[i];
+                curr_attr++;
+            }
+            
+            if(temp_block->block->chained_with != NOT_CHAINED) {
+                temp_block = (AK_mem_block*)AK_get_block(temp_block->block->chained_with);
+            } else {
                 break;
-            } else if (strcmp(newHeader[i].att_name, "\0") == 0) { //if there is no more attributes
-                AK_dbg_messg(MIDDLE, REL_OP, "AK_rename: ERROR: atribute: %s does not exist in this table\n", old_attr);
-                AK_EPI;
-                return (EXIT_ERROR);
             }
         }
 
-        //replacing old headers with new ones
-        for (i = 0; i < num_blocks; i++) {
-            mem_block = AK_get_block(tab_addresses[i]);
-            memcpy(&mem_block->block->header, newHeader, sizeof (AK_header) * MAX_ATTRIBUTES);
-            AK_mem_block_modify(mem_block, BLOCK_DIRTY);
+        // Find and rename the attribute
+        int found = 0;
+        for(i = 0; i < num_attr; i++) {
+            if(strcmp(newHeader[i].att_name, old_attr) == 0) {
+                memset(&newHeader[i].att_name, 0, MAX_ATT_NAME);
+                memcpy(&newHeader[i].att_name, new_attr, strlen(new_attr));
+                found = 1;
+                break;
+            }
         }
+
+        if(!found) {
+            AK_dbg_messg(MIDDLE, REL_OP, "AK_rename: ERROR: attribute %s does not exist\n", old_attr);
+            AK_free(newHeader);
+            AK_free(addresses);
+            AK_EPI;
+            return EXIT_ERROR;
+        }
+
+        // Update headers in all chained blocks
+        temp_block = mem_block;
+        curr_attr = 0;
+        
+        while(1) {
+            int attrs_in_block = (num_attr - curr_attr) > MAX_ATTRIBUTES ? 
+                               MAX_ATTRIBUTES : (num_attr - curr_attr);
+            
+            memcpy(&temp_block->block->header, 
+                  &newHeader[curr_attr], 
+                  sizeof(AK_header) * attrs_in_block);
+            
+            if(attrs_in_block < MAX_ATTRIBUTES) {
+                memset(&temp_block->block->header[attrs_in_block], 
+                      0, 
+                      sizeof(AK_header) * (MAX_ATTRIBUTES - attrs_in_block));
+            }
+            
+            AK_mem_block_modify(temp_block, BLOCK_DIRTY);
+            curr_attr += attrs_in_block;
+
+            if(curr_attr < num_attr && temp_block->block->chained_with != NOT_CHAINED) {
+                temp_block = (AK_mem_block*)AK_get_block(temp_block->block->chained_with);
+            } else {
+                break;
+            }
+        }
+
+        AK_free(newHeader);
     }
 
-    if (strcmp(old_table_name, new_table_name) != 0) {//new name is different than old, and old needs to be replaced
+    if (strcmp(old_table_name, new_table_name) != 0) {
         struct list_node *expr;
         expr = 0;
         AK_selection_op_rename(old_table_name, new_table_name, expr);
-        int i = 0;
-
-  for (;adresses->address_from[i] != 0; ++i)
-    {
-      if (AK_delete_extent(adresses->address_from[i], adresses->address_to[i]) == EXIT_ERROR)
-	{
-	  AK_EPI;
-	  return EXIT_ERROR;
+        
+        // Delete old extents
+        for(i = 0; addresses->address_from[i] != 0; i++) {
+            if (AK_delete_extent(addresses->address_from[i], addresses->address_to[i]) == EXIT_ERROR) {
+                AK_EPI;
+                return EXIT_ERROR;
+            }
         }
+
+        // Update system catalog
+        struct list_node* row_root = (struct list_node*)AK_malloc(sizeof(struct list_node));
+        AK_Init_L3(&row_root);
+        
+        char *system_table = "AK_relation";
+        
+        AK_DeleteAll_L3(&row_root);
+        AK_Update_Existing_Element(TYPE_VARCHAR, old_table_name, system_table, "name", row_root);
+        AK_delete_row(row_root);
+        AK_free(row_root);
     }
-	
-  struct list_node* row_root = (struct list_node*) AK_malloc(sizeof(struct list_node));
-  AK_Init_L3(&row_root);
-  
-  char *system_table;
-  system_table = "AK_relation";
-   
-  
-  AK_DeleteAll_L3(&row_root);
-  AK_Update_Existing_Element(TYPE_VARCHAR, old_table_name, system_table, "name", row_root);
-  AK_delete_row(row_root);
-  AK_free(row_root);
-    }
+
+    AK_free(addresses);
     AK_EPI;
     return EXIT_SUCCESS;
 }
@@ -1523,6 +1673,97 @@ TestResult AK_table_test() {
     AK_EPI;
     return TEST_result(successfulTests, failedTests);
 }
+
+/**
+ * @author Matija Karaula
+ * @brief Test for chained blocks in table abstraction
+ * @return TestResult containing information on the amount of failed/passed tests
+ */
+
+TestResult AK_table_chained_blocks_test() {
+    AK_PRO;
+    printf("\n********** CHAINED BLOCKS TEST **********\n");
+    
+    // Test table name
+    char* tableName = "test_chained_blocks";
+    
+    // Create parameters for table with more than MAX_ATTRIBUTES columns
+    int num_attributes = MAX_ATTRIBUTES + 3; // Testing with 3 extra attributes
+    AK_create_table_parameter* parameters = (AK_create_table_parameter*)AK_malloc(num_attributes * sizeof(AK_create_table_parameter));
+    
+    // Initialize parameters
+    for(int i = 0; i < num_attributes; i++) {
+        char attrName[10];
+        sprintf(attrName, "attr%d", i);
+        parameters[i] = *AK_create_create_table_parameter(TYPE_INT, attrName);
+    }
+    
+    // Create table with chained blocks
+    printf("Creating table '%s' with %d attributes...\n", tableName, num_attributes);
+    AK_create_table(tableName, parameters, num_attributes);
+    
+    // Test 1: Verify number of attributes
+    int attr_count = AK_num_attr(tableName);
+    printf("Number of attributes: %d (expected: %d)\n", attr_count, num_attributes);
+    int test1 = (attr_count == num_attributes);
+    
+    // Test 2: Insert test data
+    struct list_node *row_root = (struct list_node*)AK_malloc(sizeof(struct list_node));
+    AK_Init_L3(&row_root);
+    
+    // Insert test row
+    for(int i = 0; i < num_attributes; i++) {
+        int value = i * 10;
+        char attrName[10];
+        sprintf(attrName, "attr%d", i);
+        AK_Insert_New_Element(TYPE_INT, &value, tableName, attrName, row_root);
+    }
+    
+    int insert_result = AK_insert_row(row_root);
+    printf("Row insertion result: %d (expected: success)\n", insert_result);
+    int test2 = (insert_result == EXIT_SUCCESS);
+    
+    // Test 3: Verify data retrieval across chained blocks
+    printf("\nVerifying data retrieval across chained blocks:\n");
+    int test3 = 1;
+    for(int i = 0; i < num_attributes; i++) {
+        struct list_node *tuple = AK_get_tuple(0, i, tableName);
+        if(tuple == NULL) {
+            test3 = 0;
+            printf("Failed to retrieve attribute %d\n", i);
+            break;
+        }
+        int value;
+        memcpy(&value, tuple->data, sizeof(int));
+        printf("attr%d = %d (expected: %d)\n", i, value, i * 10);
+        if(value != i * 10) {
+            test3 = 0;
+        }
+        AK_DeleteAll_L3(&tuple);
+        AK_free(tuple);
+    }
+    
+    // Print table to verify structure
+    printf("\nPrinting table structure:\n");
+    AK_print_table(tableName);
+    
+    // Cleanup
+    AK_DeleteAll_L3(&row_root);
+    AK_free(row_root);
+    AK_free(parameters);
+    
+    int successful = test1 + test2 + test3;
+    int failed = 3 - successful;
+    
+    printf("\nChained blocks test summary:\n");
+    printf("- Attribute count test: %s\n", test1 ? "PASSED" : "FAILED");
+    printf("- Data insertion test: %s\n", test2 ? "PASSED" : "FAILED");
+    printf("- Data retrieval test: %s\n", test3 ? "PASSED" : "FAILED");
+    
+    AK_EPI;
+    return TEST_result(successful, failed);
+}
+
 /**
  * @author Mislav Čakarić, edited by Ljubo Barać
  * @brief Function for renaming operator testing (moved from rename.c)
