@@ -1,4 +1,4 @@
-/**
+ith_grou/**
 @file aggregation.c Provides functions for aggregation and grouping
  */
 /*
@@ -148,6 +148,58 @@ void AK_agg_input_fix(AK_agg_input *input) {
 
  // === Pomoćne funkcije ===
 
+void aggregate_value(void* src, void* dst, int type, int agg_task) {
+    switch (type) {
+        case TYPE_INT: {
+            int val_new = *((int*) src);
+            int val_old = *((int*) dst);
+            int result = val_old;
+
+            if (agg_task == AGG_TASK_SUM || agg_task == AGG_TASK_AVG_SUM)
+                result += val_new;
+            else if (agg_task == AGG_TASK_MIN && val_new < val_old)
+                result = val_new;
+            else if (agg_task == AGG_TASK_MAX && val_new > val_old)
+                result = val_new;
+
+            memcpy(dst, &result, sizeof(int));
+            break;
+        }
+        case TYPE_FLOAT: {
+            float val_new = *((float*) src);
+            float val_old = *((float*) dst);
+            float result = val_old;
+
+            if (agg_task == AGG_TASK_SUM || agg_task == AGG_TASK_AVG_SUM)
+                result += val_new;
+            else if (agg_task == AGG_TASK_MIN && val_new < val_old)
+                result = val_new;
+            else if (agg_task == AGG_TASK_MAX && val_new > val_old)
+                result = val_new;
+
+            memcpy(dst, &result, sizeof(float));
+            break;
+        }
+        case TYPE_DOUBLE: {
+            double val_new = *((double*) src);
+            double val_old = *((double*) dst);
+            double result = val_old;
+
+            if (agg_task == AGG_TASK_SUM || agg_task == AGG_TASK_AVG_SUM)
+                result += val_new;
+            else if (agg_task == AGG_TASK_MIN && val_new < val_old)
+                result = val_new;
+            else if (agg_task == AGG_TASK_MAX && val_new > val_old)
+                result = val_new;
+
+            memcpy(dst, &result, sizeof(double));
+            break;
+        }
+        default:
+            fprintf(stderr, "Unsupported type for aggregation.\n");
+    }
+}
+
 void AK_process_block_with_grouping(AK_agg_input *input, AK_agg_value *needed_values, AK_header *agg_head, char *group_name, char *source_table) {
     table_addresses *addresses = (table_addresses*) AK_get_table_addresses(source_table);
     int num_attr = AK_num_attr(source_table);
@@ -193,71 +245,12 @@ void AK_process_block_with_grouping(AK_agg_input *input, AK_agg_value *needed_va
                                 void *src = &(temp->data[temp->tuple_dict[k + m].address]);
                                 struct list_node *target = AK_Find_Column_In_Row(existing_row, agg_head[l].att_name);
                                 if (target != NULL) {
-                                    switch (needed_values[l].agg_task) {
-                                        case AGG_TASK_COUNT:
-                                        case AGG_TASK_AVG_COUNT: {
-                                            int prev = *((int*) target->value);
-                                            prev++;
-                                            memcpy(target->value, &prev, sizeof(int));
-                                            break;
-                                        }
-                                        case AGG_TASK_SUM:
-                                        case AGG_TASK_AVG_SUM:
-                                        case AGG_TASK_MIN:
-                                        case AGG_TASK_MAX: {
-                                            switch (needed_values[l].type) {
-                                                case TYPE_INT: {
-                                                    int val_new = *((int*) src);
-                                                    int val_old = *((int*) target->value);
-                                                    int result = val_old;
-
-                                                    if (needed_values[l].agg_task == AGG_TASK_SUM || needed_values[l].agg_task == AGG_TASK_AVG_SUM)
-                                                        result += val_new;
-                                                    else if (needed_values[l].agg_task == AGG_TASK_MIN && val_new < val_old)
-                                                        result = val_new;
-                                                    else if (needed_values[l].agg_task == AGG_TASK_MAX && val_new > val_old)
-                                                        result = val_new;
-
-                                                    memcpy(target->value, &result, sizeof(int));
-                                                    break;
-                                                }
-                                                case TYPE_FLOAT: {
-                                                    float val_new = *((float*) src);
-                                                    float val_old = *((float*) target->value);
-                                                    float result = val_old;
-
-                                                    if (needed_values[l].agg_task == AGG_TASK_SUM || needed_values[l].agg_task == AGG_TASK_AVG_SUM)
-                                                        result += val_new;
-                                                    else if (needed_values[l].agg_task == AGG_TASK_MIN && val_new < val_old)
-                                                        result = val_new;
-                                                    else if (needed_values[l].agg_task == AGG_TASK_MAX && val_new > val_old)
-                                                        result = val_new;
-
-                                                    memcpy(target->value, &result, sizeof(float));
-                                                    break;
-                                                }
-                                                case TYPE_DOUBLE: {
-                                                    double val_new = *((double*) src);
-                                                    double val_old = *((double*) target->value);
-                                                    double result = val_old;
-
-                                                    if (needed_values[l].agg_task == AGG_TASK_SUM || needed_values[l].agg_task == AGG_TASK_AVG_SUM)
-                                                        result += val_new;
-                                                    else if (needed_values[l].agg_task == AGG_TASK_MIN && val_new < val_old)
-                                                        result = val_new;
-                                                    else if (needed_values[l].agg_task == AGG_TASK_MAX && val_new > val_old)
-                                                        result = val_new;
-
-                                                    memcpy(target->value, &result, sizeof(double));
-                                                    break;
-                                                }
-                                                default:
-                                                    fprintf(stderr, "Unsupported type for aggregation.\n");
-                                            }
-                                            break;
-                                        }
-                                        default:
-                                            break;
+                                    if (needed_values[l].agg_task == AGG_TASK_COUNT || needed_values[l].agg_task == AGG_TASK_AVG_COUNT) {
+                                        int prev = *((int*) target->value);
+                                        prev++;
+                                        memcpy(target->value, &prev, sizeof(int));
+                                    } else {
+                                        aggregate_value(src, target->value, needed_values[l].type, needed_values[l].agg_task);
                                     }
                                 }
                             }
@@ -297,14 +290,14 @@ void AK_prepare_aggregation_headers(AK_agg_input *input, AK_header *agg_head, AK
             case AGG_TASK_MIN:
             case AGG_TASK_AVG:
             case AGG_TASK_AVG_SUM:
-                // ✅ Validacija: podržani tipovi
+                //Validacija: podržani tipovi
                 if (!(attr_type == TYPE_INT || attr_type == TYPE_FLOAT || attr_type == TYPE_DOUBLE)) {
                     fprintf(stderr, "Error: Unsupported type (%d) for aggregation task %d on attribute '%s'\n", 
                             attr_type, agg_task, input->attributes[i].att_name);
                     exit(EXIT_FAILURE);
                 }
 
-                // ✅ Dodjela imena i ciljnog tipa
+                // Dodjela imena i ciljnog tipa
                 if (agg_task == AGG_TASK_SUM) {
                     sprintf(agg_h_name, "Sum(%s)", input->attributes[i].att_name);
                 } else if (agg_task == AGG_TASK_MAX) {
@@ -333,14 +326,6 @@ void AK_prepare_aggregation_headers(AK_agg_input *input, AK_header *agg_head, AK
         // Postavljanje vrijednosti
         needed_values[i].agg_task = agg_task;
         needed_values[i].type = attr_type;
-        strcpy(needed_values[i].att_name, input->attributes[i].att_name);
-        agg_head_ptr[i] = AK_create_header(agg_h_name, agg_h_type, FREE_INT, FREE_CHAR, FREE_CHAR);
-        agg_head[i] = *(agg_head_ptr[i]);
-    }
-}
-
-
-        needed_values[i].agg_task = input->tasks[i];
         strcpy(needed_values[i].att_name, input->attributes[i].att_name);
         agg_head_ptr[i] = AK_create_header(agg_h_name, agg_h_type, FREE_INT, FREE_CHAR, FREE_CHAR);
         agg_head[i] = *(agg_head_ptr[i]);
@@ -378,48 +363,12 @@ void AK_process_block_without_grouping(AK_agg_input *input, AK_agg_value *needed
                     for (int m = 0; m < input->counter; m++) {
                         if (strcmp(needed_values[m].att_name, temp->header[l].att_name) == 0) {
                             void *src = &(temp->data[temp->tuple_dict[k + l].address]);
-                            switch (needed_values[m].agg_task) {
-                                case AGG_TASK_COUNT:
-                                case AGG_TASK_AVG_COUNT:
-                                    *((int*) needed_values[m].data) = counter;
-                                    ((char*) needed_values[m].data)[sizeof(int)] = '\0';
-                                    break;
 
-                                case AGG_TASK_SUM:
-                                case AGG_TASK_AVG_SUM:
-                                    switch (needed_values[m].type) {
-                                        case TYPE_INT: {
-                                            int val_src, val_old;
-                                            memcpy(&val_src, src, sizeof(int));
-                                            memcpy(&val_old, needed_values[m].data, sizeof(int));
-                                            val_old += val_src;
-                                            memcpy(needed_values[m].data, &val_old, sizeof(int));
-                                            break;
-                                        }
-                                        case TYPE_FLOAT: {
-                                            float val_src, val_old;
-                                            memcpy(&val_src, src, sizeof(float));
-                                            memcpy(&val_old, needed_values[m].data, sizeof(float));
-                                            val_old += val_src;
-                                            memcpy(needed_values[m].data, &val_old, sizeof(float));
-                                            break;
-                                        }
-                                        case TYPE_DOUBLE: {
-                                            double val_src, val_old;
-                                            memcpy(&val_src, src, sizeof(double));
-                                            memcpy(&val_old, needed_values[m].data, sizeof(double));
-                                            val_old += val_src;
-                                            memcpy(needed_values[m].data, &val_old, sizeof(double));
-                                            break;
-                                        }
-                                        default:
-                                            fprintf(stderr, "Unsupported type for SUM/AVG_SUM aggregation\n");
-                                            break;
-                                    }
-                                    break;
-
-                                default:
-                                    break;
+                            if (needed_values[m].agg_task == AGG_TASK_COUNT || needed_values[m].agg_task == AGG_TASK_AVG_COUNT) {
+                                *((int*) needed_values[m].data) = counter;
+                                ((char*) needed_values[m].data)[sizeof(int)] = '\0';
+                            } else {
+                                aggregate_value(src, needed_values[m].data, needed_values[m].type, needed_values[m].agg_task);
                             }
                         }
                     }
