@@ -2665,24 +2665,192 @@ AK_init_disk_manager()
   return EXIT_ERROR;
 }
 
+#include <emmintrin.h> // SSE2
+#include <immintrin.h> // za AVX2
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+void akdb_clear_bittable_simd(unsigned char *bittable, size_t size) {
+    __m128i zeros = _mm_setzero_si128();
+    size_t i = 0;
+    for (; i + 16 <= size; i += 16)
+        _mm_storeu_si128((__m128i*)(bittable + i), zeros);
+    for (; i < size; i++)
+        bittable[i] = 0;
+}
+
+void akdb_set_bittable_simd(unsigned char *bittable, size_t size) {
+  __m128i ones = _mm_set1_epi8(0xFF);
+  size_t i = 0;
+  for (; i + 16 <= size; i += 16)
+      _mm_storeu_si128((__m128i *)(bittable + i), ones);
+  for (; i < size; i++)
+      bittable[i] = 0xFF;
+}
+
+int akdb_test_bittable_all_set(unsigned char *bittable, size_t size) {
+  for (size_t i = 0; i < size; i++)
+      if (bittable[i] != 0xFF)
+          return 0;
+  return 1;
+}
+
+static inline uint64_t rdtsc(){
+  unsigned int lo, hi;
+  __asm__ __volatile__ ("rdtsc" : "=a"(lo), "=d"(hi));
+  return ((uint64_t)hi << 32) | lo;
+}
+
+int AK_find_free_range(AK_blocktable *alloc, int required_blocks) {
+  int best_index = -1;
+  int best_size = DB_FILE_BLOCKS_NUM + 1; // za best-fit
+  int start = 0;
+  int i = (alloc->strategy == NEXT_FIT) ? alloc->next_fit_cursor : 0;
+
+  int looped = 0;
+  while (i < DB_FILE_BLOCKS_NUM) {
+      int j = i;
+      while (j < DB_FILE_BLOCKS_NUM && !SAFE_BITTEST(alloc->bittable, j)) j++;
+      int length = j - i;
+
+      if (length >= required_blocks) {
+          if (alloc->strategy == FIRST_FIT) return i;
+          else if (alloc->strategy == BEST_FIT && length < best_size) {
+              best_index = i;
+              best_size = length;
+          } else if (alloc->strategy == NEXT_FIT) {
+              alloc->next_fit_cursor = j;
+              return i;
+          }
+      }
+
+      i = j + 1;
+      if (alloc->strategy == NEXT_FIT && !looped && i >= DB_FILE_BLOCKS_NUM) {
+          looped = 1;
+          i = 0; // pokušaj od početka
+      } else if (looped && i >= alloc->next_fit_cursor) break;
+  }
+
+  return (alloc->strategy == BEST_FIT) ? best_index : -1;
+}
+
+int popcnt_soft(uint8_t b) {
+  int count = 0;
+  while (b) {
+      count += b & 1;
+      b >>= 1;
+  }
+  return count;
+}
+
+int ffs_soft(uint8_t b) {
+  if (b == 0) return -1;
+  int pos = 0;
+  while ((b & 1) == 0) {
+      b >>= 1;
+      pos++;
+  }
+  return pos;
+}
+
+
+void AK_visualize_bittable() {
+  AK_blocktable* allocationBit = (AK_blocktable*) AK_allocationbit.ptr;
+  for (int i = 0; i < DB_FILE_BLOCKS_NUM_EX; i++) {
+      if (i % 64 == 0) printf("\n[%05d] ", i);
+      printf("%c", SAFE_BITTEST(allocationBit->bittable, i) ? 'X' : 'O');
+  }
+  printf("\n");
+}
+
+
+pthread_mutex_t allocation_mutex = PTHREAD_MUTEX_INITIALIZER;
+
+void akdb_threadsafe_bitset(uint8_t* bittable, int bitIndex) {
+  pthread_mutex_lock(&allocation_mutex);
+  if (SAFE_BITTEST(bittable, bitIndex)) {
+      fprintf(stderr, "[COLLISION] Bit %d već postavljen!\n", bitIndex);
+  }
+  SAFE_BITSET(bittable, bitIndex);
+  pthread_mutex_unlock(&allocation_mutex);
+}
+
+
+typedef struct {
+  uint8_t value;
+  uint16_t count;
+} RLE_Pair;
+
+int compress_bittable_rle(uint8_t* input, int len, RLE_Pair* output) {
+  int i = 0, out = 0;
+  while (i < len) {
+      uint8_t val = input[i];
+      int count = 1;
+      while (i + count < len && input[i + count] == val && count < 65535)
+          count++;
+      output[out++] = (RLE_Pair){ val, count };
+      i += count;
+  }
+  return out;
+}
 
 TestResult AK_allocationbit_test()
 {
 	//adding test code
 	int i, success, failed;
 	int bitNo;
-    AK_PRO;
-    AK_blocktable_dump(1);
-	
+  AK_PRO;
+
+	AK_blocktable *bt = malloc(sizeof(AK_blocktable));
+  memset(bt, 0, sizeof(AK_blocktable));
+
 	//for test of test itself
-	//BITCLEAR(AK_allocationbit->bittable,AK_allocationbit->last_allocated-1);
-	AK_blocktable* const allocationBit = AK_allocationbit.ptr;
+  AK_blocktable* allocationBit = (AK_blocktable*) AK_allocationbit.ptr;
+  allocationBit->strategy = FIRST_FIT;
+  allocationBit->next_fit_cursor = 0;
+
+
+  if (allocationBit != NULL && allocationBit->last_allocated>0){
+    SAFE_BITCLEAR(allocationBit->bittable,allocationBit->last_allocated-1);
+  }
+
+
 	printf("Last allocated bit: %d\n",allocationBit->last_allocated);
 	printf("Last initialized bit: %d\n",allocationBit->last_initialized);
 	printf("Prepared: %d\n",allocationBit->prepared);
+
+  AK_blocktable_dump(1);
+
+  
+printf("Resetting all bits to known state (0)...\n");
+akdb_clear_bittable_simd(allocationBit->bittable, BITNSLOTS(DB_FILE_BLOCKS_NUM_EX));
+
+
+for (i = 0; i < allocationBit->last_allocated; i++) {
+    SAFE_BITSET(allocationBit->bittable, i);
+}
+
+
+int initialized_correctly = 1;
+for (i = 0; i < allocationBit->last_allocated; i++) {
+    if (!SAFE_BITTEST(allocationBit->bittable, i)) {
+        printf("Bit %d should be set but is not (initial verification).\n", i);
+        initialized_correctly = 0;
+        failed++;
+        break;
+    }
+}
+if (initialized_correctly) {
+    printf("Initial bit setting up to last_allocated OK.\n");
+    success++;
+}
 	
-	i=success=failed=0;
-	if(BITTEST(allocationBit->bittable, i))
+	i=0;
+  success = failed = 0;
+
+	if(SAFE_BITTEST(allocationBit->bittable, i))
 	{
 		failed++;
 		printf("First bit has wrong avalue.\n",i);
@@ -2692,7 +2860,7 @@ TestResult AK_allocationbit_test()
 	success++;
 	bitNo=1;
 	for(i=1; i < allocationBit->last_allocated; i++,bitNo++)
-		if(!BITTEST(allocationBit->bittable, i))
+		if(!SAFE_BITTEST(allocationBit->bittable, i))
 		{
 			failed++;
 			success--;
@@ -2701,9 +2869,9 @@ TestResult AK_allocationbit_test()
 		}
 	success++;
 	bitNo=0;
-	for(i=allocationBit->last_allocated; i<DB_FILE_BLOCKS_NUM; i++,bitNo++)
+	for(i=allocationBit->last_allocated; i<DB_FILE_BLOCKS_NUM_EX; i++,bitNo++)
 	{
-		if(BITTEST(allocationBit->bittable, i))
+		if(SAFE_BITTEST(allocationBit->bittable, i))
 		{
 			failed++;
 			success--;
@@ -2714,10 +2882,145 @@ TestResult AK_allocationbit_test()
 	printf("\n");
 	if(failed==0)
 		printf("All bit values O.K.\n");
+
+
+int index = AK_find_free_range(allocationBit,5);
+printf("Found 5 free blocks starting at: %d\n", index);
+
+
+for (int i = 0; i < 10; i++) {
+  printf("byte %d = %02x, popcnt=%d, ffs=%d\n", i,
+           allocationBit->bittable[i],
+           popcnt_soft(allocationBit->bittable[i]),
+           ffs_soft(allocationBit->bittable[i]));
+  }
+
+AK_visualize_bittable();
+
+RLE_Pair rle[BITNSLOTS(DB_FILE_BLOCKS_NUM_EX)];
+int rle_len = compress_bittable_rle(allocationBit->bittable,
+                    BITNSLOTS(DB_FILE_BLOCKS_NUM_EX), rle);
+printf("RLE compressed into %d pairs\n", rle_len);
+
 	
-    AK_EPI;
-    return TEST_result(success,failed);
+ // ------------------------ SIMD CLEAR ------------------------
+
+ printf("Testing SIMD clear of bittable...\n");
+ uint64_t start = rdtsc();
+ akdb_clear_bittable_simd(allocationBit->bittable, BITNSLOTS(DB_FILE_BLOCKS_NUM_EX));
+ uint64_t end = rdtsc();
+ printf("SIMD clear duration: %llu CPU cycles\n", end - start);
+
+ // Provjera nule
+ int cleared_correctly = 1;
+ for (i = 0; i < DB_FILE_BLOCKS_NUM_EX; i++) {
+     if (SAFE_BITTEST(allocationBit->bittable, i)) {
+         printf("Bit %d should be cleared but is still set.\n", i);
+         cleared_correctly = 0;
+         break;
+     }
+ }
+
+ if (cleared_correctly) {
+     printf("SIMD clear successful: All bits reset to 0.\n");
+     success++;
+ } else {
+     printf("SIMD clear failed: Some bits were not cleared.\n");
+     failed++;
+ }
+
+ // ------------------------ SIMD SET ------------------------
+
+ printf("Testing SIMD set of bittable to 1...\n");
+ start = rdtsc();
+ akdb_set_bittable_simd(allocationBit->bittable, BITNSLOTS(DB_FILE_BLOCKS_NUM_EX));
+ end = rdtsc();
+ printf("SIMD set duration: %llu CPU cycles\n", end - start);
+
+ int set_correctly = 1;
+ for (i = 0; i < DB_FILE_BLOCKS_NUM_EX; i++) {
+     if (!SAFE_BITTEST(allocationBit->bittable, i)) {
+         printf("Bit %d should be set but is not.\n", i);
+         set_correctly = 0;
+         break;
+     }
+ }
+
+ if (set_correctly) {
+     printf("SIMD set successful: All bits set to 1.\n");
+     success++;
+ } else {
+     printf("SIMD set failed.\n");
+     failed++;
+ }
+
+ // ------------------------ SIMD CLEAR ------------------------
+
+ printf("Testing SIMD clear of bittable...\n");
+ start = rdtsc();
+ akdb_clear_bittable_simd(allocationBit->bittable, BITNSLOTS(DB_FILE_BLOCKS_NUM_EX));
+ end = rdtsc();
+ printf("SIMD clear duration: %llu CPU cycles\n", end - start);
+
+ // Provjera nule
+ cleared_correctly = 1;
+ for (i = 0; i < DB_FILE_BLOCKS_NUM_EX; i++) {
+     if (SAFE_BITTEST(allocationBit->bittable, i)) {
+         printf("Bit %d should be cleared but is still set.\n", i);
+         cleared_correctly = 0;
+         break;
+     }
+ }
+
+ if (cleared_correctly) {
+     printf("SIMD clear successful: All bits reset to 0.\n");
+     success++;
+ } else {
+     printf("SIMD clear failed: Some bits were not cleared.\n");
+     failed++;
+ }
+
+ AK_blocktable_dump(1);
+
+ // --- Clear all bits before testing ---
+ printf("Resetting all bits to known state (0)...\n");
+ akdb_clear_bittable_simd(allocationBit->bittable, BITNSLOTS(DB_FILE_BLOCKS_NUM_EX));
+
+ // --- FIRST_FIT strategy test ---
+ allocationBit->strategy = FIRST_FIT;
+ for (i = 0; i < 10; i++) BITSET(allocationBit->bittable, i);
+ int idx = AK_find_free_range(allocationBit, 5);
+ printf("[FIRST_FIT] Expected: 10, Got: %d\n", idx);
+
+ // --- Clear all ---
+ for (i = 0; i < DB_FILE_BLOCKS_NUM; i++) BITCLEAR(allocationBit->bittable, i);
+
+ // --- BEST_FIT strategy test ---
+ for (i = 0; i < 5; i++) BITSET(allocationBit->bittable, i);
+ for (i = 10; i < 15; i++) BITSET(allocationBit->bittable, i);
+ for (i = 20; i < 25; i++) BITSET(allocationBit->bittable, i);
+ allocationBit->strategy = BEST_FIT;
+ idx = AK_find_free_range(allocationBit, 3);
+ printf("[BEST_FIT] Expected: 15, Got: %d\n", idx);
+
+ // --- Clear all ---
+ for (i = 0; i < DB_FILE_BLOCKS_NUM; i++) BITCLEAR(allocationBit->bittable, i);
+
+ // --- NEXT_FIT strategy test ---
+ for (i = 0; i < 30; i++) BITSET(allocationBit->bittable, i);
+ allocationBit->strategy = NEXT_FIT;
+ allocationBit->next_fit_cursor = 30;
+ idx = AK_find_free_range(allocationBit, 2);
+ printf("[NEXT_FIT] Got: %d (next cursor now at %d)\n", idx, allocationBit->next_fit_cursor);
+
+ printf("Test results: success=%d, failed=%d\n", success, failed);
+
+ AK_allocationbit.ptr = NULL;
+ AK_EPI;
+ return TEST_result(success, failed);
 }
+
+
 
 TestResult AK_allocationtable_test()
 {
