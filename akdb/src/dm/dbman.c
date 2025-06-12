@@ -1733,6 +1733,10 @@ AK_insert_entry(AK_block* block_address, int type, void* entry_data, int i)
  * @param user_group address of system table of users associated with groups in db_file
  * @param user_right address of system table of user right in db_file
  * @param group_right address of system table of group right in db_file
+ * @param role address of the system table of role in db_file
+ * @param role_right address of the system table of role right in db_file
+ * @param user_role address of the system table of user role in db_file
+ * @param group_role address of the system table of user role in db_file
  * @param constraint address of system table of constraint in db_file
  * @param constraintNull address of system table of constraintNull in db_file
  * @param constraintCheck system table address for check constraint
@@ -1742,7 +1746,7 @@ AK_insert_entry(AK_block* block_address, int type, void* entry_data, int i)
 int
 AK_init_system_tables_catalog(int relation, int attribute, int index, int view, int sequence, int function, int function_arguments,
 			      int trigger, int trigger_conditions, int db, int db_obj, int user, int group, int user_group,
-			      int user_right, int group_right, int constraint, int constraintNull, int constraintCheck,
+			      int user_right, int group_right, int role, int role_right, int user_role, int group_role, int constraint, int constraintNull, int constraintCheck,
 			      int constraintUnique, int reference)
 {
   AK_block*  catalog_block;
@@ -1807,6 +1811,14 @@ AK_init_system_tables_catalog(int relation, int attribute, int index, int view, 
   AK_insert_entry(catalog_block, TYPE_INT, &user_right, i++);
   AK_insert_entry(catalog_block, TYPE_VARCHAR, "AK_group_right", i++);
   AK_insert_entry(catalog_block, TYPE_INT, &group_right, i++);
+  AK_insert_entry(catalog_block, TYPE_VARCHAR, "AK_role", i++);
+  AK_insert_entry(catalog_block, TYPE_INT, &role, i++);
+  AK_insert_entry(catalog_block, TYPE_VARCHAR, "AK_role_right", i++);
+  AK_insert_entry(catalog_block, TYPE_INT, &role_right, i++);
+  AK_insert_entry(catalog_block, TYPE_VARCHAR, "AK_user_role", i++);
+  AK_insert_entry(catalog_block, TYPE_INT, &user_role, i++);
+  AK_insert_entry(catalog_block, TYPE_VARCHAR, "AK_group_role", i++);
+  AK_insert_entry(catalog_block, TYPE_INT, &group_role, i++);
   AK_insert_entry(catalog_block, TYPE_VARCHAR, "AK_constraints_between", i++);
   AK_insert_entry(catalog_block, TYPE_INT, &constraint, i++);
   AK_insert_entry(catalog_block, TYPE_VARCHAR, "AK_constraints_not_null", i++);
@@ -1866,6 +1878,10 @@ void AK_memset_int(void *block, int value, size_t num) {
 * @param user_group user associated with group in database
 * @param user_right user right in database
 * @param group_right group right in database
+* @param role role in database
+* @param role_right role right in database
+* @param user_role user role in database
+* @param group_role group role in database
 * @param constraint constraint in database
 * @param constraintNull Null constraint in database
 * @param constraintCheck Check constraint in database
@@ -1875,7 +1891,7 @@ void AK_memset_int(void *block, int value, size_t num) {
 int
 AK_register_system_tables(int relation, int attribute, int index, int view, int sequence, int function, int function_arguments,
 			  int trigger, int trigger_conditions, int db, int db_obj, int user, int group, int user_group,
-			  int user_right, int group_right, int constraint, int constraintNull, int constraintCheck,
+			  int user_right, int group_right, int role, int role_right, int user_role, int group_role, int constraint, int constraintNull, int constraintCheck,
 			  int constraintUnique, int reference)
 {
     AK_block *relationTable;
@@ -2014,6 +2030,38 @@ AK_register_system_tables(int relation, int attribute, int index, int view, int 
 
     AK_insert_entry(relationTable, TYPE_INT, &i, j++);
     //Error:argument of type "const char *" is incompatible with parameter of type "void *"
+    AK_insert_entry(relationTable, TYPE_VARCHAR, "AK_role", j++);
+    AK_insert_entry(relationTable, TYPE_INT, &role, j++);
+    end = role + INITIAL_EXTENT_SIZE;
+    AK_insert_entry(relationTable, TYPE_INT, &end, j++);
+    i++;
+
+    AK_insert_entry(relationTable, TYPE_INT, &i, j++);
+    //Error:argument of type "const char *" is incompatible with parameter of type "void *"
+    AK_insert_entry(relationTable, TYPE_VARCHAR, "AK_role_right", j++);
+    AK_insert_entry(relationTable, TYPE_INT, &role_right, j++);
+    end = role_right + INITIAL_EXTENT_SIZE;
+    AK_insert_entry(relationTable, TYPE_INT, &end, j++);
+    i++;
+
+    AK_insert_entry(relationTable, TYPE_INT, &i, j++);
+    //Error:argument of type "const char *" is incompatible with parameter of type "void *"
+    AK_insert_entry(relationTable, TYPE_VARCHAR, "AK_user_role", j++);
+    AK_insert_entry(relationTable, TYPE_INT, &user_role, j++);
+    end = user_role + INITIAL_EXTENT_SIZE;
+    AK_insert_entry(relationTable, TYPE_INT, &end, j++);
+    i++;
+
+    AK_insert_entry(relationTable, TYPE_INT, &i, j++);
+    //Error:argument of type "const char *" is incompatible with parameter of type "void *"
+    AK_insert_entry(relationTable, TYPE_VARCHAR, "AK_group_role", j++);
+    AK_insert_entry(relationTable, TYPE_INT, &group_role, j++);
+    end = group_role + INITIAL_EXTENT_SIZE;
+    AK_insert_entry(relationTable, TYPE_INT, &end, j++);
+    i++;
+
+    AK_insert_entry(relationTable, TYPE_INT, &i, j++);
+    //Error:argument of type "const char *" is incompatible with parameter of type "void *"
     AK_insert_entry(relationTable, TYPE_VARCHAR, "AK_constraints_between", j++);
     AK_insert_entry(relationTable, TYPE_INT, &constraint, j++);
     end = constraint + INITIAL_EXTENT_SIZE;
@@ -2069,7 +2117,8 @@ int
 AK_init_system_catalog()
 {
   int relation, attribute, index, view, sequence, function, function_arguments, trigger, trigger_conditions, db, db_obj,
-    user, group, user_group, user_right, group_right, constraint, constraintNull, constraintCheck, constraintUnique, reference;
+    user, group, user_group, user_right, group_right, role, role_right, user_role, group_role, constraint, constraintNull, constraintCheck, 
+    constraintUnique, reference;
   int i;
   AK_PRO;
     
@@ -2246,7 +2295,7 @@ AK_init_system_catalog()
   AK_header hUserRight[5] =
     {
       { TYPE_INT, "obj_id", { 0 }, { { '\0' } }, { { '\0' } } },
-      { TYPE_VARCHAR, "name", 0, '\0', '\0', },
+      { TYPE_VARCHAR, "user_id", 0, '\0', '\0', },
       { TYPE_INT, "artifact_id", 0, '\0', '\0', },
       { TYPE_VARCHAR, "right_type", 0, '\0', '\0', },
       { 0, '\0', 0, '\0', '\0' }
@@ -2260,6 +2309,32 @@ AK_init_system_catalog()
       { TYPE_VARCHAR, "right_type", 0, '\0', '\0', },
       { 0, '\0', 0, '\0', '\0' }
     };
+
+  AK_header hRole[3] = {
+      { TYPE_INT, "role_id", 0, '\0', '\0' },
+      { TYPE_VARCHAR, "role_name", 0, '\0', '\0' },
+      { 0, '\0', 0, '\0', '\0' }
+  };
+  
+  AK_header hRoleRight[5] = {
+    { TYPE_INT, "obj_id",{ 0 }, { { '\0' } }, { { '\0' } } },
+    { TYPE_INT, "role_id", 0, '\0', '\0' },
+    { TYPE_INT, "artifact_id", 0, '\0', '\0', }, 
+    { TYPE_VARCHAR, "right_type", 0, '\0', '\0' },
+    { 0, '\0', 0, '\0', '\0' }
+  };
+  
+  AK_header hUserRole[3] = {
+    { TYPE_INT, "user_id", 0, '\0', '\0' },
+    { TYPE_INT, "role_id", 0, '\0', '\0' },
+    { 0, '\0', 0, '\0', '\0' }
+  };
+
+  AK_header hGroupRole[3] = {
+    { TYPE_INT, "group_id", 0, '\0', '\0' },
+    { TYPE_INT, "role_id", 0, '\0', '\0' },
+    { 0, '\0', 0, '\0', '\0' }
+  };
 
   AK_header hReference[7] =
     {
@@ -2392,6 +2467,30 @@ AK_init_system_catalog()
     memset(hGroupRight[i].constr_code, FREE_CHAR, MAX_CONSTRAINTS * MAX_CONSTR_CODE);
   }
 
+  for (i = 0; i < 2; i++) {
+    AK_memset_int(hRole[i].integrity, FREE_INT, MAX_CONSTRAINTS);
+    memset(hRole[i].constr_name, FREE_CHAR, MAX_CONSTRAINTS * MAX_CONSTR_NAME);
+    memset(hRole[i].constr_code, FREE_CHAR, MAX_CONSTRAINTS * MAX_CONSTR_CODE);
+  }
+
+  for (i = 0; i < 4; i++) {
+    AK_memset_int(hRoleRight[i].integrity, FREE_INT, MAX_CONSTRAINTS);
+    memset(hRoleRight[i].constr_name, FREE_CHAR, MAX_CONSTRAINTS * MAX_CONSTR_NAME);
+    memset(hRoleRight[i].constr_code, FREE_CHAR, MAX_CONSTRAINTS * MAX_CONSTR_CODE);
+  }
+
+  for (i = 0; i < 2; i++) {
+    AK_memset_int(hUserRole[i].integrity, FREE_INT, MAX_CONSTRAINTS);
+    memset(hUserRole[i].constr_name, FREE_CHAR, MAX_CONSTRAINTS * MAX_CONSTR_NAME);
+    memset(hUserRole[i].constr_code, FREE_CHAR, MAX_CONSTRAINTS * MAX_CONSTR_CODE);
+  }
+
+  for (i = 0; i < 2; i++) {
+    AK_memset_int(hGroupRole[i].integrity, FREE_INT, MAX_CONSTRAINTS);
+    memset(hGroupRole[i].constr_name, FREE_CHAR, MAX_CONSTRAINTS * MAX_CONSTR_NAME);
+    memset(hGroupRole[i].constr_code, FREE_CHAR, MAX_CONSTRAINTS * MAX_CONSTR_CODE);
+  }
+
   for (i = 0; i < 6; i++) {
     AK_memset_int(hReference[i].integrity, FREE_INT, MAX_CONSTRAINTS);
     memset(hReference[i].constr_name, FREE_CHAR, MAX_CONSTRAINTS * MAX_CONSTR_NAME);
@@ -2417,6 +2516,10 @@ AK_init_system_catalog()
   user_group         = AK_new_segment("AK_user_group",  SEGMENT_TYPE_SYSTEM_TABLE, hUserGroup);
   user_right         = AK_new_segment("AK_user_right",  SEGMENT_TYPE_SYSTEM_TABLE, hUserRight);
   group_right        = AK_new_segment("AK_group_right", SEGMENT_TYPE_SYSTEM_TABLE, hGroupRight);
+  role               = AK_new_segment("AK_role",        SEGMENT_TYPE_SYSTEM_TABLE, hRole);
+  role_right         = AK_new_segment("AK_role_right",  SEGMENT_TYPE_SYSTEM_TABLE, hRoleRight);
+  user_role          = AK_new_segment("AK_user_role",  SEGMENT_TYPE_SYSTEM_TABLE, hUserRole);
+  group_role         = AK_new_segment("AK_group_role",  SEGMENT_TYPE_SYSTEM_TABLE, hGroupRole);
   constraint         = AK_new_segment("AK_constraints_between", SEGMENT_TYPE_SYSTEM_TABLE, hConstraintBetween);
   constraintNull     = AK_new_segment("AK_constraints_not_null", SEGMENT_TYPE_SYSTEM_TABLE, hConstraintNotNull);
   constraintCheck    = AK_new_segment(AK_CONSTRAINTS_CHECK_CONSTRAINT, SEGMENT_TYPE_SYSTEM_TABLE, hConstraintCheck);
@@ -2427,10 +2530,10 @@ AK_init_system_catalog()
 
   if (EXIT_SUCCESS == AK_init_system_tables_catalog(relation, attribute, index, view, sequence, function, function_arguments,
 						    trigger, trigger_conditions, db, db_obj, user, group, user_group, user_right,
-						    group_right, constraint, constraintNull, constraintCheck, constraintUnique, reference))
+						    group_right, role, role_right, user_role, group_role, constraint, constraintNull, constraintCheck, constraintUnique, reference))
     {
       AK_register_system_tables(relation, attribute, index, view, sequence, function, function_arguments, trigger, trigger_conditions,
-				db, db_obj, user, group, user_group, user_right, group_right, constraint, constraintNull, constraintCheck,
+				db, db_obj, user, group, user_group, user_right, group_right, role, role_right, user_role, group_role, constraint, constraintNull, constraintCheck,
 				constraintUnique, reference);
       printf("AK_init_system_catalog: System catalog initialized!\n");
       AK_EPI;
@@ -2438,10 +2541,10 @@ AK_init_system_catalog()
     }
   else
     {
-      printf("AK_init_system_catalog: ERROR. AK_init_system_tables_catalog(%d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d) \
+      printf("AK_init_system_catalog: ERROR. AK_init_system_tables_catalog(%d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d) \
                 failed.\n",
 	     relation, attribute, index, view, sequence, function, function_arguments, trigger, trigger_conditions, db, db_obj, user, group,
-	     user_group, user_right, group_right);
+	     user_group, user_right, group_right, role, role_right, user_role, group_role);
       AK_EPI;
       return EXIT_ERROR;
     }

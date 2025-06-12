@@ -186,6 +186,144 @@ int AK_user_rename(char *old_name, char *new_name, char *password);
  * @return EXIT_SUCCESS or EXIT_ERROR
  */
 int AK_group_rename(char *old_name, char *new_name);
+
+/**
+ * @author Marko Kir
+ * @brief Adds a new role to the AK_role table
+ * @param role_name Name of the role to be added
+ * @param set_id Optional ID for the role (use 0 for auto-generated ID)
+ * @return Role ID or EXIT_ERROR if the role already exists
+ */
+int AK_role_add(char *role_name, int set_id);
+
+/**
+ * @author Marko Kir
+ * @brief Gets the ID of a role by its name
+ * @param role_name Name of the role
+ * @return Role ID or EXIT_ERROR if the role does not exist
+ */
+int AK_role_get_id(char *role_name);
+
+/**
+ * @author Marko Kir
+ * @brief Removes a role by its name
+ * @param role_name Name of the role to be removed
+ * @return EXIT_SUCCESS or EXIT_ERROR
+ */
+int AK_role_remove_by_name(char *role_name);
+
+/**
+ * @author Marko Kir
+ * @brief Grants a privilege to a role on a specific table
+ * @param role_name Name of the role
+ * @param table Name of the table
+ * @param right Type of privilege (e.g., "SELECT", "UPDATE", "ALL")
+ * @return EXIT_SUCCESS or EXIT_ERROR
+ */
+int AK_grant_privilege_role(char *role_name, char *table, char *right);
+
+/**
+ * @author Marko Kir
+ * @brief Assigns a role to a user
+ * @param username Name of the user
+ * @param role_name Name of the role
+ * @return EXIT_SUCCESS or EXIT_ERROR
+ */
+int AK_assign_role_to_user(char *username, char *role_name);
+
+/**
+ * @author Marko Kir
+ * @brief Checks if a user has a specific privilege via roles
+ * @param username Name of the user
+ * @param table Name of the table
+ * @param privilege Privilege to check
+ * @return EXIT_SUCCESS if the user has the privilege, otherwise EXIT_ERROR
+ */
+int AK_check_user_privilege_via_roles(char *username, char *table, char *privilege);
+
+/**
+ * @author Marko Kir
+ * @brief Helper function to check if a role has a specific privilege on a table
+ * @param role_id ID of the role
+ * @param table_id ID of the table
+ * @param privilege Privilege to check
+ * @return EXIT_SUCCESS if the role has the privilege, otherwise EXIT_ERROR
+ */
+int AK_check_role_privilege(int role_id, int table_id, char *privilege);
+
+/**
+ * @author Marko Kir
+ * @brief Revokes a privilege from a role on a specific table
+ * @param role_name Name of the role
+ * @param table Name of the table
+ * @param right Type of privilege (e.g., "SELECT", "UPDATE", "ALL")
+ * @return EXIT_SUCCESS if the privilege is revoked, otherwise EXIT_ERROR
+ */
+int AK_revoke_privilege_role(char *role_name, char *table, char *right);
+
+/**
+ * @author Marko Kir
+ * @brief Removes a role assigned to a user
+ * @param username Name of the user
+ * @param role_name Name of the role to be removed
+ * @return EXIT_SUCCESS or EXIT_ERROR
+ */
+int AK_remove_role_from_user(char *username, char *role_name);
+
+/**
+ * @author Marko Kir
+ * @brief Assigns a role to a group
+ * @param group_name Name of the group
+ * @param role_name Name of the role
+ * @return EXIT_SUCCESS or EXIT_ERROR
+ */
+int AK_assign_role_to_group(char *group_name, char *role_name);
+
+/**
+ * @author Marko Kir
+ * @brief Removes a role assigned to a group
+ * @param group_name Name of the group
+ * @param role_name Name of the role to be removed
+ * @return EXIT_SUCCESS or EXIT_ERROR
+ */
+int AK_remove_role_from_group(char *group_name, char *role_name);
+
+/**
+ * @author Marko Kir
+ * @brief Checks if a group has a specific privilege via roles
+ * @param group_name Name of the group
+ * @param table Name of the table
+ * @param privilege Privilege to check
+ * @return EXIT_SUCCESS if the group has the privilege, otherwise EXIT_ERROR
+ */
+int AK_check_group_privilege_via_roles(char *group_name, char *table, char *privilege);
+
+/**
+ * @author Marko Kir
+ * @brief Checks if a group has a specific privilege via roles
+ * @param group_name Name of the group
+ * @param table Name of the table
+ * @param privilege Privilege to check
+ * @return EXIT_SUCCESS if the group has the privilege, otherwise EXIT_ERROR
+ */
+int AK_check_group_privilege_via_roles(char *group_name, char *table, char *privilege);
+
+/**
+ * @author Marko Kir
+ * @brief Removes all roles assigned to a user
+ * @param username Name of the user
+ * @return EXIT_SUCCESS or EXIT_ERROR
+ */
+int AK_remove_all_roles_from_user(char *username);
+
+/**
+ * @author Marko Kir
+ * @brief Removes all roles assigned to a group
+ * @param group_name Name of the group
+ * @return EXIT_SUCCESS or EXIT_ERROR
+ */
+int AK_remove_all_roles_from_group(char *group_name);
+
 TestResult AK_privileges_test();
 
 #endif
