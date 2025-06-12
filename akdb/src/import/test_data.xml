@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<users>
+    <user id="1">
+        <name>Alice</name>
+        <profile>
+            <age>31</age>
+            <email>alice@example.com</email>
+        </profile>
+        <address>
+            <street>Ilica 15</street>
+            <city>Zagreb</city>
+        </address>
+        <tags>
+            <tag>admin</tag>
+            <tag>beta</tag>
+            <tag>early-bird</tag>
+        </tags>
+    </user>
+
+    <user id="2">
+        <name>Bob</name>
+        <profile>
+            <age>27</age>
+            <email>bob@example.com</email>
+        </profile>
+        <address>
+            <street>Tkalčićeva 35</street>
+            <city>Zagreb</city>
+        </address>
+        <tags>
+            <tag>guest</tag>
+        </tags>
+    </user>
+
+    <user id="3">
+        <name>Karla</name>
+        <profile>
+            <age>45</age>
+            <email>karla@example.com</email>
+        </profile>
+        <address>
+            <street>Savska cesta 120</street>
+            <city>Zagreb</city>
+        </address>
+        <tags>
+            <tag>editor</tag>
+            <tag>vip</tag>
+        </tags>
+    </user>
+
+    <user id="4">
+        <name>Djuro</name>
+        <profile>
+            <age>22</age>
+            <email>djuro@example.com</email>
+        </profile>
+        <address>
+            <street>Vlaška ulica 45</street>
+            <city>Zagreb</city>
+        </address>
+        <tags>
+            <tag>student</tag>
+            <tag>new</tag>
+        </tags>
+    </user>
+
+    <user id="5">
+        <name>Eva</name>
+        <profile>
+            <age>38</age>
+            <email>eva@example.com</email>
+        </profile>
+        <address>
+            <street>Martićeva 12</street>
+            <city>Zagreb</city>
+        </address>
+        <tags>
+            <tag>moderator</tag>
+            <tag>premium</tag>
+            <tag>beta</tag>
+        </tags>
+    </user>
+</users>

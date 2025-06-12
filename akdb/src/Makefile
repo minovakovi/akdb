@@ -3,12 +3,14 @@ CC = gcc -pthread -w
 DEBUG = -g
 CFLAGS = $(DEBUG) -c
 CFLAGS += -I./import
+CFLAGS += $(shell pkg-config --cflags libxml-2.0)
 
 LIBS = -lcjson
+LIBS   += -lxml2
 
 DISKTARGETS = dm/dbman.o
 MEMORYTARGETS = mm/memoman.o
-IMPORTTARGETS = import/json_importer.o import/csv_importer.o
+IMPORTTARGETS = import/json_importer.o import/csv_importer.o import/xml_importer.o
 FILETARGETS = file/files.o file/fileio.o file/filesearch.o file/filesort.o file/idx/index.o file/idx/btree.o file/idx/hash.o file/idx/bitmap.o file/table.o file/blobs.o
 RELOPTARGETS = rel/difference.o rel/intersect.o rel/nat_join.o rel/projection.o rel/selection.o rel/union.o rel/aggregation.o rel/product.o rel/theta_join.o trans/transaction.o
 OPTITARGETS = opti/rel_eq_projection.o opti/rel_eq_selection.o opti/rel_eq_assoc.o opti/rel_eq_comut.o opti/query_optimization.o
