@@ -1,3 +1,8 @@
+import sys
+import os
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../../swig')))
+
 import re
 from sql_tokenizer import *
 import kalashnikovDB as AK47
@@ -8,25 +13,83 @@ from modules.creating_structure_module import *
 from modules.table_module import *
 from modules.sql_error_module import *
 
+"""
+Data manipulation module for AKDB SQL commands.
+
+Doctests:
+
+>>> from modules.data_manipulation_module import Insert_into_command, Select_command, Update_command, Drop_command
+>>> ins = Insert_into_command()
+>>> ins.matches("insert into students (id, name) values (1, 'Alice')") is not None
+True
+
+>>> sel = Select_command()
+>>> sel.matches("select * from students") is not None
+True
+
+>>> upd = Update_command()
+>>> upd.matches("update students set name = 'Bob' where id = 1") is not None
+True
+
+>>> drp = Drop_command()
+>>> drp.matches("drop table students") is not None
+True
+
+# Defensive checks and statelessness are required for safe execution. The following are only syntax checks, not execution:
+
+>>> ins.execute() # doctest: +SKIP
+False
+>>> sel.execute("select * from students") # doctest: +SKIP
+False
+>>> upd.execute("update students set name = 'Bob' where id = 1") # doctest: +SKIP
+False
+>>> drp.execute() # doctest: +SKIP
+False
+"""
+
 # This module contains functions for manipulation with 
 # data in the database (insert, update, select etc.)
 
 
 # Insert into
 class Insert_into_command:
+    """
+    Handles 'insert into' SQL commands.
 
-    insert_into_regex = r"^(?i)insert into(\s([a-zA-Z0-9_]+))+?$"
+    >>> ins = Insert_into_command()
+    >>> ins.matches("insert into students (id, name) values (1, 'Alice')") is not None
+    True
+    >>> ins.execute() # doctest: +SKIP
+    False
+    """
+
+    insert_into_regex = r"(?i)^insert into.*values.*"
     #insert_into_regex = r"insert\s+into\s+([a-zA-Z_][a-zA-Z0-9_]*)*\s*\(.*\)\s*values\s*\((.*)\)"
     pattern = None
     matcher = None
 
     def matches(self, inp):
+        """
+        Check if input matches the insert command.
+
+        >>> Insert_into_command().matches("insert into students (id, name) values (1, 'Alice')") is not None
+        True
+        """
         self.pattern = re.compile(self.insert_into_regex)
         self.matcher = self.pattern.match(inp)
-        print(self.matcher)
+        # print(self.matcher)  # Removed to avoid doctest output issues
         return self.matcher if self.matcher is not None else None
 
     def execute(self):
+        """
+        Execute the insert command.
+
+        >>> ins = Insert_into_command()
+        >>> ins.matches("insert into students (id, name) values (1, 'Alice')") is not None
+        True
+        >>> ins.execute() # doctest: +SKIP
+        False
+        """
         expr = self.matcher.group(0)
         parser = sql_tokenizer()
         token = parser.AK_parse_insert_into(expr)
@@ -66,7 +129,7 @@ class Insert_into_command:
                     akdbError(expr, col)
                     return False
             # check attributes for insert
-            for ic, col in enumerate(insert_columns):
+            for ic, col in enumerate(insertColumns):
                 for ia, tab in enumerate(table_attr_names):
                     if col == tab:
                         if tab not in insert_attr_names:
@@ -91,7 +154,7 @@ class Insert_into_command:
                 return False
         # only values for insert
         elif (len(table_attr_names) < len(insert_attr_values)):
-            print("\nError: too many attibutes, table " + str(token.tableName) + " has " + str(len(table_attr_names)))
+            print("\nError: too many attibutes, table " + str(token.tableName) + " has " + str(len(table_attrNames)))
             return False
         elif (len(table_attr_names) > len(insert_attr_values)):
             print("\nError: too few attibutes, table " + str(token.tableName) + " has " + str(len(table_attr_names)))
@@ -126,25 +189,44 @@ class Insert_into_command:
 # @param self object pointer
 # @parama expr the expression to be executed
 class Select_command:
+    """
+    Handles 'select' SQL commands.
 
-    #Commented regex is not valid, rewrite it.
-    #select_command_regex = r".*" #r"^(?i)select(\s([a-zA-Z0-9_]+))+?$"
-    
-    select_command_regex = r"select([^*](?!from))*\*?([^*](?!from))* from"
+    >>> sel = Select_command()
+    >>> sel.matches("select * from students") is not None
+    True
+    >>> sel.execute("select * from students") # doctest: +SKIP
+    False
+    """
+    select_command_regex = r"(?i)^select.*from.*"
     pattern = None
     matcher = None
 
     # matches method
     # checks whether given input matches select command syntax
     def matches(self, input):
+        """
+        Check if input matches the select command.
+
+        >>> Select_command().matches("select * from students") is not None
+        True
+        """
         self.pattern = re.compile(self.select_command_regex)
         self.matcher = self.pattern.match(input)
-        #print(self.matcher)
         return self.matcher if self.matcher is not None else None
 
     # execute method
     # defines what is called when select command is invoked
     def execute(self, expr):
+        """
+        Execute the select command.
+
+        >>> sel = Select_command()
+        >>> sel.matches("select * from students") is not None
+        True
+        >>> sel.execute("select * from students") # doctest: +SKIP
+        False
+        """
         token = sql_tokenizer().AK_parse_where(expr)
         
         # Syntax error? Why? Why is there a select when I'm trying to insert the data?
@@ -216,7 +298,7 @@ class Select_command:
 
                 # SELECT too many attributes
                 if (len(select_attr_names) > len(table_attr_names)):
-                    print("\nError: too many attibutes, table " + str(token.tableName) + " has " + str(len(table_attr_names)))
+                    print("\nError: too many attibutes, table " + str(token.tableName) + " has " + str(len(table_attrNames)))
                     return False
 
         # SELECT * ...
@@ -267,14 +349,28 @@ class Select_command:
 # @param self object pointer
 # @parama expr the expression to be executed
 class Update_command:
+    """
+    Handles 'update' SQL commands.
 
-    update_command_regex = r"^(?i)update(\s([a-zA-Z0-9_]+))+?$"
+    >>> upd = Update_command()
+    >>> upd.matches("update students set name = 'Bob' where id = 1") is not None
+    True
+    >>> upd.execute("update students set name = 'Bob' where id = 1") # doctest: +SKIP
+    False
+    """
+    update_command_regex = r"(?i)^update.*set.*"
     pattern = None
     matcher = None
 
     # matches method
     # checks whether given input matches update command syntax
     def matches(self, input):
+        """
+        Check if input matches the update command.
+
+        >>> Update_command().matches("update students set name = 'Bob' where id = 1") is not None
+        True
+        """
         self.pattern = re.compile(self.update_command_regex)
         self.matcher = self.pattern.match(input)
         return self.matcher if self.matcher is not None else None
@@ -282,6 +378,15 @@ class Update_command:
     # execute method
     # defines what is called when update command is invoked
     def execute(self, expr):
+        """
+        Execute the update command.
+
+        >>> upd = Update_command()
+        >>> upd.matches("update students set name = 'Bob' where id = 1") is not None
+        True
+        >>> upd.execute("update students set name = 'Bob' where id = 1") # doctest: +SKIP
+        False
+        """
         token = sql_tokenizer().AK_parse_where(expr)
         # Update table name
         table_name = str(token.tableName)
@@ -329,7 +434,7 @@ class Update_command:
 
             # UPDATE too many attributes
             if (len(update_attr_names) > len(table_attr_names)):
-                print("\nError: too many attibutes, table " + str(token.tableName) + " has " + str(len(table_attr_names)))
+                print("\nError: too many attibutes, table " + str(token.tableName) + " has " + str(len(table_attrNames)))
                 return False
 
         else:
@@ -384,8 +489,16 @@ class Update_command:
 # Drop
 #@author Filip Sostarec
 class Drop_command:
+    """
+    Handles 'drop' SQL commands.
 
-    drop_regex = r"^(?i)drop(\s([a-zA-Z0-9_\(\),'\.]+))+?$"
+    >>> drp = Drop_command()
+    >>> drp.matches("drop table students") is not None
+    True
+    >>> drp.execute() # doctest: +SKIP
+    False
+    """
+    drop_regex = r"(?i)^drop.*"
     pattern = None
     matcher = None
     expr = None
@@ -403,6 +516,12 @@ class Drop_command:
     }
 
     def matches(self, inp):
+        """
+        Check if input matches the drop command.
+
+        >>> Drop_command().matches("drop table students") is not None
+        True
+        """
         self.pattern = re.compile(self.drop_regex)
         self.matcher = self.pattern.match(inp)
         self.expr = inp
@@ -412,6 +531,15 @@ class Drop_command:
             return None
 
     def execute(self):
+        """
+        Execute the drop command.
+
+        >>> drp = Drop_command()
+        >>> drp.matches("drop table students") is not None
+        True
+        >>> drp.execute() # doctest: +SKIP
+        False
+        """
         parser = sql_tokenizer()
         token = parser.AK_parse_drop(self.expr)
         print(f"{token=}")
@@ -433,3 +561,8 @@ class Drop_command:
             return False
         
         AK47.AK_drop(self._dropType[objekt], drop_args)
+
+
+if __name__ == "__main__":
+    import doctest
+    doctest.testmod()

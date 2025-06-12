@@ -1,3 +1,8 @@
+import sys
+import os
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../../swig')))
+
 import re
 from sql_tokenizer import *
 import kalashnikovDB as AK47
@@ -9,14 +14,23 @@ from modules.get_module import *
 # create sequence
 # developd by Danko Sacer
 class Create_sequence_command:
-    create_seq_regex = r"^(?i)create sequence(\s([a-zA-Z0-9_]+))+?$"
+    """
+    Handles 'create sequence' SQL commands.
+
+    >>> cmd = Create_sequence_command()
+    >>> cmd.matches('create sequence myseq') is not None
+    True
+    >>> cmd.execute('create sequence myseq') # doctest: +SKIP
+    # Output and return value depend on C extension and parser
+    """
+    create_seq_regex = r"(?i)^create sequence(\s([a-zA-Z0-9_]+))+?$"
     pattern = None
     matcher = None
 
     # matches method
     # checks whether given input matches table_exists command syntax
     def matches(self, input):
-        print("Trying to match sequance regex")
+        # print("Trying to match sequance regex")
         self.pattern = re.compile(self.create_seq_regex)
         self.matcher = self.pattern.match(input)
         if (self.matcher is not None):
@@ -61,11 +75,53 @@ class Create_sequence_command:
                     return error
         '''
         # executing create statement
+        # Post-process raw values from tokenizer for executor logic
+        def to_int(val, default):
+            try:
+                return int(val)
+            except (ValueError, TypeError):
+                return default
+
+        # Set defaults based on as_value
+        as_value = tok.as_value
+        min_default = max_default = start_default = None
+        if as_value == 'smallint':
+            min_default = -32768
+            max_default = 32767
+        elif as_value == 'int':
+            min_default = -2147483648
+            max_default = 2147483647
+        elif as_value == 'bigint':
+            min_default = -9223372036854775808
+            max_default = 9223372036854775807
+        else:
+            min_default = 0
+            max_default = 255
+
+        min_value = to_int(tok.min_value, min_default) if tok.min_value != 'no minvalue' else min_default
+        max_value = to_int(tok.max_value, max_default) if tok.max_value != 'no maxvalue' else max_default
+        start_with = to_int(tok.start_with, min_value) if tok.start_with != 'no start' else min_value
+        increment_by = to_int(tok.increment_by, 1)
+        cache = to_int(tok.cache, 15)
+        cycle = 1 if tok.cycle == 'cycle' else 0
+
+        # Check if sequence already exists before creating
         try:
-            AK47.AK_sequence_add(str(tok.seq_name), int(tok.start_with), int(
-                tok.increment_by), int(tok.max_value), int(tok.min_value), int(tok.cycle))
+            seq_id = AK47.AK_sequence_get_id(str(tok.seq_name))
+            if seq_id != -1:
+                print(f"Sequence '{tok.seq_name}' already exists with id {seq_id}. Skipping creation.")
+                return "Sequence already exists"
+        except Exception as e:
+            print(f"Error checking sequence existence: {e}")
+
+        # Print parameters for debugging
+        print(f"Calling AK_sequence_add with: name={tok.seq_name}, start_with={start_with}, increment_by={increment_by}, max_value={max_value}, min_value={min_value}, cycle={cycle}")
+
+        try:
+            AK47.AK_sequence_add(str(tok.seq_name), start_with, increment_by, max_value, min_value, cycle)
             result = "Command succesfully executed"
-        except:
+        except Exception as e:
+            print(f"Error in AK_sequence_add: {e}")
             result = "ERROR creating sequence didn't pass"
 
         AK47.AK_print_table("AK_sequence")
@@ -74,15 +130,28 @@ class Create_sequence_command:
 # create table command
 # @author Franjo Kovacic
 class Create_table_command:
-    create_table_regex = r"^(?i)create table(\s([a-zA-Z0-9_\(\),'\.]+))+?"
+    """
+    Handles 'create table' SQL commands.
+
+    >>> cmd = Create_table_command()
+    >>> cmd.matches('create table students (id int, name varchar)') is not None
+    True
+    >>> cmd.matches('CREATE TABLE students (id int, name varchar)') is not None
+    True
+    >>> cmd.matches('create table') is not None
+    False
+    >>> cmd.execute('create table students (id int, name varchar)') # doctest: +SKIP
+    # Output and return value depend on C extension and parser
+    """
+    create_table_regex = r"^create table(\s([a-zA-Z0-9_\(\),'.]+))+?"
     pattern = None
     matcher = None
     expr = None
     # matches method
     # checks whether given input matches table_exists command syntax
     def matches(self, input):
-        print("Trying to match create table regex")
-        self.pattern = re.compile(self.create_table_regex)
+        # print("Trying to match create table regex")
+        self.pattern = re.compile(self.create_table_regex, re.IGNORECASE)
         self.matcher = self.pattern.match(input)
         self.expr = input
         if (self.matcher is not None):
@@ -141,15 +210,27 @@ class Create_table_command:
 
 
 class Create_index_command:
-    create_table_regex = r"^(?i)create index(\s([a-zA-Z0-9_]+))+?$"
+    """
+    Handles 'create index' SQL commands.
+
+    >>> cmd = Create_index_command()
+    >>> cmd.matches('create index idx_students on students (id) using btree') is not None
+    True
+    >>> cmd.matches('CREATE INDEX idx_students ON students (id) USING btree') is not None
+    True
+    >>> cmd.matches('create index') is not None
+    False
+    >>> cmd.execute() # doctest: +SKIP
+    # Output and return value depend on C extension and parser
+    """
+    create_table_regex = r"^create index(\s([a-zA-Z0-9_]+))+?"
     pattern = None
     matcher = None
     expr = None
-
     # matches method
     # checks whether given input matches table_exists command syntax
     def matches(self, input):
-        self.pattern = re.compile(self.create_table_regex)
+        self.pattern = re.compile(self.create_table_regex, re.IGNORECASE)
         self.matcher = self.pattern.match(input)
         self.expr = input
         if (self.matcher is not None):
@@ -199,16 +280,28 @@ class Create_index_command:
 
 
 class Create_trigger_command:
-    create_trigger_regex = r"^(?i)create trigger(\s([a-zA-Z0-9_]+))+?$"
+    """
+    Handles 'create trigger' SQL commands.
+
+    >>> cmd = Create_trigger_command()
+    >>> cmd.matches('create trigger trg_students') is not None
+    True
+    >>> cmd.matches('CREATE TRIGGER trg_students') is not None
+    True
+    >>> cmd.matches('create trigger') is not None
+    False
+    >>> cmd.execute() # doctest: +SKIP
+    # Output and return value depend on C extension and parser
+    """
+    create_trigger_regex = r"^create trigger(\s([a-zA-Z0-9_]+))+?"
     pattern = None
     matcher = None
     expr = None
-
     # matches method
     # checks whether given input matches table_exists command syntax
     def matches(self, input):
-        print("Trying to match trigger regex")
-        self.pattern = re.compile(self.create_trigger_regex)
+        # print("Trying to match trigger regex")
+        self.pattern = re.compile(self.create_trigger_regex, re.IGNORECASE)
         self.matcher = self.pattern.match(input)
         self.expr = input
         if (self.matcher is not None):
@@ -253,3 +346,7 @@ class Create_trigger_command:
         except:
             result = "Error. Creating trigger failed."
         return result
+
+if __name__ == "__main__":
+    import doctest
+    doctest.testmod()

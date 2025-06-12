@@ -195,7 +195,12 @@ int AK_strcmp(const void *a, const void *b) {
 void AK_Init_L3(struct list_node **L) {
   AK_PRO;
   assert(L != NULL);
-  (*L)->next = NULL;
+  if (*L != NULL) {
+    (*L)->next = NULL;
+    (*L)->size = 0;
+    (*L)->type = 0;
+    memset((*L)->data, 0, MAX_VARCHAR_LENGTH);
+  }
   AK_EPI;
 }
 
@@ -350,24 +355,36 @@ void AK_InsertBefore_L2(int type, char *data, int size,
 
 void AK_InsertAfter_L2(int type, char *data, int size,
                        struct list_node **current, struct list_node **L) {
-
   AK_PRO;
   struct list_node *new_elem;
 
-  new_elem = (struct list_node *)AK_malloc(sizeof(struct list_node));
+  // Validate input parameters
+  if (data == NULL) {
+      fprintf(stderr, "ERROR: AK_InsertAfter_L2 called with NULL data pointer (type=%d, size=%d)\n", type, size);
+      AK_EPI;
+      return;}
+  if (L == NULL || *L == NULL) {
+      fprintf(stderr, "ERROR: AK_InsertAfter_L2 called with NULL list pointer\n");
+      AK_EPI;
+      return;}
+  new_elem = (struct list_node *)AK_calloc(1, sizeof(struct list_node));
+  if (new_elem == NULL) {
+      fprintf(stderr, "ERROR: AK_InsertAfter_L2 failed to allocate memory\n");
+      AK_EPI;
+      return;}
   new_elem->size = size;
   new_elem->type = type;
-  memcpy(new_elem->data, data, MAX_VARCHAR_LENGTH);
+  // Use actual size instead of MAX_VARCHAR_LENGTH, but ensure we don't exceed buffer
+  int copy_size = (size > 0 && size < MAX_VARCHAR_LENGTH) ? size : MAX_VARCHAR_LENGTH - 1;
+  memcpy(new_elem->data, data, copy_size);
+  new_elem->data[copy_size] = '\0'; // Ensure null termination
   if ((*current) == NULL) {
     (*L)->next = new_elem;
     new_elem->next = NULL;
-    AK_EPI;
-    return;
-  }
-  new_elem->next = (*current)->next;
-  (*current)->next = new_elem;
-  AK_EPI;
-}
+  } else {
+    new_elem->next = (*current)->next;
+    (*current)->next = new_elem;}
+  AK_EPI;}
 
 /**
  * @author Ljiljana Pintarić.
@@ -1195,3 +1212,20 @@ EXIT_FAILURE;
 
 }
 */
+
+int AK_chars_num_from_float(float float_value) {
+  char temp_buffer[32];
+  int result;
+  AK_PRO;
+  
+  // Use snprintf to format the float and get the length
+  result = snprintf(temp_buffer, sizeof(temp_buffer), "%.3f", float_value);
+  
+  // Ensure result is positive (snprintf can return negative on error)
+  if (result < 0) {
+    result = 10; // Default reasonable length for a float
+  }
+  
+  AK_EPI;
+  return result;
+}

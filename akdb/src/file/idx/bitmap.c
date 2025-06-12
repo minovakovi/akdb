@@ -73,7 +73,6 @@
     char * indexName;
     int indexed_attr_position;
 
-
     AK_header t_header[ MAX_ATTRIBUTES ];
     AK_header t_headerr[ MAX_ATTRIBUTES ];
     AK_header* tempHeader;
@@ -84,7 +83,6 @@
     num_attr = AK_num_attr(tblName);
     temp_head = (AK_header *) AK_get_header(tblName);
     headerAtributes = (struct list_node *) AK_malloc(sizeof (struct list_node));
-
 
     for (i = 0; i < num_attr; i++)
     {
@@ -108,61 +106,55 @@
                             {
                                 switch (temp->tuple_dict[ k ].type)
                                 {
-
-
                                     case TYPE_INT:
-                                    memcpy(&temp_int, &(temp->data[ temp->tuple_dict[ k ].address]),
-                                     temp->tuple_dict[k].size);
-                                    temp_int = sprintf(temp_char, "%d", temp_int);
+                                        memcpy(&temp_int, &(temp->data[ temp->tuple_dict[ k ].address]),
+                                         temp->tuple_dict[k].size);
+                                        temp_int = sprintf(temp_char, "%d", temp_int);
 
-                                    ee = (struct list_node *) AK_First_L2(headerAtributes);
-                                    if (ee == 0)
-                                    {
-                                        AK_Insert_New_Element(TYPE_VARCHAR, temp_char, "indexLista", temp_char, headerAtributes);
-                                    }
-                                    else
-                                    {
-                                        if (AK_If_ExistOp(headerAtributes, temp_char) == 0)
+                                        ee = (struct list_node *) AK_First_L2(headerAtributes);
+                                        if (ee == 0)
                                         {
-                                            ee = (struct list_node *) AK_End_L2(headerAtributes);
-                                            AK_Insert_New_Element(TYPE_VARCHAR, temp_char, "indexLista", temp_char, ee);
+                                            AK_Insert_New_Element(TYPE_VARCHAR, temp_char, "indexLista", temp_char, headerAtributes);
                                         }
-                                    }
-                                    //printf("TEMP %-10s \n", temp_char);
-                                    break;
+                                        else
+                                        {
+                                            if (AK_If_ExistOp(headerAtributes, temp_char) == 0)
+                                            {
+                                                ee = (struct list_node *) AK_End_L2(headerAtributes);
+                                                AK_Insert_New_Element(TYPE_VARCHAR, temp_char, "indexLista", temp_char, ee);
+                                            }
+                                        }
+                                        break;
 
-                                //FLOAT VALUES ARE USUALLY NOT BEING INDEXED
+                                    //FLOAT VALUES ARE USUALLY NOT BEING INDEXED
                                     case TYPE_FLOAT:
-                                    break;
-
+                                        break;
 
                                     case TYPE_VARCHAR:
-                                    memcpy(temp_char, &(temp->data[ temp->tuple_dict[ k ].address]),
-                                     temp->tuple_dict[k].size);
-                                    temp_char[ temp->tuple_dict[k].size ] = '\0';
+                                        memcpy(temp_char, &(temp->data[ temp->tuple_dict[ k ].address]),
+                                         temp->tuple_dict[k].size);
+                                        temp_char[ temp->tuple_dict[k].size ] = '\0';
 
-                                    ee = (struct list_node *) AK_First_L2(headerAtributes);
-                                    if (ee == 0)
-                                    {
-                                        AK_Insert_New_Element(TYPE_VARCHAR, temp_char, "indexLista", temp_char, headerAtributes);
-                                    }
-                                    else
-                                    {
-                                        if (AK_If_ExistOp(headerAtributes, temp_char) == 0)
+                                        ee = (struct list_node *) AK_First_L2(headerAtributes);
+                                        if (ee == 0)
                                         {
-                                            ee = (struct list_node *) AK_End_L2(headerAtributes);
-                                            AK_Insert_New_Element(TYPE_VARCHAR, temp_char, "indexLista", temp_char, ee);
+                                            AK_Insert_New_Element(TYPE_VARCHAR, temp_char, "indexLista", temp_char, headerAtributes);
                                         }
-                                    }
-                                    break;
+                                        else
+                                        {
+                                            if (AK_If_ExistOp(headerAtributes, temp_char) == 0)
+                                            {
+                                                ee = (struct list_node *) AK_End_L2(headerAtributes);
+                                                AK_Insert_New_Element(TYPE_VARCHAR, temp_char, "indexLista", temp_char, ee);
+                                            }
+                                        }
+                                        break;
                                 }
-
                             }
                         }
                     }
                     br++;
                 }
-
 
                 //PART WHERE WE CHECK EVERY ATTRIBUTE
                 int brr;
@@ -172,80 +164,74 @@
                 switch ((temp_head + i)->type)
                 {
                     case TYPE_VARCHAR:
-                    brr = 2; //3 First two places are reserved for block and row pointers
-                    e = (struct list_node *) AK_First_L2(headerAtributes);
-                    while (e != 0)
-                    {
-                        tempHeader = (AK_header*) AK_create_header(e->attribute_name, TYPE_VARCHAR, FREE_INT, FREE_CHAR, FREE_CHAR);
-                        memcpy(t_header + brr, tempHeader, sizeof ( AK_header));
-                        e = (struct list_node *) AK_Next_L2(e);
-                        brr++;
-                    }
-                    //ADDITIONAL ATTRIBTE IS PRESENT FOR BLOCK ADDRESS
-                    tempHeader = (AK_header*) AK_create_header("addBlock", TYPE_INT, FREE_INT, FREE_CHAR, FREE_CHAR);
-                    memcpy(t_header, tempHeader, sizeof ( AK_header));
-                    tempHeader = (AK_header*) AK_create_header("indexTd", TYPE_INT, FREE_INT, FREE_CHAR, FREE_CHAR);
-                    memcpy(t_header + 1, tempHeader, sizeof ( AK_header));
+                        brr = 2; //3 First two places are reserved for block and row pointers
+                        e = (struct list_node *) AK_First_L2(headerAtributes);
+                        while (e != 0)
+                        {
+                            tempHeader = (AK_header*) AK_create_header(e->attribute_name, TYPE_VARCHAR, FREE_INT, FREE_CHAR, FREE_CHAR);
+                            memcpy(t_header + brr, tempHeader, sizeof ( AK_header));
+                            e = (struct list_node *) AK_Next_L2(e);
+                            brr++;
+                        }
+                        //ADDITIONAL ATTRIBTE IS PRESENT FOR BLOCK ADDRESS
+                        tempHeader = (AK_header*) AK_create_header("addBlock", TYPE_INT, FREE_INT, FREE_CHAR, FREE_CHAR);
+                        memcpy(t_header, tempHeader, sizeof ( AK_header));
+                        tempHeader = (AK_header*) AK_create_header("indexTd", TYPE_INT, FREE_INT, FREE_CHAR, FREE_CHAR);
+                        memcpy(t_header + 1, tempHeader, sizeof ( AK_header));
 
-                    for (z = brr; z < MAX_ATTRIBUTES; z++)
-                    {
-                        memcpy(t_header + z, "\0", sizeof ( "\0"));
-                    }
+                        for (z = brr; z < MAX_ATTRIBUTES; z++)
+                        {
+                            memcpy(t_header + z, "\0", sizeof ( "\0"));
+                        }
 
-                    //INITIALIZATION OF NEW HEADER FILE
-                    strcpy(inde, tblName);
-                    indexName = strcat(inde, (temp_head + i)->att_name);
-                    indexName = strcat(indexName, "_bmapIndex");
-                //Error: argument of type "char" is incompatible with parameter of type "char *"
-                    startAddress = AK_initialize_new_index_segment(indexName,AK_get_table_id(tblName),indexed_attr_position, t_header);
+                        //INITIALIZATION OF NEW HEADER FILE
+                        strcpy(inde, tblName);
+                        indexName = strcat(inde, (temp_head + i)->att_name);
+                        indexName = strcat(indexName, "_bmapIndex");
+                        startAddress = AK_initialize_new_index_segment(indexName,AK_get_table_id(tblName),indexed_attr_position, t_header);
 
-
-                    if (startAddress != EXIT_ERROR)
-                    {
-                        printf("\nINDEX %s CREATED!\n", indexName);
-                        //funtion that fills index with attribute values
-                        AK_create_Index(tblName, indexName, (temp_head + i)->att_name, i, num_attr, t_header);
-                    }
-
-                    break;
+                        if (startAddress != EXIT_ERROR)
+                        {
+                            printf("\nINDEX %s CREATED!\n", indexName);
+                            //funtion that fills index with attribute values
+                            AK_create_Index(tblName, indexName, (temp_head + i)->att_name, i, num_attr, t_header);
+                        }
+                        break;
 
                     case TYPE_INT:
-                    brr = 2; //3 First two places are reserved for block and row pointers
+                        brr = 2; //3 First two places are reserved for block and row pointers
 
-                    tempHeader = (AK_header*) AK_create_header("addBlock", TYPE_INT, FREE_INT, FREE_CHAR, FREE_CHAR);
-                    memcpy(t_headerr, tempHeader, sizeof ( AK_header));
+                        tempHeader = (AK_header*) AK_create_header("addBlock", TYPE_INT, FREE_INT, FREE_CHAR, FREE_CHAR);
+                        memcpy(t_headerr, tempHeader, sizeof ( AK_header));
 
-                    tempHeader = (AK_header*) AK_create_header("indexTd", TYPE_INT, FREE_INT, FREE_CHAR, FREE_CHAR);
-                    memcpy(t_headerr + 1, tempHeader, sizeof ( AK_header));
+                        tempHeader = (AK_header*) AK_create_header("indexTd", TYPE_INT, FREE_INT, FREE_CHAR, FREE_CHAR);
+                        memcpy(t_headerr + 1, tempHeader, sizeof ( AK_header));
 
-                    e = (struct list_node *) AK_First_L2(headerAtributes);
-                    while (e != 0)
-                    {
-                        tempHeader = (AK_header*) AK_create_header(e->attribute_name, TYPE_INT, FREE_INT, FREE_CHAR, FREE_CHAR);
-                        memcpy(t_headerr + brr, tempHeader, sizeof ( AK_header));
-                        e = (struct list_node *) AK_Next_L2(e);
-                        brr++;
-                    }
+                        e = (struct list_node *) AK_First_L2(headerAtributes);
+                        while (e != 0)
+                        {
+                            tempHeader = (AK_header*) AK_create_header(e->attribute_name, TYPE_INT, FREE_INT, FREE_CHAR, FREE_CHAR);
+                            memcpy(t_headerr + brr, tempHeader, sizeof ( AK_header));
+                            e = (struct list_node *) AK_Next_L2(e);
+                            brr++;
+                        }
 
+                        for (z = brr; z < MAX_ATTRIBUTES; z++)
+                        {
+                            memcpy(t_headerr + z, "\0", sizeof ( "\0"));
+                        }
 
-                    for (z = brr; z < MAX_ATTRIBUTES; z++)
-                    {
-                        memcpy(t_headerr + z, "\0", sizeof ( "\0"));
-                    }
-
-                    strcpy(inde, tblName);
-                    indexName = strcat(inde, (temp_head + i)->att_name);
-                    indexName = strcat(indexName, "_bmapIndex");
-                //Error: argument of type "char" is incompatible with parameter of type "char *"
-                    startAddress = AK_initialize_new_index_segment(indexName,AK_get_table_id(tblName),indexed_attr_position, t_headerr);
-                    if (startAddress != EXIT_ERROR)
-                    {
-                        printf("\nINDEX %s CREATED!\n", indexName);
-                        AK_create_Index(tblName, indexName, (temp_head + i)->att_name, i, num_attr, t_header);
-                    }
-                    break;
+                        strcpy(inde, tblName);
+                        indexName = strcat(inde, (temp_head + i)->att_name);
+                        indexName = strcat(indexName, "_bmapIndex");
+                        startAddress = AK_initialize_new_index_segment(indexName,AK_get_table_id(tblName),indexed_attr_position, t_headerr);
+                        if (startAddress != EXIT_ERROR)
+                        {
+                            printf("\nINDEX %s CREATED!\n", indexName);
+                            AK_create_Index(tblName, indexName, (temp_head + i)->att_name, i, num_attr, t_header);
+                        }
+                        break;
                 }
-
             }
             some_element = (struct list_node *) AK_Next_L2(some_element);
         }
@@ -273,7 +259,6 @@
  */
  void AK_create_Index(char *tblName, char *tblNameIndex, char *attributeName, int positionTbl, int numAtributes, AK_header *headerIndex)
  {
-
     table_addresses *addresses;
     AK_block *temp;
 
@@ -281,7 +266,6 @@
     int temp_int;
     int temp_indexTd;
     char temp_char[ MAX_VARCHAR_LENGTH ];
-    i = 0;
     struct list_node *row_root;
 
     AK_PRO;
@@ -289,6 +273,7 @@
     addresses = (table_addresses*) AK_get_table_addresses(tblName);
     temp = (AK_block*) AK_read_block(addresses->address_from[0]);
 
+    i = 0;
     while (addresses->address_from[ i ] != 0)
     {
         for (j = addresses->address_from[ i ]; j < addresses->address_to[ i ]; j++)
@@ -296,12 +281,10 @@
             AK_block *temp = (AK_block*) AK_read_block(j);
             for (k = positionTbl; k < DATA_BLOCK_SIZE; k = k + numAtributes)
             {
-
                 if (temp->tuple_dict[ k ].size > 0)
                 {
                     switch (temp->tuple_dict[ k ].type)
                     {
-
                         case TYPE_INT:
                             memcpy(&temp_int, &(temp->data[ temp->tuple_dict[ k ].address]),
                              temp->tuple_dict[k].size);
@@ -312,17 +295,15 @@
 
                             AK_Insert_New_Element(TYPE_INT, &(temp->address), tblNameIndex, "addBlock", row_root);
                             AK_Insert_New_Element(TYPE_INT, &temp_indexTd, tblNameIndex, "indexTd", row_root);
-                            //Error: argument of type "const char *" is incompatible with parameter of type "void *"
                             AK_Insert_New_Element(TYPE_VARCHAR, "1", tblNameIndex, temp_char, row_root);
 
                             AK_insert_row(row_root);
                             AK_DeleteAll_L3(&row_root);
                             AK_free(row_root);
-                        break;
-
+                            break;
 
                         case TYPE_FLOAT:
-                        break;
+                            break;
 
                         case TYPE_VARCHAR:
                             memcpy(temp_char, &(temp->data[ temp->tuple_dict[ k ].address]),
@@ -337,11 +318,9 @@
                             AK_Insert_New_Element(TYPE_VARCHAR, "1", tblNameIndex, temp_char, row_root);
 
                             AK_insert_row(row_root);
-
-
                             AK_DeleteAll_L3(&row_root);
                             AK_free(row_root);
-                        break;
+                            break;
                     }
                 }
             }
@@ -351,7 +330,6 @@
 
     AK_free(addresses);
     AK_free(temp);
-    // AK_free(t_header);
     AK_EPI;
 }
 
@@ -399,7 +377,6 @@
 
     while (addresses->address_from[ i ] != 0)
     {
-
         for (j = addresses->address_from[ i ]; j < addresses->address_to[ i ]; j++)
         {
 
@@ -448,7 +425,6 @@
     }
     AK_EPI;
     return add_root;
-    AK_free(add_root);
 }
 
 
@@ -496,7 +472,7 @@
     table_addresses *addresses = (table_addresses*) AK_get_index_addresses(indexName);
     if (addresses->address_from[ 0 ] == 0)
     {
-        printf("There is no index for table: %s on attribute: %s", tableName, attributeName);
+        printf("There is no index for table: %s on attribute: %s\n", tableName, attributeName);
     }
     else
     {
@@ -547,69 +523,66 @@
     i = 0;
     for (i = 0; i < num_attr; i++)
     {
-            if (strcmp((temp_head + i)->att_name, attributeValue) == 0)
-            {
-                posNew = i;
-            }
+        if (strcmp((temp_head + i)->att_name, attributeValue) == 0)
+        {
+            posNew = i;
         }
+    }
 
-        if (posNew == -1)
-        {
-            printf("Update is posible ONLY for existing values! \n");
-            AK_EPI;
-            exit(1);
-        }
+    if (posNew == -1)
+    {
+        printf("Update is posible ONLY for existing values! \n");
+        AK_EPI;
+        exit(1);
+    }
 
-        table_addresses *addresses = (table_addresses*) AK_get_index_addresses(indexName);
-        if (addresses->address_from[ 0 ] == 0)
+    table_addresses *addresses = (table_addresses*) AK_get_index_addresses(indexName);
+    if (addresses->address_from[ 0 ] == 0)
+    {
+        printf("There is no index for table : %s on attribute: %s\n", tableName, attributeName);
+    }
+    else
+    {
+        for (b = 0; b < num_attr; b++)
         {
-            printf("There is no index for table : %s on attribute: %s", tableName, attributeName);
-        }
-        else
-        {
-            for (b = 0; b < num_attr; b++)
+            if (strcmp((temp_head + b)->att_name, attributeValue) == 0)
             {
-                if (strcmp((temp_head + b)->att_name, attributeValue) == 0)
+                i = 0;
+                while (addresses->address_from[ i ] != 0)
                 {
-                    i = 0;
-                    while (addresses->address_from[ i ] != 0)
+                    for (j = addresses->address_from[ i ]; j < addresses->address_to[ i ]; j++)
                     {
-                        for (j = addresses->address_from[ i ]; j < addresses->address_to[ i ]; j++)
+                        AK_block *temp = (AK_block*) AK_read_block(j);
+
+                        for (k = 0; k < DATA_BLOCK_SIZE; k = k + num_attr)
                         {
-                            AK_block *temp = (AK_block*) AK_read_block(j);
-
-                            for (k = 0; k < DATA_BLOCK_SIZE; k = k + num_attr)
+                            if (temp->tuple_dict[ k ].size > 0)
                             {
-                                if (temp->tuple_dict[ k ].size > 0)
+                                memcpy(&temp_adr_block, &(temp->data[ temp->tuple_dict[ k ].address]), temp->tuple_dict[k].size);
+                                memcpy(&temp_adr_Td, &(temp->data[ temp->tuple_dict[ k + 1 ].address]), temp->tuple_dict[k + 1].size);
+                                printf("%i vs.%i, %i vs %i\n",temp_adr_block,addBlock,temp_adr_Td,addTd);
+
+                                if ((temp_adr_block == addBlock) && (temp_adr_Td == addTd))
                                 {
-                                    memcpy(&temp_adr_block, &(temp->data[ temp->tuple_dict[ k ].address]), temp->tuple_dict[k].size);
-                                    memcpy(&temp_adr_Td, &(temp->data[ temp->tuple_dict[ k + 1 ].address]), temp->tuple_dict[k + 1].size);
-                                    printf("%i vs.%i, %i vs %i\n",temp_adr_block,addBlock,temp_adr_Td,addTd);
+                                    printf( "Block address: %d, Td address: %d segment:%i \n", temp_adr_block, temp_adr_Td, temp->address );
 
-                                    if ((temp_adr_block == addBlock) && (temp_adr_Td == addTd))
-                                    {
-                                        printf( "Block address: %d, Td address: %d segment:%i \n", temp_adr_block, temp_adr_Td, temp->address );
+                                    memcpy(&(temp->data[ temp->tuple_dict[ k + pos ].address]), "n", 1);
+                                    memset(&(temp->data[ temp->tuple_dict[ k + posNew ].address]), 0, 4);
+                                    memcpy(&(temp->data[ temp->tuple_dict[ k + posNew ].address]), "1", 1);                                
 
-                                        memcpy(&(temp->data[ temp->tuple_dict[ k + pos ].address]), "n", 1);
-                                        memset(&(temp->data[ temp->tuple_dict[ k + posNew ].address]), 0, 4);
-                                        memcpy(&(temp->data[ temp->tuple_dict[ k + posNew ].address]), "1", 1);                                
-                                        
-					AK_PRO;
-
-                                        AK_write_block(temp);
-                                    }
+                                    AK_write_block(temp);
                                 }
                             }
-
                         }
-                        i++;
                     }
+                    i++;
                 }
             }
         }
-        printf("Index %s updated for %s table\n",indexName,tableName);
-        AK_EPI;
     }
+    printf("Index %s updated for %s table\n",indexName,tableName);
+    AK_EPI;
+}
 
 /**
  * @author Saša Vukšić
@@ -703,7 +676,7 @@
     AK_PRO;
     temp_head = AK_get_header(tblName);
     num_attr = AK_num_attr(tblName);
-    printf("Number of attributes in header: %d", num_attr);
+    printf("Number of attributes in header: %d\n", num_attr);
     printf("\n");
     for (i = 0; i < num_attr; i++)
         printf("%-10s", (temp_head + i)->att_name);
@@ -736,6 +709,7 @@
  TestResult AK_bitmap_test()
  {
     int id_prof;
+    int tel_value;
     struct list_node *row_root = (struct list_node *) AK_malloc(sizeof (struct list_node));
 
 
@@ -748,13 +722,11 @@
     //CREATING BITMAP INDEXES ON ATTRIBUTES FIRSTNAME AND TEL
     struct list_node *att_root = (struct list_node *) AK_malloc(sizeof (struct list_node));
     AK_Init_L3(&att_root);
-    //Error: argument of type "const char *" is incompatible with parameter of type "void *"
     AK_Insert_New_Element(TYPE_VARCHAR, "firstname", tblName, "firstname", att_root);
     
 
     struct list_node *some_element;
     some_element = (struct list_node *) AK_First_L2(att_root);
-    //Error: argument of type "const char *" is incompatible with parameter of type "void *"
     AK_Insert_New_Element(TYPE_VARCHAR, "tel", tblName, "tel", some_element);
     AK_create_Index_Table(tblName, att_root);
 
@@ -778,17 +750,13 @@
     printf("\n\n************Updating table indexes******************\n\n");
     AK_Init_L3(&row_root);
     id_prof = 35890;
+    tel_value = 42390858;
     AK_DeleteAll_L3(&row_root);
     AK_Insert_New_Element(TYPE_INT, &id_prof, tblName, "id_prof", row_root);
-    //Error: argument of type "const char *" is incompatible with parameter of type "void *"
     AK_Insert_New_Element(TYPE_VARCHAR, "Miran", tblName, "firstname", row_root);
-        //Error: argument of type "const char *" is incompatible with parameter of type "void *"
     AK_Insert_New_Element(TYPE_VARCHAR, "Zlatović", tblName, "lastname", row_root);
-        //Error: argument of type "const char *" is incompatible with parameter of type "void *"
-    AK_Insert_New_Element(TYPE_INT, "042390858", tblName, "tel", row_root);
-        //Error: argument of type "const char *" is incompatible with parameter of type "void *"
+    AK_Insert_New_Element(TYPE_INT, &tel_value, tblName, "tel", row_root);
     AK_Insert_New_Element(TYPE_VARCHAR, "miran.zlatovic@foi.hr", tblName, "email", row_root);
-        //Error: argument of type "const char *" is incompatible with parameter of type "void *"
     AK_Insert_New_Element(TYPE_VARCHAR, "www.foi.hr/nastavnici/zlatovic.miran/index.html", tblName, "web_page", row_root);
     AK_insert_row(row_root);
     AK_DeleteAll_L3(&row_root);
