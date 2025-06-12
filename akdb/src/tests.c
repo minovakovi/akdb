@@ -54,6 +54,7 @@
 #include "auxi/iniparser.h"
 #include "file/blobs.h"
 #include "sql/trigger.h"
+#include "sql/python_proc.h"
 #include "sql/privileges.h"
 #include "trans/transaction.h"
 #include "rec/recovery.h"
@@ -135,6 +136,7 @@ Test tests[] = {
 {"sql: AK_trigger", &AK_trigger_test}, //sql/trigger.c
 {"sql: AK_unique", &AK_unique_test}, //sql/cs/unique.c //old 44, new 46
 {"sql: AK_function", &AK_function_test}, //sql/function.c //old 45, new 47
+{"sql: AK_python_proc", &AK_python_proc_test}, //sql/python_proc.c
 {"sql: AK_privileges", &AK_privileges_test}, //sql/privileges.c
 {"sql: AK_reference", &AK_reference_test}, //sql/cs/reference.c //old 47, new 49
 {"sql: AK_constraint_between", &AK_constraint_between_test}, //sql/cs/between.c

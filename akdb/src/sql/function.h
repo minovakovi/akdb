@@ -27,6 +27,10 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include "../file/fileio.h"
 #include "../file/table.h"
 
+// Language constants for procedural functions
+#define LANG_C          0
+#define LANG_PYTHON     1
+
 /**
  * @author Unknown, updated by Jurica Hlevnjak - check function arguments included for drop purpose, updated by Tomislav Ilisevic
  * @brief Function that gets obj_id of a function by name and arguments list (transferred from trigger.c/drop.c).
@@ -121,6 +125,12 @@ int AK_function_rename(char *name, struct list_node *arguments_list, char *new_n
  */
 int AK_function_change_return_type(char *name, struct list_node *arguments_list, int new_return_type);
 TestResult AK_function_test();
+
+// Procedural language support
+int AK_function_add_with_language(char *name, int return_type, struct list_node *arguments_list, int language, char *code);
+int AK_function_get_language(int function_id);
+char* AK_function_get_code(int function_id);
+int AK_function_execute_procedural(int function_id, struct list_node *arguments, struct list_node *old_vals, struct list_node *new_vals, char *table, char *event);
 
 /**
  * @author Andrej Hrebak Pajk
