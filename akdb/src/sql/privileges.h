@@ -298,6 +298,32 @@ int AK_remove_role_from_group(char *group_name, char *role_name);
  */
 int AK_check_group_privilege_via_roles(char *group_name, char *table, char *privilege);
 
+/**
+ * @author Marko Kir
+ * @brief Checks if a group has a specific privilege via roles
+ * @param group_name Name of the group
+ * @param table Name of the table
+ * @param privilege Privilege to check
+ * @return EXIT_SUCCESS if the group has the privilege, otherwise EXIT_ERROR
+ */
+int AK_check_group_privilege_via_roles(char *group_name, char *table, char *privilege);
+
+/**
+ * @author Marko Kir
+ * @brief Removes all roles assigned to a user
+ * @param username Name of the user
+ * @return EXIT_SUCCESS or EXIT_ERROR
+ */
+int AK_remove_all_roles_from_user(char *username);
+
+/**
+ * @author Marko Kir
+ * @brief Removes all roles assigned to a group
+ * @param group_name Name of the group
+ * @return EXIT_SUCCESS or EXIT_ERROR
+ */
+int AK_remove_all_roles_from_group(char *group_name);
+
 TestResult AK_privileges_test();
 
 #endif
