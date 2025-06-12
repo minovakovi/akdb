@@ -181,7 +181,7 @@ int AK_insert_row(struct list_node *row_root)
     AK_dbg_messg(HIGH, FILE_MAN, "insert_row: Start testing reference integrity.\n");
 
     // recovery checkpoint
-    AK_add_to_redolog(INSERT, row_root);
+    AK_add_to_redolog_universal(INSERT, row_root);
 
     if (AK_reference_check_entry(row_root) == EXIT_ERROR)
     {
