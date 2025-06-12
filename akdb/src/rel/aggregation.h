@@ -21,6 +21,7 @@
 #define AGGREGATION
 
 #include "../auxi/test.h"
+#include "../auxi/auxiliary.h"  // Dodano zbog definicija list_node i drugih struktura
 #include "selection.h"
 #include "projection.h"
 #include "../file/filesearch.h"
@@ -65,17 +66,18 @@ typedef struct {
     int agg_task;
 } GroupByAttribute;
 
-
 /**
   * @author Unknown
   * @struct AK_agg_value
-  * @brief Structure that contains atribute name, date and aggregation task associated
+  * @brief Structure that contains attribute name, data and aggregation task associated
   */
 typedef struct {
     char att_name[MAX_ATT_NAME];
     char data[ MAX_VARCHAR_LENGTH ];
+    int type;      // Dodano polje type jer ga koristiš u .c datoteci
     int agg_task;
 } AK_agg_value;
+
 /**
   * @author Unknown
   * @struct AK_agg_input
@@ -95,6 +97,7 @@ typedef struct {
 typedef struct{
     struct list_node * row_root;
 } rowroot_struct;
+
 /**
   * @author Ena Dujak
   * @struct projection_att_struct
@@ -158,14 +161,14 @@ void AK_agg_input_fix(AK_agg_input *input);
    @author Dejan Frankovic
    @brief Function that aggregates a given table by given attributes. Firstly, AGG_TASK_AVG_COUNT and
           AGG_TASK_AVG_SUM are put on the beginning of the input object. Then for loop iterates through
-          input tasks and assignes the type of aggregation operation according to aggregation operation.
+          input tasks and assigns the type of aggregation operation according to aggregation operation.
 	  New table has to be created. For loop goes through given table. GROUP operation is executed separately
 	  from other operations. Addresses of records are put in needed_values array and
 	  results are put in new table.
-   @param input input object with list of atributes by which we aggregate and types of aggregations
+   @param input input object with list of attributes by which we aggregate and types of aggregations
    @param source_table - table name for the source table
    @param agg_table  table name for aggregated table
-   @return EXIT_SUCCESS if continues succesfuly, when not EXIT_ERROR
+   @return EXIT_SUCCESS if continues successfully, when not EXIT_ERROR
 
  */
 int AK_aggregation(AK_agg_input *input, char *source_table, char *agg_table);
