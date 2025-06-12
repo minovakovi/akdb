@@ -164,6 +164,7 @@ void AK_define_tarjan_graph();
  * @return the number of digits for the given number
  */
 int AK_chars_num_from_number(int number, int base);
+int AK_chars_num_from_float(float float_value);
 
 /**
  * @author Miroslav Policki

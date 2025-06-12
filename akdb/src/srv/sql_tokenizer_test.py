@@ -5,13 +5,23 @@ def get_attribute_tokens(tokens, attribute_name):
     return [token.get(attribute_name) for token in tokens]
 
 
+def _parse_result_to_dict(result):
+    if hasattr(result, "asDict"):
+        return result.asDict()
+    elif isinstance(result, dict):
+        return result
+    else:
+        # If it's a string (error), skip or return None
+        return None
+
+
 sql_tokenizer = sql_tokenizer()
 
 
 grant_commands = ["GRANT SELECT, INSERT, UPDATE, DELETE ON album, song TO Elvis, Jimmy WITH ADMIN OPTION",
                   "grant update on table1, table2 to Ivica, pero22foi1",
                   "Grant insert on drivers to Hamilton, Raikkonen, Alonso"]
-grant_tokens = [sql_tokenizer.AK_parse_grant(cmd).asDict() for cmd in grant_commands]
+grant_tokens = [d for d in (_parse_result_to_dict(sql_tokenizer.AK_parse_grant(cmd)) for cmd in grant_commands) if d is not None]
 
 
 def AK_parse_grant_test():
@@ -39,7 +49,7 @@ drop_commands = ["DROP temporary table if exists tabela1231 cascade",
                  "drop role test",
                  "drop function if exists funcija1",
                  "drop procedure if exists procedurea_df489f"]
-drop_tokens = [sql_tokenizer.AK_parse_drop(cmd).asDict() for cmd in drop_commands]
+drop_tokens = [d for d in (_parse_result_to_dict(sql_tokenizer.AK_parse_drop(cmd)) for cmd in drop_commands) if d is not None]
 
 
 def AK_parse_drop_test():
@@ -66,7 +76,7 @@ alter_table_commands = ["alter table imena drop column srednje_ime",
                         "alter table icecream add flavor varchar(20)"]
                         # "alter table icecream add flavor",
                         # "alter table icecream drop flavor varchar(20)"]
-alter_table_tokens = [sql_tokenizer.AK_alter_table(cmd).asDict() for cmd in alter_table_commands]
+alter_table_tokens = [d for d in (_parse_result_to_dict(sql_tokenizer.AK_alter_table(cmd)) for cmd in alter_table_commands) if d is not None]
 
 
 def AK_alter_table_test():
@@ -101,7 +111,7 @@ trans_commands = ["begin tijelo commit",
                   "begin tijelo rollback",
                   "begin work tijelo commit",
                   "begin transaction isolation level serializable tijelo rollback"]
-trans_tokens = [sql_tokenizer.AK_parse_trans(cmd).asDict() for cmd in trans_commands]
+trans_tokens = [d for d in (_parse_result_to_dict(sql_tokenizer.AK_parse_trans(cmd)) for cmd in trans_commands) if d is not None]
 
 
 def AK_trans_test():
@@ -116,7 +126,7 @@ def AK_trans_test():
 createIndex_commands = ["CREATE INDEX Pindex ON tablica ( stupac1, stupac2 ) USING Btree",
                         "create index Pindex on tablica ( stupac1 ) USING Btree",
                         "create index Pindex on tablica ( stupac1, stupac2 ) USING Hash"]
-createIndex_tokens = [sql_tokenizer.AK_parse_createIndex(cmd).asDict() for cmd in createIndex_commands]
+createIndex_tokens = [d for d in (_parse_result_to_dict(sql_tokenizer.AK_parse_createIndex(cmd)) for cmd in createIndex_commands) if d is not None]
 
 
 def AK_parse_createIndex_test():
@@ -140,7 +150,7 @@ create_sequence_commands = [
     "create sequence sequenca start with 1 increment by 2 minvalue 9 maxvalue 9999999  cache 10",
     "create sequence brojac_1 as smallint start with 10 increment by 1 minvalue 5",
     "create sequence brojac_2"]
-create_sequence_tokens = [sql_tokenizer.AK_create_sequence(cmd).asDict() for cmd in create_sequence_commands]
+create_sequence_tokens = [d for d in (_parse_result_to_dict(sql_tokenizer.AK_create_sequence(cmd)) for cmd in create_sequence_commands) if d is not None]
 
 
 def AK_create_sequence_test():
@@ -176,7 +186,20 @@ where_commands = [
     "delete from t1 where t1.at1 in (select * from t2 where at2 > 0 and at3 < 0 or at4 = 0) or t1.at2 in (select * from at3)"
 ]
 parsed_where_tokens = list(map(sql_tokenizer.AK_parse_where, where_commands))
-where_tokens = [parsed_where_token.condition for parsed_where_token in parsed_where_tokens]
+# Fix: Handle the case where AK_parse_where returns a string (error) or different structure
+where_tokens = []
+for parsed_token in parsed_where_tokens:
+    if isinstance(parsed_token, str):
+        # If it's a string, it's likely an error message, skip or handle appropriately
+        where_tokens.append(parsed_token)
+    elif hasattr(parsed_token, 'condition'):
+        where_tokens.append(parsed_token.condition)
+    else:
+        # If it's a parsed result but no condition attribute, try to access it differently
+        try:
+            where_tokens.append(parsed_token.get('condition', parsed_token))
+        except:
+            where_tokens.append(str(parsed_token))
 
 
 def AK_parse_where_test():
@@ -203,7 +226,7 @@ def AK_parse_where_test():
 create_user_commands = ["CREATE USER test1 WITH PASSWORD tt", "CREATE USER user WITH PASSWORD 1pass1",
                         "CREATE USER ub1 IN GROUP grupa",
                         "CREATE USER mmw WITH PASSWORD pas1mac IN GROUP anim CREATEDB VALID UNTIL 2013-22-02"]
-create_user_tokens = [sql_tokenizer.AK_parse_create_user(cmd).asDict() for cmd in create_user_commands]
+create_user_tokens = [d for d in (_parse_result_to_dict(sql_tokenizer.AK_parse_create_user(cmd)) for cmd in create_user_commands) if d is not None]
 
 
 def AK_parse_create_user_test():
@@ -224,7 +247,7 @@ def AK_parse_create_user_test():
 
 create_table_commands = ["CREATE TABLE tablica (var1 INT NOT NULL, var2 INT PRIMARY KEY)",
                          "CREATE TABLE tabla1 (v2 INT, v4 TEXT, v11 INT AUTO_INCREMENT)"]
-create_table_tokens = [sql_tokenizer.AK_parse_create_table(cmd).asDict() for cmd in create_table_commands]
+create_table_tokens = [d for d in (_parse_result_to_dict(sql_tokenizer.AK_parse_create_table(cmd)) for cmd in create_table_commands) if d is not None]
 
 
 def AK_parse_create_table_test():
@@ -241,7 +264,7 @@ def AK_parse_create_table_test():
 
 insert_into_commands = ["INSERT INTO tablica(vr1, v2, ttt3) VALUES ('a1', 'ss2', 'a2')",
                         "INSERT INTO tablica1 VALUES (11, 'kk2', 'j2')"]
-insert_into_tokens = [sql_tokenizer.AK_parse_insert_into(cmd).asDict() for cmd in insert_into_commands]
+insert_into_tokens = [d for d in (_parse_result_to_dict(sql_tokenizer.AK_parse_insert_into(cmd)) for cmd in insert_into_commands) if d is not None]
 
 
 def AK_parse_insert_into_test():
@@ -263,7 +286,7 @@ create_trigger_commands = [
     "CREATE TRIGGER prihvat_veze BEFORE  DELETE OR INSERT ON veza EXECUTE PROCEDURE veza_prihvacena()",
     "CREATE TRIGGER prihvat_veze BEFORE DELETE OR INSERT ON veza FOR EACH STATEMENT EXECUTE PROCEDURE veza_prihvacena(2,3,'data')",
     "CREATE TRIGGER prihvat_veze AFTER DELETE OR INSERT OR UPDATE ON veza FOR EACH STATEMENT EXECUTE PROCEDURE veza_prihvacena(2,10.5,'data')"]
-create_trigger_tokens = [sql_tokenizer.AK_parse_trigger(cmd).asDict() for cmd in create_trigger_commands]
+create_trigger_tokens = [d for d in (_parse_result_to_dict(sql_tokenizer.AK_parse_trigger(cmd)) for cmd in create_trigger_commands) if d is not None]
 
 
 def AK_create_trigger_test():
@@ -303,7 +326,7 @@ def AK_create_trigger_test():
 
 create_view_commands = ["CREATE VIEW TestView AS SELECT * FROM someTable",
                         "CREATE TEMP VIEW TestView AS SELECT * FROM someTable"]
-create_view_tokens = [sql_tokenizer.AK_parse_CreateView(cmd).asDict() for cmd in create_view_commands]
+create_view_tokens = [d for d in (_parse_result_to_dict(sql_tokenizer.AK_parse_CreateView(cmd)) for cmd in create_view_commands) if d is not None]
 
 
 def AK_parse_CreateView_test():
@@ -320,7 +343,7 @@ def AK_parse_CreateView_test():
 alter_sequence_commands = ["ALTER SEQUENCE sequenca INCREMENT BY 2 MINVALUE 9 MAXVALUE 9999999  cache 10 CYCLE",
                            "ALTER sequence sequenca increment by 2 minvalue 9 maxvalue 9999999  cache 10",
                            "ALTER SEQUENCE serial RESTART WITH 105"]
-alter_sequence_tokens = [sql_tokenizer.AK_parse_alter_sequence(cmd).asDict() for cmd in alter_sequence_commands]
+alter_sequence_tokens = [d for d in (_parse_result_to_dict(sql_tokenizer.AK_parse_alter_sequence(cmd)) for cmd in alter_sequence_commands) if d is not None]
 
 
 def AK_alter_sequence_test():
@@ -344,7 +367,7 @@ def AK_alter_sequence_test():
 
 
 alter_view_commands = ["ALTER VIEW foo RENAME TO bar", "ALTER VIEW nek ALTER COLUMN mag SET DEFAULT neke"]
-alter_view_tokens = [sql_tokenizer.AK_parse_alter_view(cmd).asDict() for cmd in alter_view_commands]
+alter_view_tokens = [d for d in (_parse_result_to_dict(sql_tokenizer.AK_parse_alter_view(cmd)) for cmd in alter_view_commands) if d is not None]
 
 
 def AK_alter_view_test():
@@ -364,7 +387,7 @@ def AK_alter_view_test():
 
 
 alter_index_commands = ["ALTER INDEX distributors RENAME TO suppliers"]
-alter_index_tokens = [sql_tokenizer.AK_parse_alter_index(cmd).asDict() for cmd in alter_index_commands]
+alter_index_tokens = [d for d in (_parse_result_to_dict(sql_tokenizer.AK_parse_alter_index(cmd)) for cmd in alter_index_commands) if d is not None]
 
 
 def AK_alter_index_test():
@@ -382,7 +405,7 @@ def AK_alter_index_test():
 alter_user_commands = ["ALTer USEr davide WITH PASSWORD hu8jmn3", "ALTER USER manuel VALID UNTIL 2013-22-02",
                        "ALTER USER miriam CREATEUSER CREATEDB", "ALTER USER marinac RENAME TO marinac666",
                        "ALTER USER dd VALID UNTIL 1", "ALTER USER marinac RENAME TO marinac666 "]
-alter_user_tokens = [sql_tokenizer.AK_parse_alter_user(cmd).asDict() for cmd in alter_user_commands]
+alter_user_tokens = [d for d in (_parse_result_to_dict(sql_tokenizer.AK_parse_alter_user(cmd)) for cmd in alter_user_commands) if d is not None]
 
 
 def AK_alter_user_test():

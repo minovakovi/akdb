@@ -1,3 +1,8 @@
+import sys
+import os
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../../swig')))
+
 import kalashnikovDB as AK47
 import re
 
@@ -8,8 +13,17 @@ import re
 # table_details_command
 # defines the structure of table details command and its execution
 class Table_details_command:
+    """
+    Handles table details command.
 
-    table_details_regex = r"^\\d\s+([a-zA-Z0-9_]+)\s*$"
+    >>> cmd = Table_details_command()
+    >>> cmd.matches('1 students') is not None
+    True
+    >>> cmd.execute('1 students') # doctest: +SKIP
+    # Output depends on C extension
+    """
+
+    table_details_regex = r"^\d+\s+[a-zA-Z0-9_]+\s*$"
     pattern = None
     matcher = None
 
@@ -34,8 +48,17 @@ class Table_details_command:
 # table_exists_command
 # defines the structure of table exists command and its execution
 class Table_exists_command:
+    """
+    Handles table exists command.
 
-    table_details_regex = r"^\\t\s+([a-zA-Z0-9_]+)\?\s*$"
+    >>> cmd = Table_exists_command()
+    >>> cmd.matches('\t students?') is not None
+    True
+    >>> cmd.execute() # doctest: +SKIP
+    # Output depends on C extension
+    """
+
+    table_details_regex = r"^[ \t]+[a-zA-Z0-9_]+\?\s*$"
     pattern = None
     matcher = None
 
@@ -54,3 +77,7 @@ class Table_exists_command:
         else:
             result = "Table exists. You can see it by typing \p <table_name>."
         return result
+
+if __name__ == "__main__":
+    import doctest
+    doctest.testmod()

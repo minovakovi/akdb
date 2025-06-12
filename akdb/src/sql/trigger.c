@@ -18,6 +18,7 @@
  */
 
 #include "trigger.h"
+#include "python_proc.h"
 
 /**
  * @author Unknown, updated by Mario Peroković, fixed by Josip Susnjara

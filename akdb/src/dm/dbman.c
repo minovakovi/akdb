@@ -1237,8 +1237,14 @@ AK_copy_header(AK_header *header, int* blockSet, int blockSetSize)
   
   AK_PRO;
   
-  while(header[atts].type != TYPE_INTERNAL){
+  while(atts < MAX_ATTRIBUTES && header[atts].type != TYPE_INTERNAL){
   		atts++;
+  }
+  
+  // If we hit MAX_ATTRIBUTES without finding TYPE_INTERNAL, assume end of header
+  if (atts >= MAX_ATTRIBUTES) {
+    AK_dbg_messg(HIGH, DB_MAN, "Warning: Header terminator not found, assuming %d attributes\n", MAX_ATTRIBUTES);
+    atts = MAX_ATTRIBUTES;
   }
   blocks_per_row = 1 + (atts - 1) / MAX_ATTRIBUTES;
   
@@ -1250,9 +1256,11 @@ AK_copy_header(AK_header *header, int* blockSet, int blockSetSize)
   		for(k = 0; k < MAX_ATTRIBUTES && (i * MAX_ATTRIBUTES + k < atts); k++){
 	  		temp = (AK_header*) AK_create_header(header[cur_attr].att_name, header[cur_attr].type, FREE_INT, FREE_CHAR, FREE_CHAR);
 			memcpy(t_header[i] + k, temp, sizeof ( AK_header));
+			AK_free(temp); // Fix memory leak: free allocated header
 			cur_attr++;
 	  	}
 	  	temp = (AK_header*) AK_create_header("test", TYPE_INTERNAL, FREE_INT, FREE_CHAR, FREE_CHAR);
+	  	AK_free(temp); // Fix memory leak: free allocated header
 	  	memset(t_header[i] + k, 0, MAX_ATTRIBUTES - k);
 	  	
   }
@@ -1263,6 +1271,8 @@ AK_copy_header(AK_header *header, int* blockSet, int blockSetSize)
       block = AK_read_block(blockSet[j]);
       if(j + 1 < blockSetSize){
       		next_block = AK_read_block(blockSet[j + 1]);
+      } else {
+      		next_block = NULL; // No next block available
       }
 
       //@TODO the check fails second time around if the table has MAX_ATTRIBUTES
@@ -1275,7 +1285,7 @@ AK_copy_header(AK_header *header, int* blockSet, int blockSetSize)
       block->type = BLOCK_TYPE_NORMAL;
       block->AK_free_space = 0;
       block->last_tuple_dict_id = 0;
-      if(j % blocks_per_row != (blocks_per_row - 1) && blocks_per_row > 1){
+      if(j % blocks_per_row != (blocks_per_row - 1) && blocks_per_row > 1 && next_block != NULL){
       		block->chained_with = next_block->address;
       }
       else{
@@ -1287,10 +1297,12 @@ AK_copy_header(AK_header *header, int* blockSet, int blockSetSize)
 	  num_blocks++;
 	}
       
+      // Free block memory after processing this iteration
+      AK_free(block);
+      if(next_block != NULL) {
+      		AK_free(next_block);
+      }
     }
-    
-    AK_free(block);
-    AK_free(next_block);
   
   AK_EPI;
   return num_blocks;
