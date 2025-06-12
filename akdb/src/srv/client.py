@@ -84,6 +84,81 @@ class Client:
         while self.working:
             try:
                 cmd = input("akdb> ")
+                if cmd == "?":  # Provjera za unos '?'
+                    print("Available commands:")
+                    print("\n== General Commands ==")
+                    print("  q               - Quit the client")
+                    print("  ?               - Show this help message")
+                    print("  clearhistory    - Clear command history")
+                    print("  time            - Show current time")
+                    print("  history         - List all previously typed commands")
+                    print("  help            - Show detailed help")
+                    print("  quiz            - Start a quiz")
+                    
+                    print("\n== Table Commands ==")
+                    print("  \\p              - Print table command")
+                    print("  \\ps             - Print system table command")
+                    print("  \\d              - Table details command")
+                    print("  \\t              - Check if table exists")
+                    print("  \\q              - Disconnect from the server and quit akdb client")
+                    print("  create table []    - Create a new table")
+                    print("  drop table  []    - Drop a table")
+                    print("  alter table  []   - Alter an existing table")
+                    print("  truncate        - Remove all records from a table")
+                    
+                    print("\n== Data Manipulation Commands ==")
+                    print("  select          - Retrieve data from a table")
+                    print("  insert into     - Insert values into a table")
+                    print("  update          - Update existing records in a table")
+                    print("  delete          - Delete records from a table")
+                    
+                    print("\n== Schema Objects Commands ==")
+                    print("  create index    - Create an index")
+                    print("  alter index     - Modify an existing index")
+                    print("  create sequence - Create a sequence")
+                    print("  alter sequence  - Modify an existing sequence")
+                    print("  create view     - Create a view")
+                    print("  alter view      - Modify an existing view")
+                    print("  create trigger  - Create a trigger")
+                    print("  alter trigger   - Modify a trigger")
+                    print("  create function - Create a function")
+                    print("  alter function  - Modify a function")
+                    
+                    print("\n== User Management Commands ==")
+                    print("  create user     - Create a new user")
+                    print("  alter user      - Modify a user")
+                    print("  create group    - Create a group")
+                    print("  grant           - Grant privileges on a table")
+                    print("  revoke          - Remove privileges from a user or group")
+                    
+                    print("\n== Transaction Commands ==")
+                    print("  begin           - Start a transaction block")
+                    print("  commit          - Commit the current transaction")
+                    print("  rollback        - Abort the current transaction")
+                    print("  savepoint       - Define a savepoint within a transaction")
+                    
+                    print("\n== Database Commands (Planned) ==")
+                    print("  create database - Create a new database")
+                    print("  alter database  - Modify a database")
+                    print("  backup database - Create a backup of a database")
+                    print("  drop database   - Delete a database")
+                    
+                    print("\n== Other Commands (Planned) ==")
+                    print("  comment         - Add a comment to a database object")
+                    print("  vacuum          - Clean and optimize a database")
+                    print("  lock            - Lock a table")
+                    print("  cluster         - Cluster a table according to an index")
+                    print("  checkpoint      - Force a transaction log checkpoint")
+                    print("  analyze         - Collect statistics about a database")
+                    print("  abort           - Abort the current transaction")
+                    print("  create domain   - Create a domain")
+                    print("  drop domain     - Remove a domain")
+                    
+                    continue  # Preskoči daljnju obradu i nastavi petlju
+                if cmd.lower() == "q":  # Provjera za unos 'q'
+                    print("Exiting client...")
+                    self.working = False
+                  
                 if cmd.lower() == "clearhistory":
                     self.command_history = []
                     print("History cleared.")
