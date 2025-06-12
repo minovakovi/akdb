@@ -15,7 +15,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
 /**
- @file drop.h Header file that provides data structures, functions and defines for unique constraint
+ @file drop.h Header file that provides data structures, functions and defines for DROP operations.
 */
 
 #ifndef DROP
@@ -45,6 +45,7 @@ typedef struct drop_arguments AK_drop_arguments;
 
 /**
  * @author Unknown, Jurica Hlevnjak, updated by Tomislav Ilisevic, Maja Vračan, Fran Turković
+ * @updated by Antonio Brković
  * @brief Function for DROP table, index, view, sequence, trigger, function, user, group and constraint.
  * @param type drop type
  * @param drop_arguments arguments of DROP command
@@ -53,89 +54,83 @@ int AK_drop(int type, AK_drop_arguments *drop_arguments);
 
 /**
  * @author Fran Turković
- * @brief Drop function that deletes specific table
- * @param drop_arguments arguments of DROP command 
+ * @updated by Antonio Brković
  */
 int AK_drop_table(AK_drop_arguments *drop_arguments);
 
 /**
  * @author Fran Turković
- * @brief Drop function that deletes specific index
- * @param drop_arguments arguments of DROP command 
+ * @updated by Antonio Brković
  */
 int AK_drop_index(AK_drop_arguments *drop_arguments);
 
 /**
  * @author Fran Turković
- * @brief Drop function that deletes specific view
- * @param drop_arguments arguments of DROP command 
+ * @updated by Antonio Brković
  */
 int AK_drop_view(AK_drop_arguments *drop_arguments);
 
 /**
  * @author Fran Turković
- * @brief Drop function that deletes specific sequence
- * @param drop_arguments arguments of DROP command 
+ * @updated by Antonio Brković
  */
 int AK_drop_sequence(AK_drop_arguments *drop_arguments);
 
 /**
  * @author Fran Turković
- * @brief Drop function that deletes specific trigger
- * @param drop_arguments arguments of DROP command 
+ * @updated by Antonio Brković
  */
 int AK_drop_trigger(AK_drop_arguments *drop_arguments);
 
 /**
  * @author Fran Turković
- * @brief Drop function that deletes specific function
- * @param drop_arguments arguments of DROP command 
+ * @updated by Antonio Brković
  */
 int AK_drop_function(AK_drop_arguments *drop_arguments);
 
 /**
  * @author Fran Turković
- * @brief Drop function that deletes specific user
- * @param drop_arguments arguments of DROP command 
+ * @updated by Antonio Brković
  */
 int AK_drop_user(AK_drop_arguments *drop_arguments);
 
 /**
  * @author Fran Turković
- * @brief Drop function that deletes specific group
- * @param drop_arguments arguments of DROP command 
+ * @updated by Antonio Brković
  */
 int AK_drop_group(AK_drop_arguments *drop_arguments);
 
 /**
  * @author Fran Turković
- * @brief Drop function that deletes specific group
- * @param drop_arguments arguments of DROP command 
+ * @updated by Antonio Brković
  */
 int AK_drop_constraint(AK_drop_arguments *drop_arguments);
 
 /**
- * @author unknown, Jurica Hlevnjak - fix bugs and reorganize code in this function
- * @brief Help function for the drop command. Delete memory blocks and addresses of table 
- * and removes table or index from system table.
- * @param tblName name of table or index
- * @param sys_table name of system catalog table
+ * @author unknown, Jurica Hlevnjak
+ * @updated by Antonio Brković
  */
 void AK_drop_help_function(char *tblName, char *sys_table);
 
 /**
- * @author Jurica Hlevnjak, updated by Tomislav Ilisevic
- * @brief Help function for checking if the element(view, function, sequence, user ...) exist in system catalog table
- * @param tblName name of table, index view, function, trigger, sequence, user, group or constraint
- * @param sys_table name of system catalog table
- * @return if element exist in system catalog returns 1, if not returns 0
+ * @author Jurica Hlevnjak
+ * @updated by Antonio Brković
  */
 int AK_if_exist(char *tblName, char *sys_table);
 
 /**
- * @author unknown, Jurica Hlevnjak - added all tests except drop table test, updated by Tomislav Ilisevic, Maja Vračan, Fran Turković
- * @brief Function for testing all DROP functions
+ * @author unknown, Jurica Hlevnjak
+ * @updated by Antonio Brković
  */
-TestResult AK_drop_test(); 
+TestResult AK_drop_test();
+
+/**
+ * @author Antonio Brković
+ * @brief Generic drop handler for entities with name and optional remove function
+ * @param drop_arguments drop argument list
+ * @param sys_table system catalog table name
+ * @param remove_fn optional remove function (may be NULL)
+ */
+int AK_generic_drop(AK_drop_arguments *drop_arguments, const char *sys_table, void (*remove_fn)(char*));
 
 #endif
