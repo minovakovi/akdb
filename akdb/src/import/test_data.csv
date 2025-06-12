@@ -1,0 +1,6 @@
+id,name,age,email,street,city,tags
+1,Alice,31,alice@example.com,"Ilica 15",Zagreb,admin;beta;early-bird
+2,Bob,27,bob@example.com,"Tkalčićeva 35",Zagreb,guest
+3,Karla,45,karla@example.com,"Savska cesta 120",Zagreb,editor;vip
+4,Djuro,22,djuro@example.com,"Vlaška ulica 45",Zagreb,student;new
+5,Eva,38,eva@example.com,"Martićeva 12",Zagreb,moderator;premium;beta

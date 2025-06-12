@@ -58,6 +58,9 @@
 #include "trans/transaction.h"
 #include "rec/recovery.h"
 #include "sql/view.h"
+// Import
+#include "json_importer.h"
+#include "csv_importer.h"
 
 // NUMBERS ARE FOR COUNTING OLD IS BASED ON COMMIT FROM 2018 AND OLDER WHILE NEW IS 2022
 //COUNTED BCS THE TESTING() FUNCTION A LOT OF STUFF IS BASED ON IF(NUMBER) WHICH IS DOESNT MAKE SENSE
@@ -148,9 +151,12 @@ Test tests[] = {
 //54
 //rec:
 //----------
-{"rec: AK_recovery", &AK_recovery_test} //rec/recovery.c
+{"rec: AK_recovery", &AK_recovery_test}, //rec/recovery.c
 //55
+{"import: JSON Importer", &json_importer_test}, // New JSON importer test
+{"import: CSV Importer", &csv_importer_test} // New CSV importer test
 };
+
 //here are all tests in a order like in the folders from the github
 void help()
 {

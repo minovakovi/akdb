@@ -86,3 +86,5 @@
 ./rel/nat_join.c
 ./rel/intersect.c
 ./main.c
+./import/json_importer.c
+./import/csv_importer.c

@@ -1,0 +1,28 @@
+[
+    {
+      "id": 1,
+      "name": "Djuro",
+      "profile": {
+        "age": 30,
+        "email": "djuro@djuro.com",
+        "address": {
+          "street": "Vukovarska 8",
+          "city": "Varazdin"
+        }
+      },
+      "tags": ["admin", "user"]
+    },
+    {
+      "id": 2,
+      "name": "Stef",
+      "profile": {
+        "age": 23,
+        "email": "stef@stef.com",
+        "address": {
+          "street": "Zagrebacka 56",
+          "city": "Vukovar"
+        }
+      },
+      "tags": ["user"]
+    }
+  ]
