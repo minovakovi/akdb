@@ -25,17 +25,6 @@
 #include "../../file/fileio.h"
 #include "../../file/files.h"
 
-/**
- * @author Unknown
- * @brief Function that initialises a linked list
- * @param list_ad *L linked list head
- * @return No return value
- * */
-void AK_InitializelistAd(list_ad *L) {
-    AK_PRO;
-    L->next = 0;
-    AK_EPI;
-}
 
 /**
  * @author Unknown
@@ -279,6 +268,36 @@ int AK_get_index_num_records(char *indexTblName) {
     return number_of_rows;
 }
 
+
+/**
+ * Helper function to validate input parameters
+ */
+static int AK_validate_tuple_params(int row, int column, char *indexTblName) {
+    int num_rows = AK_get_index_num_records(indexTblName);
+    int num_attr = AK_num_index_attr(indexTblName);
+    
+    return (row < num_rows && column < num_attr);
+}
+
+/**
+ * Helper function to read tuple data from block
+ */
+static struct list_node* AK_read_tuple_data(AK_mem_block *temp, int k, int column) {
+    int type = temp->block->tuple_dict[k + column].type;
+    int size = temp->block->tuple_dict[k + column].size;
+    int address = temp->block->tuple_dict[k + column].address;
+    char data[MAX_VARCHAR_LENGTH];
+    
+    struct list_node *row_root = (struct list_node *) AK_malloc(sizeof(struct list_node));
+    AK_Init_L3(&row_root);
+    
+    memcpy(data, &temp->block->data[address], size);
+    data[size] = '\0';
+    AK_InsertAtEnd_L3(type, data, size, row_root);
+    
+    return row_root;
+}
+
 /**
  * @author Matija Šestak, modified for indexes by Lovro Predovan
  * @brief Function that gets value in some row and column
@@ -290,46 +309,36 @@ int AK_get_index_num_records(char *indexTblName) {
 struct list_node *AK_get_index_tuple(int row, int column, char *indexTblName) {
     AK_PRO;
 
-    int num_rows = AK_get_index_num_records(indexTblName);
-    int num_attr = AK_num_index_attr(indexTblName);
-
-    if (row >= num_rows || column >= num_attr){
+    // Validate parameters
+    if (!AK_validate_tuple_params(row, column, indexTblName)) {
         AK_EPI;
         return NULL;
     }
 
     table_addresses *addresses = (table_addresses*) AK_get_index_addresses(indexTblName);
+    int num_attr = AK_num_index_attr(indexTblName);
+    int counter = -1;
 
-    struct list_node *row_root = (struct list_node *) AK_malloc(sizeof (struct list_node));
-    AK_Init_L3(&row_root);
-
-    int i, j, k, counter;
-    char data[ MAX_VARCHAR_LENGTH ];
-
-    i = 0;
-    counter = -1;
-    while (addresses->address_from[ i ] != 0) {
-        for (j = addresses->address_from[ i ]; j < addresses->address_to[ i ]; j++) {
+    // Search for requested tuple
+    for (int i = 0; addresses->address_from[i] != 0; i++) {
+        for (int j = addresses->address_from[i]; j < addresses->address_to[i]; j++) {
             AK_mem_block *temp = (AK_mem_block*) AK_get_block(j);
-            if (temp->block->last_tuple_dict_id == 0) break;
-            for (k = 0; k < DATA_BLOCK_SIZE; k += num_attr) {
-                if (temp->block->tuple_dict[k].size > 0)
+            if (temp->block->last_tuple_dict_id == 0) continue;
+            
+            for (int k = 0; k < DATA_BLOCK_SIZE; k += num_attr) {
+                if (temp->block->tuple_dict[k].size > 0) {
                     counter++;
-                if (counter == row) {
-                    int type = temp->block->tuple_dict[ k + column ].type;
-                    int size = temp->block->tuple_dict[ k + column ].size;
-                    int address = temp->block->tuple_dict[ k + column ].address;
-                    memcpy(data, &temp->block->data[address], size);
-                    data[ size ] = '\0';
-                    AK_InsertAtEnd_L3(type, data, size, row_root);
-                    AK_free(addresses);
-                    AK_EPI;
-                    return (struct list_node *) AK_First_L2(row_root);
+                    if (counter == row) {
+                        struct list_node *result = AK_read_tuple_data(temp, k, column);
+                        AK_free(addresses);
+                        AK_EPI;
+                        return (struct list_node *) AK_First_L2(result);
+                    }
                 }
             }
         }
-        i++;
     }
+
     AK_free(addresses);
     AK_EPI;
     return NULL;
@@ -399,6 +408,113 @@ AK_header *AK_get_index_header(char *indexTblName) {
 
 
 
+
+/**
+ * Calculate maximum lengths for each column
+ */
+static void AK_calculate_column_lengths(char *indexTblName, AK_header *head, 
+                                      int num_attr, int num_rows, int *len) {
+    // Initialize with header lengths
+    for (int i = 0; i < num_attr; i++) {
+        len[i] = strlen((head + i)->att_name);
+    }
+    
+    // Find maximum lengths for data
+    for (int i = 0; i < num_attr; i++) {
+        for (int j = 0; j < num_rows; j++) {
+            struct list_node *el = AK_get_index_tuple(j, i, indexTblName);
+            switch (el->type) {
+                case TYPE_INT:
+                    int length = AK_chars_num_from_number(*((int *) (el)->data), 10);
+                    len[i] = MAX(len[i], length);
+                    break;
+                    
+                case TYPE_FLOAT:
+                    length = AK_chars_num_from_number(*((float *) (el)->data), 10);
+                    len[i] = MAX(len[i], length);
+                    break;
+                    
+                case TYPE_VARCHAR:
+                default:
+                    len[i] = MAX(len[i], el->size);
+                    break;
+            }
+        }
+    }
+}
+
+/**
+ * Print table header
+ */
+static void AK_print_index_header(AK_header *head, int num_attr, int *len) {
+    printf("\n|");
+    
+    for (int i = 0; i < num_attr; i++) {
+        // Center header elements
+        int k = (len[i] - (int) strlen((head + i)->att_name) + TBL_BOX_OFFSET + 1);
+        if (k % 2 == 0) {
+            k /= 2;
+            printf("%-*s%-*s|", k, " ", k + (int) strlen((head + i)->att_name), 
+                   (head + i)->att_name);
+        } else {
+            k /= 2;
+            printf("%-*s%-*s|", k, " ", k + (int) strlen((head + i)->att_name) + 1, 
+                   (head + i)->att_name);
+        }
+    }
+    printf("\n");
+}
+
+/**
+ * Print table data rows
+ */
+static void AK_print_index_data(table_addresses *addresses, int num_attr, int *len) {
+    struct list_node *row_root = (struct list_node *) AK_malloc(sizeof(struct list_node));
+    AK_Init_L3(&row_root);
+    int i = 0;
+    
+    while (addresses->address_from[i] != 0) {
+        for (int j = addresses->address_from[i]; j < addresses->address_to[i]; j++) {
+            AK_mem_block *temp = (AK_mem_block*) AK_get_block(j);
+            
+            for (int k = 0; k < DATA_BLOCK_SIZE; k += num_attr) {
+                if (temp->block->tuple_dict[k].size > 0) {
+                    for (int l = 0; l < num_attr; l++) {
+                        int type = temp->block->tuple_dict[k + l].type;
+                        int size = temp->block->tuple_dict[k + l].size;
+                        int address = temp->block->tuple_dict[k + l].address;
+                        
+                        AK_InsertAtEnd_L3(type, &temp->block->data[address], size, row_root);
+                    }
+                    
+                    AK_print_row(len, row_root);
+                    AK_print_row_spacer(len, num_attr);
+                    AK_DeleteAll_L3(&row_root);
+                }
+            }
+        }
+        i++;
+    }
+    
+    AK_free(row_root);
+}
+
+/**
+ * Print execution time stats
+ */
+static void AK_print_index_stats(char *indexTblName, int num_rows, clock_t start_time) {
+    clock_t elapsed = clock() - start_time;
+    printf("\nIndex: %s\n", indexTblName);
+    
+    if ((((double) elapsed) / CLOCKS_PER_SEC) < 0.1) {
+        printf("%i rows found, duration: %f μs\n", num_rows, 
+               ((double) elapsed) / CLOCKS_PER_SEC * 1000);
+    } else {
+        printf("%i rows found, duration: %f s\n", num_rows, 
+               ((double) elapsed) / CLOCKS_PER_SEC);
+    }
+}
+
 /**
  * @author Matija Šestak, modified for indexes by Lovro Predovan
  * @brief  Function that prints out the index table
@@ -407,266 +523,147 @@ AK_header *AK_get_index_header(char *indexTblName) {
  */
 void AK_print_index_table(char *indexTblName) {
     AK_PRO;
+    
+    // Validate index exists
     table_addresses *addresses = (table_addresses*) AK_get_index_addresses(indexTblName);
-    char *index_table = "AK_index";
-
-    if ((addresses->address_from[0] == 0)  || (AK_index_table_exist(indexTblName) == 0)) {
+    if ((addresses->address_from[0] == 0) || (AK_index_table_exist(indexTblName) == 0)) {
         printf("Table %s does not exist!\n", indexTblName);
+        AK_free(addresses);
         AK_EPI;
-    } else {
-
-        AK_header *head = AK_get_index_header(indexTblName);
-
-        int i, j, k, l;
-        int num_attr = AK_num_index_attr(indexTblName);
-        int num_rows = AK_get_index_num_records(indexTblName);
-        int len[num_attr]; //max length for each attribute in row
-        int length = 0; //length of spacer
-        clock_t t;
-
-        //printf("BROJ ATTR %i ; BROJ REDOVA %i U TABLICI %s",num_attr,num_rows,indexTblName);
-        //store lengths of header attributes
-        for (i = 0; i < num_attr; i++) {
-            len[i] = strlen((head + i)->att_name);
-        }
-
-
-        //for each header attribute iterate through all table rows and check if
-        //there is longer element than previously longest and store it in array
-        for (i = 0; i < num_attr; i++) {
-            for (j = 0; j < num_rows; j++) {
-                struct list_node *el = AK_get_index_tuple(j, i, indexTblName);
-                switch (el->type) {
-
-                    case TYPE_INT:
-                        length = AK_chars_num_from_number(*((int *) (el)->data), 10);
-                        if (len[i] < length) {
-                            len[i] = length;
-                        }
-                        break;
-                    case TYPE_FLOAT:
-                        length = AK_chars_num_from_number(*((float *) (el)->data), 10);
-                        if (len[i] < length) {
-                            len[i] = length;
-                        }
-                        break;
-                    case TYPE_VARCHAR:
-                    default:
-                        if (len[i] < el->size) {
-                            len[i] = el->size;
-                        }
-                        break;
-                }
-            }
-        }
-        //num_attr is number of char | + space in printf
-        //set offset to change the box size
-
-        length = 0;
-        for (i = 0; i < num_attr; length += len[i++]);
-        length += num_attr * TBL_BOX_OFFSET + 2 * num_attr + 1;
-
-        //start measuring time
-        t = clock();
-
-        if (num_attr <= 0 || num_rows <= 0) {
-            printf("Table is empty.\n");
-            AK_EPI;
-        } else {
-
-            AK_print_row_spacer(len, length);
-            printf("\n|");
-
-            //HEADER
-            for (i = 0; i < num_attr; i++) {
-                //PRINTING HEADER ELEMENTS CENTERED
-                k = (len[i] - (int) strlen((head + i)->att_name) + TBL_BOX_OFFSET + 1);
-                if (k % 2 == 0) {
-                    k /= 2;
-                    printf("%-*s%-*s|", k, " ", k + (int) strlen((head + i)->att_name), (head + i)->att_name);
-                } else {
-                    k /= 2;
-                    printf("%-*s%-*s|", k, " ", k + (int) strlen((head + i)->att_name) + 1, (head + i)->att_name);
-                }
-            }
-            printf("\n");
-            AK_print_row_spacer(len, length);
-            //END HEADER
-
-            struct list_node *row_root = (struct list_node *) AK_malloc(sizeof (struct list_node));
-            AK_Init_L3(&row_root);
-            int type, size, address,last_addres_value;
-            i = 0;
-
-            if(addresses->address_to[i] != 0){
-                last_addres_value = addresses->address_to[i];
-            }
-
-
-            while (addresses->address_from[i] != 0) {
-
-                for (j = addresses->address_from[i]; j < addresses->address_to[i]; j++) {
-                    AK_mem_block *temp = (AK_mem_block*) AK_get_block(j);
-
-                    //THIS IS KINDA HACK, THIS PROBABLY SHOULD BE CHANGED SO MAIN INDEX TABLE ARE NOT INCLUDED
-                    if ((temp->block->last_tuple_dict_id == 0) && (last_addres_value == addresses->address_to[i])){
-                        printf("\nIndex: %s\n", indexTblName);
-
-
-                        //PRINTING OUT TIME STATS
-                        t = clock() - t;
-                        if ((((double) t) / CLOCKS_PER_SEC) < 0.1) {
-                            printf("%i rows found, duration: %f μs\n", num_rows, ((double) t) / CLOCKS_PER_SEC * 1000);
-                        } else {
-                            printf("%i rows found, duration: %f s\n", num_rows, ((double) t) / CLOCKS_PER_SEC);
-                        }
-
-                        AK_free(row_root);
-                        AK_free(addresses);
-                        AK_EPI;
-                        //break;
-                        return 1;
-                    }
-
-                    //PRINTING VALUES IN INDEX TABLE
-                    for (k = 0; k < DATA_BLOCK_SIZE; k += num_attr) {
-                        if (temp->block->tuple_dict[k].size > 0) {
-                            for (l = 0; l < num_attr; l++) {
-
-                                type = temp->block->tuple_dict[k + l].type;
-                                size = temp->block->tuple_dict[k + l].size;
-                                address = temp->block->tuple_dict[k + l].address;
-
-                                AK_InsertAtEnd_L3(type, &temp->block->data[address], size, row_root);
-                            }
-
-                            AK_print_row(len, row_root);
-                            AK_print_row_spacer(len, length);
-                            AK_DeleteAll_L3(&row_root);
-                        }
-                    }
-                }
-                i++;
-            }
-
-        AK_free(row_root);
-        }
+        return;
     }
-
+    
+    // Get table metadata
+    AK_header *head = AK_get_index_header(indexTblName);
+    int num_attr = AK_num_index_attr(indexTblName);
+    int num_rows = AK_get_index_num_records(indexTblName);
+    
+    if (num_attr <= 0 || num_rows <= 0) {
+        printf("Table is empty.\n");
+        AK_free(addresses);
+        AK_free(head);
+        AK_EPI;
+        return;
+    }
+    
+    // Calculate column lengths
+    int len[num_attr];
+    AK_calculate_column_lengths(indexTblName, head, num_attr, num_rows, len);
+    
+    // Start timing
+    clock_t start_time = clock();
+    
+    // Print table
+    AK_print_row_spacer(len, num_attr);
+    AK_print_index_header(head, num_attr, len);
+    AK_print_row_spacer(len, num_attr);
+    AK_print_index_data(addresses, num_attr, len);
+    AK_print_index_stats(indexTblName, num_rows, start_time);
+    
+    // Cleanup
     AK_free(addresses);
+    AK_free(head);
     AK_EPI;
 }
 
 
 
 /**
- * @author Lovro Predovan
- * @brief  Test funtion for index structures(list) and printing table
- * @return No return value
+ * @author Lovro Predovan, updated by Matija Karaula
+ * @brief Test function for index structures (list) and printing functionality
+ * @return TestResult structure with test results
  */
-void AK_index_test() {
-
+TestResult AK_index_test() {
     AK_PRO;
-    int position;
+    int successful = 0;
+    int failed = 0;
+
     printf("\n********** INDEX TEST **********\n\n");
 
-    list_ad *add_root;
-    add_root = (list_ad *) AK_malloc(sizeof (list_ad));
+    // Test list operations
+    list_ad *add_root = (list_ad *) AK_malloc(sizeof(list_ad));
+    add_root->next = 0;
 
-
-    AK_InitializelistAd(add_root);
-
+    // Test element insertion
     AK_Insert_NewelementAd(1, 1, "Alen", add_root);
-    element_ad some_element;
-
-    some_element = AK_Get_First_elementAd(add_root);
-    AK_Insert_NewelementAd(2, 2, "Markus", some_element);
-
-    element_ad some_elementt = AK_Get_Last_elementAd(add_root);
-    AK_Insert_NewelementAd(3, 3, "Mirko", some_elementt);
-
-    element_ad some_elementtt = AK_Get_Last_elementAd(add_root);
-    AK_Insert_NewelementAd(4, 4, "Sandra", some_elementtt);
-
-    element_ad some_elementttt = AK_Get_Last_elementAd(add_root);
-    AK_Insert_NewelementAd(5, 5, "Tonimir", some_elementttt);
-
-
-    printf("\n********** Printing all values **********\n\n");
-    element_ad ele = AK_Get_First_elementAd(add_root);
-    while (ele != 0)
-    {
-        printf("Value : %s\n", ele->attName);
-        ele = AK_Get_Next_elementAd(ele);
+    element_ad first = AK_Get_First_elementAd(add_root);
+    if (first != NULL && strcmp(first->attName, "Alen") == 0) {
+        successful++;
+    } else {
+        failed++;
+        printf("Failed to insert first element\n");
     }
 
-    printf("\n********** Printing position values **********\n\n");
-     element_ad last = AK_Get_Last_elementAd(add_root);   
-     printf("Last element in list: %s \n",last->attName);
+    // Test getting next element
+    AK_Insert_NewelementAd(2, 2, "Markus", first);
+    element_ad next = AK_Get_Next_elementAd(first);
+    if (next != NULL && strcmp(next->attName, "Markus") == 0) {
+        successful++;
+    } else {
+        failed++;
+        printf("Failed to get next element\n");
+    }
 
-     element_ad previous = AK_Get_Previous_elementAd(last,add_root);
-     printf("Previous element from list: %s \n",previous->attName);
+    // Test getting last element
+    element_ad last = AK_Get_Last_elementAd(add_root);
+    if (last != NULL && strcmp(last->attName, "Markus") == 0) {
+        successful++;
+    } else {
+        failed++;
+        printf("Failed to get last element\n");
+    }
 
-     element_ad first = AK_Get_First_elementAd(add_root);
-     printf("First element in list: %s \n",first->attName);
+    // Test element deletion
+    AK_Delete_elementAd(first, add_root);
+    element_ad check = AK_Get_First_elementAd(add_root);
+    if (check != NULL && strcmp(check->attName, "Markus") == 0) {
+        successful++;
+    } else {
+        failed++;
+        printf("Failed to delete element\n");
+    }
 
-     element_ad next = AK_Get_Next_elementAd(first);
-     printf("Next element in list after '%s' is : %s \n",first->attName,next->attName);
-
-     printf("Position of element '%s' above is : %i \n",next->attName,AK_Get_Position_Of_elementAd(next, add_root));
-
-    printf("\n********** Deleting values **********\n\n");
-
-    printf("Deleting element: %s \n",previous->attName);
-    AK_Delete_elementAd(previous, add_root) ;
-    element_ad elem = AK_Get_First_elementAd(add_root);
-
-    printf("\n********** Printing values after delete**********\n\n");
-
-        while (elem != 0)
-        {
-            printf("Value : %s\n", elem->attName);
-            elem = AK_Get_Next_elementAd(elem);
-        }
-
-    printf("\n********** Printing values after deleting all values**********\n\n");
-    //Error: incomplete type is not allowed
-    void AK_Delete_All_elementsAd(add_root) ;
-    element_ad eleme = AK_Get_First_elementAd(add_root);
-    while (elem != 0)
-        {
-            printf("Value : %s\n", eleme->attName);
-            eleme = AK_Get_Next_elementAd(eleme);
-
-        }
-
-    printf("\n********** Index test **********\n\n");
-        //CREATING BITMAP INDEXES ON ATTRIBUTE FIRSTNAME AS REFERENCE
-
+    // Test index table operations
     char *tblName = "assistant";
     char *indexTblName = "assistantfirstname_bmapIndex";
-
-    char *notExistingIndexName = "assistantincome_bmapIndex";
-
-    struct list_node *att_root = (struct list_node *) AK_malloc(sizeof (struct list_node));
+    
+    struct list_node *att_root = (struct list_node *) AK_malloc(sizeof(struct list_node));
     AK_Init_L3(&att_root);
-    //Error: argument of type "const char *" is incompatible with parameter of type "void *"
     AK_Insert_New_Element(TYPE_VARCHAR, "firstname", tblName, "firstname", att_root);
- 
+    
+    // Test index creation
     AK_create_Index_Table(tblName, att_root);
+    if (AK_index_table_exist(indexTblName)) {
+        successful++;
+    } else {
+        failed++;
+        printf("Failed to create index table\n");
+    }
 
-    AK_print_table(tblName);
-    AK_print_table("AK_index");
-    AK_print_index_table(indexTblName);
+    // Test index attributes count
+    int num_attr = AK_num_index_attr(indexTblName);
+    if (num_attr > 0) {
+        successful++;
+    } else {
+        failed++;
+        printf("Failed to get index attributes\n");
+    }
 
-    printf("\n\nIndex table %s exists: %i\n\n",indexTblName,AK_index_table_exist(indexTblName));
-    printf("Number of rows in index %s: %i\n\n",indexTblName,AK_get_index_num_records(indexTblName));
-    printf("Number of attributes in index %s: %i\n\n",indexTblName,AK_num_index_attr(indexTblName));
-    printf("Index table %s exists: %i\n\n\n",notExistingIndexName,AK_index_table_exist(notExistingIndexName));
+    // Test index records count
+    int num_records = AK_get_index_num_records(indexTblName);
+    if (num_records >= 0) {
+        successful++;
+    } else {
+        failed++;
+        printf("Failed to get index records count\n");
+    }
 
-
-    printf("\n********** Index test Passed**********\n\n");
-
+    // Cleanup
+    AK_Delete_All_elementsAd(add_root);
+    AK_free(add_root);
+    AK_DeleteAll_L3(&att_root);
+    AK_free(att_root);
 
     AK_EPI;
+    return TEST_result(successful, failed);
 }
