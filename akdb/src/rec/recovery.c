@@ -56,6 +56,28 @@
     }
 
     redoLog->number = log_file.number;
+    
+    printf("\nFollowing commands are pending and will be recovered:\n");
+    // print out all commands that are not finished
+    for (i = 0; i < redoLog->number; i++) {
+        if (redoLog->command_recovery[i].finished != 1) {
+            printf("Command %d on table '%s': ", i + 1, redoLog->command_recovery[i].table_name);
+            for (int j = 0; j < MAX_ATTRIBUTES; j++) {
+                if (strlen(redoLog->command_recovery[i].arguments[j]) == 0) break;
+                printf("%s ", redoLog->command_recovery[i].arguments[j]);
+            }
+            printf("\n");
+        }
+    }
+    char confirm;
+    printf("\nDo you want to execute these commands? (y/n): ");
+    scanf(" %c", &confirm);
+    if (confirm != 'y' && confirm != 'Y') {
+        printf("Recovery cancelled by user.\n");
+        fclose(fp);
+        AK_EPI;
+        return;
+    }
 
     printf("AK_recover_archive_log: Checking for unfinished archived data commands...\nNumber of archived commands: %d\n", redoLog->number);
 
@@ -88,21 +110,29 @@ void AK_recovery_insert_row(char* table, int commandNumber){
     AK_PRO;
     
     printf("AK_recovery: found unfinished archived data commands for %s, executing...\n", table);
-    int i;
 
     // retrieve table attributes names
-
     char* table_attr_names = AK_rel_eq_get_atrributes_char(table);
-    char** attr_name = AK_recovery_tokenize(table_attr_names, ";", 0);
-    
-    // retrieve table attribute types
-
     char* table_attr_types = AK_get_table_atribute_types(table);
+
+    if (table_attr_names == NULL || table_attr_types == NULL) {
+        fprintf(stderr, "ERROR: Table \"%s\" does not exist or has no attributes. Skipping recovery.\n", table);
+        AK_EPI;
+        return;
+    }
+
+    char** attr_name = AK_recovery_tokenize(table_attr_names, ";", 0);
     char** attr_types = AK_recovery_tokenize(table_attr_types, ";", 0);
+
+    if (attr_name == NULL || attr_types == NULL) {
+        fprintf(stderr, "ERROR: Failed to tokenize attribute names or types for table \"%s\".\n", table);
+        AK_EPI;
+        return;
+    }
 
     // convert all attribute types to integers
     int type[MAX_ATTRIBUTES];
-
+    int i;
     for(i = 0; i < MAX_ATTRIBUTES; i++){
         if(attr_types[i] == NULL){
             break;
@@ -112,26 +142,26 @@ void AK_recovery_insert_row(char* table, int commandNumber){
 
     char** attributes = AK_malloc(MAX_ATTRIBUTES*sizeof(*attributes));
     int n = i;
-    
+
     // insert data to table
     AK_redo_log* const redoLog = redo_log.ptr;
-    for(i=0;i<n;i++){
-	attributes[i]=redoLog->command_recovery[commandNumber].arguments[i];
+    for(i=0; i<n; i++){
+        attributes[i] = redoLog->command_recovery[commandNumber].arguments[i];
     }
 
     int result = recovery_insert_row(table, attr_name, attributes, n, type);
-    
-    //mark command as finished
-    if(result == EXIT_SUCCESS)
-    {
-        redoLog->command_recovery[commandNumber].finished=1;
-        printf("Uspješni recovery insert");
-    }
-    else printf("Neupješni recovery insert");
 
-	
+    // mark command as finished
+    if(result == EXIT_SUCCESS) {
+        redoLog->command_recovery[commandNumber].finished = 1;
+        printf("Recovery insert successful.\n");
+    } else {
+        printf("Recovery insert failed.\n");
+    }
+
     AK_EPI;
 }
+
 
 /**
  * @author Danko Bukovac
@@ -367,6 +397,31 @@ void AK_load_chosen_log () {
 	
 		//getting the neccessary number for the next for-loop
 	    redoLog->number = log_file.number;
+        // Display pending commands
+        printf("\nFollowing commands are pending and will be recovered:\n");
+        for (i = 0; i < log_file.number; i++) {
+            if (log_file.command_recovery[i].finished != 1) {
+                printf("Command %d on table '%s': ", i + 1, log_file.command_recovery[i].table_name);
+                for (int j = 0; j < MAX_ATTRIBUTES; j++) {
+                    if (strlen(log_file.command_recovery[i].arguments[j]) == 0) break;
+                    printf("%s ", log_file.command_recovery[i].arguments[j]);
+                }
+                printf("\n");
+            }
+        }
+
+        // Confirm with user
+        char confirm;
+        printf("\nDo you want to execute these commands? (y/n): ");
+        scanf(" %c", &confirm);
+        if (confirm != 'y' && confirm != 'Y') {
+            printf("Recovery cancelled by user.\n");
+            free(dest);
+            fclose(fp);
+            closedir(dr);
+            AK_EPI;
+            return;
+        }
 
 	    //looking for unfinished commands and passing them on for recovery
 	    for(i = 0; i < redoLog->number; i++) {
@@ -463,6 +518,31 @@ void AK_load_latest_log () {
 	
 		//getting the neccessary number for the next for-loop
 	    redoLog->number = log_file.number;
+        // Display pending commands
+        printf("\nFollowing commands are pending and will be recovered:\n");
+        for (i = 0; i < log_file.number; i++) {
+            if (log_file.command_recovery[i].finished != 1) {
+                printf("Command %d on table '%s': ", i + 1, log_file.command_recovery[i].table_name);
+                for (int j = 0; j < MAX_ATTRIBUTES; j++) {
+                    if (strlen(log_file.command_recovery[i].arguments[j]) == 0) break;
+                    printf("%s ", log_file.command_recovery[i].arguments[j]);
+                }
+                printf("\n");
+            }
+        }
+
+        // Confirm with user
+        char confirm;
+        printf("\nDo you want to execute these commands? (y/n): ");
+        scanf(" %c", &confirm);
+        if (confirm != 'y' && confirm != 'Y') {
+            printf("Recovery cancelled by user.\n");
+            free(name);
+            free(dest);
+            fclose(fp);
+            AK_EPI;
+            return;
+        }
 
 	    //looking for unfinished commands and passing them on for recovery
 	    for(i = 0; i < redoLog->number; i++) {

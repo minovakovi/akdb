@@ -84,6 +84,23 @@ int main(int argc, char * argv[])
     
                 sigset(SIGINT, AK_archive_log);
                 AK_recover_archive_log("../src/rec/rec.bin");  // "../src/rec/rec.bin" needs to be replaced with destination when AK_recover_archive_log is fixed
+
+                int choice;
+                printf("Choose recovery mode:\n");
+                printf("1 - Load the latest log file\n");
+                printf("2 - Manually select a log file\n");
+                printf("Enter your choice (1 or 2): ");
+                scanf("%d", &choice);
+                // Check the user's choice and call the appropriate function
+                if (choice == 1) {
+                    AK_load_latest_log();
+                } else if (choice == 2) {
+                    AK_load_chosen_log();
+                } else {
+                    printf("Invalid choice. Skipping recovery.\n");
+                }
+
+
                 /* component test area --- begin */
                 if((argc == 2) && !strcmp(argv[1], "test"))
                 {

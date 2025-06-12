@@ -21,86 +21,64 @@
 #include "redo_log.h"
 
 /**
- * @author @author Krunoslav Bilić updated by Dražen Bandić, second update by Tomislav Turek
+ * @author @author Krunoslav Bilić updated by Dražen Bandić, second update by Tomislav Turek, third update by Laura Štefanac
  * @brief Function that adds a new element to redolog
  * @return EXIT_FAILURE if not allocated memory for ispis, otherwise EXIT_SUCCESS
  */
-int AK_add_to_redolog(int command, struct list_node *row_root){
+int AK_add_to_redolog_universal (int command, struct list_node *row_root) {
     AK_PRO;
 
     AK_redo_log* const redoLog = redo_log.ptr;
     if (redoLog == NULL)
-      return EXIT_FAILURE;
-    int n = redoLog->number;
-    printf("AK_add_to_redolog: Recovery checkpoint %d\n", n);
+        return EXIT_FAILURE;
 
+    int n = redoLog->number;
     if(n == MAX_REDO_LOG_ENTRIES){
         AK_archive_log(-10);
         n = 0;
     }
 
-    struct list_node * el = (struct list_node *) AK_First_L2(row_root);
-    
-    char* record;
-    if((record = (char*) AK_calloc(MAX_VARCHAR_LENGTH, sizeof(char))) == NULL){
-        AK_EPI;
-    	return EXIT_FAILURE;
-    }
+    struct list_node* el = AK_First_L2(row_root);
+    if (!el) return EXIT_FAILURE;
 
     char table[MAX_ATT_NAME];
     memset(table, '\0', MAX_ATT_NAME);
-    memcpy(&table, el->table, strlen(el->table));
+    strncpy(table, el->table, MAX_ATT_NAME);
 
-    int max = AK_num_attr(table);
-    int numAttr = 1;
-	int attrs_length = MAX_ATTRIBUTES;
-	if(AK_Size_L2(row_root) > MAX_ATTRIBUTES)
-		attrs_length = AK_Size_L2(row_root);
-    char** attrs = AK_calloc(attrs_length, sizeof(char*));
     int i = 0;
-    while (el != NULL) {
-        switch (el->type) {
+    while (el != NULL && i < MAX_ATTRIBUTES) {
+        char* value = NULL;
 
+        switch (el->type) {
             case FREE_CHAR:
-                strncat(record, "null", 4);
-                attrs[i] = "null";
+                value = strdup("null");
                 break;
             case TYPE_INT:
-				attrs[i] = (char*) AK_malloc(MAX_VARCHAR_LENGTH * sizeof(char));
-                sprintf (attrs[i], "%i", *((int *) el->data));
-                strncat(record, attrs[i], strlen(attrs[i]));
+                value = AK_malloc(MAX_VARCHAR_LENGTH);
+                sprintf(value, "%d", *((int*)el->data));
                 break;
             case TYPE_FLOAT:
-				attrs[i] = (char*) AK_malloc(MAX_VARCHAR_LENGTH * sizeof(char));
-               	sprintf (attrs[i], "%.3f", *((float *) el->data));
-               	strncat(record, attrs[i], strlen(attrs[i]));
+                value = AK_malloc(MAX_VARCHAR_LENGTH);
+                sprintf(value, "%.3f", *((float*)el->data));
                 break;
             case TYPE_VARCHAR:
             default:
-                attrs[i] = AK_check_attributes(el->data);
-                strncat(record, attrs[i], strlen(el->data));
+                value = AK_check_attributes(el->data);
                 break;
         }
-        if(numAttr < max){
-            strncat(record, "|", 1);
-        }
-        numAttr++;
-		i++;
+
+        strncpy(redoLog->command_recovery[n].arguments[i], value, MAX_VARCHAR_LENGTH);
+        AK_free(value);
         el = el->next;
+        i++;
     }
-    
-    printf("AK_add_to_redolog: redolog new entry -- %s, %s\n", table, record);
-    memcpy(redoLog->command_recovery[n].table_name, table, strlen(table));
-	for(i=0; i<numAttr-1; i++)
-		strcpy(redoLog->command_recovery[n].arguments[i], attrs[i]);
+
+    strncpy(redoLog->command_recovery[n].table_name, table, MAX_ATT_NAME);
     redoLog->command_recovery[n].operation = command;
     redoLog->command_recovery[n].finished = 0;
-    redoLog->number = n+1;
-    AK_free(record);
-	for(i=0; i < numAttr-1; i++)
-		AK_free(attrs[i]);
-	AK_free(attrs);
-    printf("AK_add_to_redolog: Recovery checkpoint saved\n");
+    redoLog->number = n + 1;
+
+    printf("AK_add_to_redolog_universal: Saved cmd %d on table %s with %d args\n", command, table, i);
     AK_EPI;
     return EXIT_SUCCESS;
 }

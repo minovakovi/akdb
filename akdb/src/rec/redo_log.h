@@ -29,7 +29,7 @@
  * @brief Function that adds a new element to redolog
  * @return EXIT_FAILURE if not allocated memory for ispis, otherwise EXIT_SUCCESS
  */
-int AK_add_to_redolog(int command, struct list_node *row_root);
+int AK_add_to_redolog_universal(int command, struct list_node *row_root);
 
 /**
  * @author Danko Bukovac
