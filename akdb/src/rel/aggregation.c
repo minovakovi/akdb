@@ -1,4 +1,4 @@
-ith_grou/**
+/**
 @file aggregation.c Provides functions for aggregation and grouping
  */
 /*
@@ -418,12 +418,9 @@ void AK_cleanup_aggregation(AK_agg_value *needed_values, AK_header **agg_head_pt
 // === Testne funkcije ===
 
 void AK_aggregation_test_print_result(char *table) {
-    printf("
-=== Rezultat za tablicu: %s ===
-", table);
+    printf("\n=== Rezultat za tablicu: %s ===\n", table);
     AK_print_table(table);
-    printf("===============================
-");
+    printf("===============================\n");
 }
 
 void AK_aggregation_test_sum_and_count(char *source_table) {
