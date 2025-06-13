@@ -9,7 +9,7 @@ from modules.get_module import *
 # create sequence
 # developd by Danko Sacer
 class Create_sequence_command:
-    create_seq_regex = r"^(?i)create sequence(\s([a-zA-Z0-9_]+))+?$"
+    create_seq_regex = r"(?i)^create sequence(\s([a-zA-Z0-9_]+))+?$"
     pattern = None
     matcher = None
 
@@ -74,7 +74,7 @@ class Create_sequence_command:
 # create table command
 # @author Franjo Kovacic
 class Create_table_command:
-    create_table_regex = r"^(?i)create table(\s([a-zA-Z0-9_\(\),'\.]+))+?"
+    create_table_regex = r"(?i)^create table(\s([a-zA-Z0-9_\(\),'\.]+))+?"
     pattern = None
     matcher = None
     expr = None
@@ -141,7 +141,7 @@ class Create_table_command:
 
 
 class Create_index_command:
-    create_table_regex = r"^(?i)create index(\s([a-zA-Z0-9_]+))+?$"
+    create_table_regex = r"(?i)^create index(\s([a-zA-Z0-9_]+))+?$"
     pattern = None
     matcher = None
     expr = None
@@ -199,7 +199,7 @@ class Create_index_command:
 
 
 class Create_trigger_command:
-    create_trigger_regex = r"^(?i)create trigger(\s([a-zA-Z0-9_]+))+?$"
+    create_trigger_regex = r"(?i)^create trigger(\s([a-zA-Z0-9_]+))+?$"
     pattern = None
     matcher = None
     expr = None
@@ -250,6 +250,6 @@ class Create_trigger_command:
             AK47.AK_trigger_add(trigger, token.whatOption,
                                 p, table_name, token.functionName)
             result = "Trigger created"
-        except:
+        except Exception as e:
             result = "Error. Creating trigger failed."
         return result

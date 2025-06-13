@@ -41,19 +41,19 @@ class Sql_executor:
     # Missing delete from
 
     # add command instances to the commands array
-    commands = [print_command, table_details_command, table_exists_command, create_sequence_command, create_table_command,
-                create_index_command, create_trigger_command, insert_into_command, grant_command, select_command, update_command, drop_command, print_system_table_command]
+    commands = [print_command, table_details_command, table_exists_command, create_sequence_command, create_table_command, create_index_command,
+                create_trigger_command, insert_into_command, grant_command, select_command, update_command, drop_command, print_system_table_command]
 
     # commands for input
     # checks whether received command matches any of the defined commands for kalashnikovdb,
     # and call its execution if it matches
-    def commands_for_input(self, command):
-        if isinstance(command, str) and len(command) > 0:
-            for elem in self.commands:
-                if elem.matches(command) is not None:
-                    print(elem)
-                    return (elem.__class__.__name__, elem.execute(command))
-        return ("",  "Error. Wrong command: " + command)
+    def commands_for_input(self, command: str):
+        if command and isinstance(command, str):
+            for cmd in self.commands:
+                if cmd.matches(command):
+                    print(f"Matched command: {cmd}")
+                    return (cmd.__class__.__name__, cmd.execute(command))
+        return "", f"Error. Wrong command: {command}"
 
     # execute method
     # called when a new command is received (from client)
@@ -66,7 +66,7 @@ class Sql_executor:
     # executes the insert expression
     # @param self object pointer
     # @parama expr the expression to be executed
-    def insert(self, expr):
+    '''def insert(self, expr):
         parser = sql_tokenizer()
         token = parser.AK_parse_insert_into(expr)
         
@@ -149,4 +149,4 @@ class Sql_executor:
         if(AK47.insert_data_test(table_name, insert_attr_names, insert_attr_values, insert_attr_types) == AK47.EXIT_SUCCESS):
             return True
         else:
-            return False
+            return False'''
