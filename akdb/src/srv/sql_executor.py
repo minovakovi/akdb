@@ -49,18 +49,31 @@ class Sql_executor:
     # and call its execution if it matches
     def commands_for_input(self, command):
         if isinstance(command, str) and len(command) > 0:
+            drop_cmd = Drop_command()
+            if drop_cmd.matches(command):
+                return ("DropCommand", drop_cmd.execute(command))
+
             for elem in self.commands:
                 if elem.matches(command) is not None:
                     print(elem)
                     return (elem.__class__.__name__, elem.execute(command))
         return ("",  "Error. Wrong command: " + command)
 
+
     # execute method
     # called when a new command is received (from client)
     def execute(self, command):
-        #tmp = self.commands_for_input(command)
-        #print(f"{tmp=}")
+    # execute "\t <ime_tabele>?" command
+        if isinstance(command, str) and command.startswith("\\t ") and command.endswith("?"):
+            tablename = command[3:-1].strip()
+            exists = AK47.AK_table_exist(tablename)
+            if exists:
+                return ("TableExistsCommand", f"✔ Table '{tablename}' exists.")
+            else:
+                return ("TableExistsCommand", f"✖ Table '{tablename}' does NOT exist.")
+    
         return self.commands_for_input(command)
+
 
     # insert
     # executes the insert expression
@@ -150,3 +163,33 @@ class Sql_executor:
             return True
         else:
             return False
+
+    def drop(self, expr):
+        parser = sql_tokenizer()
+        token = parser.AK_parse_drop(expr)
+
+        if isinstance(token, str):
+            print("Error: syntax error in expression")
+            return False
+
+        objekt = token.objekt.lower()
+        ime_objekta = token.ime_objekta.replace("'", "").replace("`", "").strip()
+
+        _dropType = {
+            "table": AK47.OBJECT_TYPE_TABLE,
+            "index": AK47.OBJECT_TYPE_INDEX,
+            "sequence": AK47.OBJECT_TYPE_SEQUENCE,
+            "trigger": AK47.OBJECT_TYPE_TRIGGER,
+            "view": AK47.OBJECT_TYPE_VIEW
+        }
+
+        if objekt not in _dropType:
+            print(f"Error: unknown object type '{objekt}'")
+            return False
+
+        if AK47.AK_drop(_dropType[objekt], ime_objekta) == AK47.EXIT_SUCCESS:
+            return True
+        else:
+            print(f"Error: failed to drop {objekt} '{ime_objekta}'")
+            return False
+

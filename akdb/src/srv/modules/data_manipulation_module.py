@@ -382,7 +382,7 @@ class Update_command:
 
 
 # Drop
-#@author Filip Sostarec
+#@author Filip Sostarec, updated by Laura Krišković
 class Drop_command:
 
     drop_regex = r"^(?i)drop(\s([a-zA-Z0-9_\(\),'\.]+))+?$"
@@ -411,25 +411,29 @@ class Drop_command:
         else:
             return None
 
-    def execute(self):
+    def execute(self, expression):
+        self.expr = expression
         parser = sql_tokenizer()
         token = parser.AK_parse_drop(self.expr)
         print(f"{token=}")
+    
         if isinstance(token, str):
             print("Error: syntax error in expression")
             print(token)
             return False
+
         objekt = str(token.objekt)
-        # Removes all []' from string
         translation_table = str.maketrans("", "", "[]'")
-        table_name = str(token.ime_objekta)
-        table_name = table_name.translate(translation_table)
+        table_name = str(token.ime_objekta).translate(translation_table)
 
         drop_args = AK47.drop_arguments()
         drop_args.value = table_name
 
-        if (AK47.AK_table_exist(table_name) == 0):
-            print("Error: table '" + table_name + "' does not exist")
+        if AK47.AK_table_exist(table_name) == 0:
+            print(f"Error: table '{table_name}' does not exist")
             return False
-        
+
         AK47.AK_drop(self._dropType[objekt], drop_args)
+        return True
+
+
