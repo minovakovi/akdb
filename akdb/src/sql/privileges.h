@@ -26,6 +26,41 @@
 #include "../rec/archive_log.h"
 #include "../auxi/mempro.h"
 
+/**
+ * @author Luka Balažinec
+ * @brief Reads len bytes from /dev/urandom into salt.
+ * @param salt Buffer to receive len random bytes.
+ * @param len Number of bytes to read.
+ * @return 0 on success, -1 on error.
+ */
+static int generate_salt(unsigned char *salt, size_t len);
+
+/**
+ * @author Luka Balažinec
+ * @brief Converts a binary buffer to a hex string.
+ * @param in Input buffer of in_len bytes.
+ * @param in_len Number of bytes in the input buffer.
+ * @param out Buffer to receive the hex string.
+ */
+static void to_hex(const unsigned char *in, size_t in_len, char *out);
+
+/**
+ * @author Luka Balažinec
+ * @brief Hashes a password with a hex-encoded salt using SHA-256.
+ * @param password Plain-text password.
+ * @param salt_hex Hex string of the salt (length SALT_HEX_LEN).
+ * @param out_hash_hex Buffer to receive the resulting hash as a hex string.
+ */
+static void hash_password_with_salt(const char *password, const char *salt_hex, char *out_hash_hex);
+
+/**
+ * @author Luka Balažinec
+ * @brief Validates the strength of a password based on multiple security rules.
+ * @param password The password to validate.
+ * @param username The associated username (used to prevent inclusion in the password).
+ * @return 1 if the password is strong, 0 otherwise. Prints messages for each failed condition.
+ */
+int is_password_strong(const char *password, const char *username);
 
 /**
  * @author Kristina Takač.
@@ -52,6 +87,16 @@ int AK_user_get_id(char *username);
 * @return check 0 if false or 1 if true
 */
 int AK_user_check_pass(char *username, char *password);
+
+/**
+ * @author Luka Balažinec
+ * @brief  Changes the password and salt for an existing user.
+ * @param  username Username whose password is to be updated.
+ * @param  new_password New plain-text password.
+ * @return EXIT_SUCCESS on success, EXIT_ERROR on failure.
+ */
+int AK_user_change_password(char *username, char *new_password);
+
 /**
  * @author Kristina Takač, edited by Ljubo Barać
  * @brief Function that adds a new group
@@ -186,6 +231,15 @@ int AK_user_rename(char *old_name, char *new_name, char *password);
  * @return EXIT_SUCCESS or EXIT_ERROR
  */
 int AK_group_rename(char *old_name, char *new_name);
+
+/**
+ * @author Luka Balažinec
+ * @brief List all users that have the specified privilege on any table.
+ * @param  privilege A privilege string like "SELECT" or "INSERT".
+ * @return EXIT_SUCCESS.
+ */
+int AK_list_users_with_privilege(char *privilege);
+
 TestResult AK_privileges_test();
 
 #endif
