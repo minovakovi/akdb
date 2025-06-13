@@ -558,6 +558,7 @@ TestResult AK_drop_test() {
     RUN_DROP_TEST(8, "DROP TABLE",AK_drop(DROP_USER, drop_args));
 
     // DROP GROUP
+    
     AK_group_add("group_drop_test", 1);
     drop_args->value = "group_drop_test";
     drop_args->next->value = "CASCADE";
