@@ -192,4 +192,21 @@ void AK_delete_hash_index(char *indexName) ;
  */
 TestResult AK_hash_test();
 
+/**
+ * @author Karlo Ipsa
+ * @brief Counts hash collisions, analyzes distribution and access time.
+ */
+ void AK_analyze_hash_index(char *tblName, char *attrName);
+
+ /**
+  * @author Karlo Ipsa
+  * @brief Test function for hash index statistics on a test table.
+  */
+ void AK_test_hash_stats();
+ /**
+ * @author Karlo Ipsa
+ * @brief Simple hash function for int and varchar values.
+ */
+ int AK_hash_function(void *data, int type);
+
 #endif
