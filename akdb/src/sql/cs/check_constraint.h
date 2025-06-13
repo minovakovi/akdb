@@ -29,7 +29,7 @@
 
 
 /**
- * @author Mislav Jurinić
+ * @author Mislav Jurinić, updated by Vilim Trakoštanec
  * @brief Function that for a given value, checks if it satisfies the "check" constraint.
  * @param condition logical operator ['<', '>', '!=', ...]
  * @param type data type [int, float, varchar, datetime, ...]
@@ -61,6 +61,17 @@ int AK_set_check_constraint(char *table_name, char *constraint_name, char *attri
  * @return 1 - result, 0 - failure 
  */
 int AK_delete_check_constraint(char* tableName, char* constraintName);
+
+/**
+ * @author Vilim Trakoštanec
+ * @brief Function that verifies if the value we want to insert satisfies the "check" constraint.
+ * @param table target table name
+ * @param attribute target attribute name
+ * @param value data we want to insert
+ * @return EXIT_SUCCESS if constraint is satisfied, EXIT_ERROR otherwise
+ */
+int AK_check_constraint(char *table, char *attribute, void *value);
+
 TestResult AK_check_constraint_test();
 
 #endif
