@@ -16,251 +16,509 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor Boston, MA 02110-1301,  USA
  */
+
+ #include "difference.h"
+ #include <stdbool.h>
+
+/**
+ * @author Tea Radić
+ * @brief Copies all rows from srcTable into dstTable without any filtering or comparison.
+ */
+static void AK_copy_all_rows(char *srcTable, char *dstTable, int num_att) {
+    table_addresses *src_addr = (table_addresses*) AK_get_table_addresses(srcTable);
+    struct list_node *row_root = AK_malloc(sizeof *row_root);
+    memset(row_root, 0, sizeof *row_root);
+    AK_Init_L3(&row_root);
+    AK_mem_block *blk;
+    for (int i = 0; src_addr->address_from[i] != 0; i++) {
+        for (int b = src_addr->address_from[i]; b < src_addr->address_to[i]; b++) {
+            blk = AK_get_block(b);
+            if (blk->block->AK_free_space == 0) continue;
+            for (int k = 0; k < DATA_BLOCK_SIZE; k++) {
+                if (blk->block->tuple_dict[k].type == FREE_INT) break;
+                char buf[MAX_VARCHAR_LENGTH];
+                int addr  = blk->block->tuple_dict[k].address;
+                int sz    = blk->block->tuple_dict[k].size;
+                int type  = blk->block->tuple_dict[k].type;
+                memcpy(buf, blk->block->data + addr, sz);
+                buf[sz] = '\0';
+                AK_Insert_New_Element(type, buf, dstTable,
+                                      blk->block->header[k % num_att].att_name,
+                                      row_root);
+                if ((k+1) % num_att == 0) {
+                    AK_insert_row(row_root);
+                    AK_DeleteAll_L3(&row_root);
+                }
+            }
+        }
+    }
+    AK_DeleteAll_L3(&row_root);
+    AK_free(row_root);
+    AK_free(src_addr);
+}
+
+ /**
+  * @author Dino Laktašić edited by Elena Kržina
+  * @brief  Auxiliary function for printing data depending on the variable that enters the switch statement. Original code written 
+  * by Dino Lakšatić, section separated and edited by Elena Kržina for code transparency
+  * @param data accessed for later comparison
+  * @param address address of block for accessing data
+  * @param size size of block for accessing data
+  * @param type type of block for accessing data
+  * @param tbl_temp_block temporary block from which data is accessed
+  * @return returns void
+  */
+ void AK_difference_Print_By_Type(char* data, int address, int size, int type, AK_mem_block *tbl_temp_block){
+	 AK_PRO;
+	 int temp_int = 0;	
+	 float temp_float = 0;
  
-#include "difference.h"
-
-/**
- * @author Dino Laktašić edited by Elena Kržina
- * @brief  Auxiliary function for printing data depending on the variable that enters the switch statement. Original code written 
- * by Dino Lakšatić, section separated and edited by Elena Kržina for code transparency
- * @param data accessed for later comparison
- * @param address address of block for accessing data
- * @param size size of block for accessing data
- * @param type type of block for accessing data
- * @param tbl_temp_block temporary block from which data is accessed
- * @return returns void
- */
-void AK_difference_Print_By_Type(char* data, int address, int size, int type, AK_mem_block *tbl_temp_block){
-	AK_PRO;
-	int temp_int = 0;	
-	float temp_float = 0;
-
-	switch (type) {
-		case TYPE_INT: 
-			memcpy(&temp_int, &(tbl_temp_block->block->data[address]), size);
-			sprintf(data, "%d", temp_int);
-			break;
-		case TYPE_FLOAT:
-			memcpy(&temp_float, &(tbl_temp_block->block->data[address]), size);
-			sprintf(data, "%f", temp_float);
-			break;
-		case TYPE_VARCHAR:
-		default:
-			memset(data, '\0', MAX_VARCHAR_LENGTH);
-			memcpy(data, &(tbl_temp_block->block->data[address]), size);
-	}
-	AK_EPI;
-}
-
-/**
- * @author Dino Laktašić; updated by Elena Kržina
- * @brief  Function that produces a difference of two tables. Table addresses are gotten by providing names of the tables.
- *         Specifically start addresses are taken from them. They are used to allocate blocks for them. It is checked whether
-           the tables have same table schemas. If not, it returns EXIT_ERROR. New segment for result of difference operation is
-           initialized. Function compares every block in extent of the first table with every block in extent of second table. If there 
-	   is a difference between their rows, they are put in dstTable.
- * @param srcTable1 name of the first table
- * @param srcTable2 name of the second table
- * @param dstTable name of the new table
- * @return if success returns EXIT_SUCCESS, else returns EXIT_ERROR
- */
-int AK_difference(char *srcTable1, char *srcTable2, char *dstTable) {
-    AK_PRO;
-
-    table_addresses *src_addr1 = (table_addresses*) AK_get_table_addresses(srcTable1);
-    table_addresses *src_addr2 = (table_addresses*) AK_get_table_addresses(srcTable2);
-
-    int startAddress1 = src_addr1->address_from[0];
-    int startAddress2 = src_addr2->address_from[0];
-
-    if ((startAddress1 != 0) && (startAddress2 != 0)) {
-	
-		//for greater speed, integers are put into CPU registers
-        register int i, j, k, l, m, n, o;
-        i = j = k = l = 0;
-
-        AK_mem_block *tbl1_temp_block = (AK_mem_block *) AK_get_block(startAddress1);
-        AK_mem_block *tbl2_temp_block = (AK_mem_block *) AK_get_block(startAddress2);
-		
-		int num_att = AK_check_tables_scheme(tbl1_temp_block, tbl2_temp_block, "Difference");
-		
-		if (num_att == EXIT_ERROR) {
-
-			AK_free(src_addr1);
-       		AK_free(src_addr2);
-			AK_free(tbl1_temp_block);
-			AK_free(tbl2_temp_block);
-			
-			AK_EPI;
-			return EXIT_ERROR;
+	 switch (type) {
+		 case TYPE_INT: 
+			 memcpy(&temp_int, &(tbl_temp_block->block->data[address]), size);
+			 //Sigurno formatiranje cijelih brojeva u string uz ograničenje duljine buffera
+			 snprintf(data, MAX_VARCHAR_LENGTH, "%d", temp_int);
+			 //Ranije korišteni sprintf mogao je prepisati više znakova nego što data drži:
+			 //sprintf(data, "%d", temp_int); 
+			 break;
+		 case TYPE_FLOAT:
+			 memcpy(&temp_float, &(tbl_temp_block->block->data[address]), size);
+			 //Sigurno formatiranje realnih brojeva u string uz ograničenje duljine buffera
+			 snprintf(data, MAX_VARCHAR_LENGTH, "%f", temp_float);
+			 //Ranije korišteni sprintf mogao je prepisati više znakova nego što data drži:
+			 //sprintf(data, "%f", temp_float);
+			 break;
+		 case TYPE_VARCHAR:
+		 default:
+		 //prilagođavanje veličine da ne premaši maksimalnu dužinu buffera
+		 if (size >= MAX_VARCHAR_LENGTH) {
+			size = MAX_VARCHAR_LENGTH - 1;
 		}
+			//Originalni memset je bio suvišan jer memcpy i završni '\0' pokrivaju inicijalizaciju:
+			 //memset(data, '\0', MAX_VARCHAR_LENGTH);
+			 memcpy(data, &(tbl_temp_block->block->data[address]), size);
+			 //postavljanje završnog nul-znaka na kraj stringa
+			 data[size] = '\0';
+	 }
+	 AK_EPI;
+ }
+ 
+ /**
+  * @author Dino Laktašić; updated by Elena Kržina
+  * @brief  Function that produces a difference of two tables. Table addresses are gotten by providing names of the tables.
+  *         Specifically start addresses are taken from them. They are used to allocate blocks for them. It is checked whether
+			the tables have same table schemas. If not, it returns EXIT_ERROR. New segment for result of difference operation is
+			initialized. Function compares every block in extent of the first table with every block in extent of second table. If there 
+		is a difference between their rows, they are put in dstTable.
+  * @param srcTable1 name of the first table
+  * @param srcTable2 name of the second table
+  * @param dstTable name of the new table
+  * @return if success returns EXIT_SUCCESS, else returns EXIT_ERROR
+  */
+ int AK_difference(char *srcTable1, char *srcTable2, char *dstTable) {
+	 AK_PRO;
+ 
+	 table_addresses *src_addr1 = (table_addresses*) AK_get_table_addresses(srcTable1);
+	 //Provjera postoji li prva tablica
+	 if (!src_addr1) {
+        printf("AK_difference ERROR: ne mogu dohvatiti adresu tablice %s\n", srcTable1);
+        return EXIT_ERROR;
+    }
 
-		//initializing variables for table difference
-		int address, type, size;
-		int different, num_rows, summ;
-		different = num_rows = summ = 0;
-		
-        char data1[MAX_VARCHAR_LENGTH];
-		char data2[MAX_VARCHAR_LENGTH];
-
-		//initializing new segment
-		AK_header *header = (AK_header *) AK_malloc(num_att * sizeof (AK_header));
-		memcpy(header, tbl1_temp_block->block->header, num_att * sizeof (AK_header));
-		AK_initialize_new_segment(dstTable, SEGMENT_TYPE_TABLE, header);
-		AK_free(header);
-
-		struct list_node *row_root = (struct list_node *) AK_malloc(sizeof(struct list_node));
-		memset(row_root, 0, sizeof(struct list_node));
-		AK_Init_L3(&row_root);
-		
-		//START ADDRESS: for each bit in the address
-		for (i = 0; src_addr1->address_from[i] != 0; i++) {
-		
-			startAddress1 = src_addr1->address_from[i];
-			//BLOCK: for each block in table1 extent until reaching the end of the allocated address of the table
-			for (j = startAddress1; j < src_addr1->address_to[i]; j++) {
-			
-				//read block from first table
-				tbl1_temp_block = (AK_mem_block *) AK_get_block(j); 
-
-				//if there is data in the block, continue
-				if (tbl1_temp_block->block->AK_free_space != 0) {
-							
-					//TABLE2: for each extent in table2
-						for (k = 0; k < (src_addr2->address_from[k] != 0); k++) {
-							startAddress2 = src_addr2->address_from[k];
-							
-							if (startAddress2 != 0) {
-								//BLOCK: for each block in table2 extent
-								for (l = startAddress2; l < src_addr2->address_to[k]; l++) {
-									tbl2_temp_block = (AK_mem_block *) AK_get_block(l);
-
-									//if there is data in the block, continue
-									if (tbl2_temp_block->block->AK_free_space != 0) {
-									
-									//check whether the next block is free for m and n
-									//TUPLE_DICTS: for each tuple_dict in the block
-										for (m = 0; m < DATA_BLOCK_SIZE; m += num_att) {
-											if (tbl1_temp_block->block->tuple_dict[m + 1].type == FREE_INT)
-												break;
-											
-										for (n = 0; n < DATA_BLOCK_SIZE; n += num_att) {
-											if (tbl2_temp_block->block->tuple_dict[n + 1].type == FREE_INT)
-													break;
-											
-											//for each element in row
-											for (o = 0; o < num_att; o++) {
-												address = tbl1_temp_block->block->tuple_dict[m + o].address;
-												size = tbl1_temp_block->block->tuple_dict[m + o].size;
-												type = tbl1_temp_block->block->tuple_dict[m + o].type;
-												AK_difference_Print_By_Type(data1,address, size, type, tbl1_temp_block);
-
-												address = tbl2_temp_block->block->tuple_dict[n + o].address;
-												size = tbl2_temp_block->block->tuple_dict[n + o].size;
-												type = tbl2_temp_block->block->tuple_dict[n + o].type;
-												AK_difference_Print_By_Type(data2,address, size, type, tbl2_temp_block);
-
-												//if they are the same
-												if(strcmp(data1,data2)==0){
-													different++;
-												}
-												if(different==(num_att-1)) 
-													summ=1;
-											}
-											
-											//if same rows are found don't keep searching
-												if(summ==1)
-													break;
-										}
-										//if there is a difference between tuple_dicts
-										if (summ == 0) {
-											AK_DeleteAll_L3(&row_root);	
-											for (o = 0; o < num_att; o++) {
-												address = tbl1_temp_block->block->tuple_dict[m + o].address;
-												size = tbl1_temp_block->block->tuple_dict[m + o].size;
-												type = tbl1_temp_block->block->tuple_dict[m + o].type;
-														
-												memset(data1, '\0', MAX_VARCHAR_LENGTH);
-												memcpy(data1, tbl1_temp_block->block->data + address, size);
-
-												AK_Insert_New_Element(type, data1, dstTable, tbl1_temp_block->block->header[o].att_name, row_root);
-											}
-
-											AK_insert_row(row_root);
-										}
-										num_rows = different = summ = 0;
-									}
-								}
-							}
-						} else break;
-					}
-				}
-			}
-		}
-			
-		AK_free(src_addr1);
-		AK_free(src_addr2);
-		
-		AK_free(tbl1_temp_block);
-		AK_free(tbl2_temp_block);
-		
-		AK_DeleteAll_L3(&row_root);
-		AK_free(row_root);
-		AK_dbg_messg(LOW, REL_OP, "DIFFERENCE_TEST_SUCCESS\n\n");
-		AK_EPI;
-		
-		return EXIT_SUCCESS;
-	} 
-	
-	else {
-		AK_dbg_messg(LOW, REL_OP, "\nAK_difference: Table/s doesn't exist!");
-		
+	 table_addresses *src_addr2 = (table_addresses*) AK_get_table_addresses(srcTable2);
+	 //Provjera postoji li prva tablica
+	 if (!src_addr2) {
+        printf("AK_difference ERROR: ne mogu dohvatiti adresu tablice %s\n", srcTable2);
         AK_free(src_addr1);
-        AK_free(src_addr2);
-		
-		AK_EPI;
-		return EXIT_ERROR;
-	}
-	AK_EPI;
-}
+        return EXIT_ERROR;
+    }
+ 
+	 int startAddress1 = src_addr1->address_from[0];
+	 int startAddress2 = src_addr2->address_from[0];
+ 
+	 if ((startAddress1 != 0) && (startAddress2 != 0)) {
+	 
+		 //for greater speed, integers are put into CPU registers
+		 register int i, j, k, l, m, n, o;
+		 i = j = k = l = 0;
+ 
+		 AK_mem_block *tbl1_temp_block = (AK_mem_block *) AK_get_block(startAddress1);
+		 AK_mem_block *tbl2_temp_block = (AK_mem_block *) AK_get_block(startAddress2);
+		 
+		 int num_att = AK_check_tables_scheme(tbl1_temp_block, tbl2_temp_block, "Difference");
+		 
+		 if (num_att == EXIT_ERROR) {
+ 
+			//printf("DIFF DEBUG: about to AK_free(src_addr1=%p)\n", src_addr1);
+			 AK_free(src_addr1);
+			//printf("DIFF DEBUG: returned from AK_free(src_addr1)\n");
 
-/**
+			//printf("DIFF DEBUG: about to AK_free(src_addr2=%p)\n", src_addr2);
+			 AK_free(src_addr2);
+			//printf("DIFF DEBUG: returned from AK_free(src_addr2)\n");
+
+			/*printf("DIFF DEBUG: before AK_free(tbl1_temp_block=%p)\n", tbl1_temp_block);
+			 AK_free(tbl1_temp_block);
+			printf("DIFF DEBUG: after AK_free(tbl1_temp_block)\n");
+
+			printf("DIFF DEBUG: before AK_free(tbl2_temp_block=%p)\n", tbl2_temp_block);
+			 AK_free(tbl2_temp_block);
+			printf("DIFF DEBUG: after AK_free(tbl2_temp_block)\n");*/
+			 
+			 AK_EPI;
+			 return EXIT_ERROR;
+		 }
+ 
+		 //initializing variables for table difference
+		 int address, type, size;
+		 int different, num_rows, summ;
+		 different = num_rows = summ = 0;
+		 
+		 char data1[MAX_VARCHAR_LENGTH];
+		 char data2[MAX_VARCHAR_LENGTH];
+ 
+		 //initializing new segment
+		 //AK_header *header = (AK_header *) AK_malloc(num_att * sizeof (AK_header));
+
+		 	 /**
+			 * @author Tea Radić
+			 * @brief Prepare a full MAX_ATTRIBUTES-length header array: copy the first num_att entries from the source header and zero the remainder 
+			 */
+			  AK_header header_buf[MAX_ATTRIBUTES];
+			  memcpy(header_buf,
+				  tbl1_temp_block->block->header,
+				  num_att * sizeof(AK_header));
+			  memset(header_buf + num_att,
+				  0,
+				  (MAX_ATTRIBUTES - num_att) * sizeof(AK_header));
+			  AK_initialize_new_segment(dstTable,
+									  SEGMENT_TYPE_TABLE,
+									  header_buf);
+				// Check if the second source table is completely empty (no tuples in any block).
+				bool empty2 = true;
+				for (int e = 0; src_addr2->address_from[e] != 0; e++) {
+					for (int b = src_addr2->address_from[e]; b < src_addr2->address_to[e]; b++) {
+						AK_mem_block *blk2 = AK_get_block(b);
+						if (blk2->block->tuple_dict[0].type != FREE_INT) {
+							empty2 = false;
+							break;
+						}
+					}
+					if (!empty2) break;
+				}
+				// If the second table is empty, simply copy all rows from the first table and return.
+				if (empty2) {
+					AK_copy_all_rows(srcTable1, dstTable, num_att);
+					AK_free(src_addr1);
+					AK_free(src_addr2);
+					return EXIT_SUCCESS;
+				}
+
+		 //Provjera uspješne alokacije memorije za zaglavlje rezultirajuće tablice
+		 /*if (!header) {
+            printf("AK_difference ERROR: ne mogu alocirati header\n");
+            AK_free(src_addr1);
+            AK_free(src_addr2);
+            return EXIT_ERROR;
+        }*/
+
+		 //memcpy(header, tbl1_temp_block->block->header, num_att * sizeof (AK_header));
+		 //AK_initialize_new_segment(dstTable, SEGMENT_TYPE_TABLE, header);
+
+		 //Ovaj poziv je premješten na kraj funkcije kako ne bi došlo do ranog oslobađanja memorije
+		 //AK_free(header);
+		 //header = NULL;
+		 //printf("DIFF DEBUG: header freed and set to %p\n", (void*)header);
+     
+
+		 struct list_node *row_root = (struct list_node *) AK_malloc(sizeof(struct list_node));
+		 //Alokacija početnog čvora za unos redaka u novu tablicu
+		 if (!row_root) {
+            printf("AK_difference ERROR: ne mogu alocirati row_root\n");
+            AK_free(src_addr1);
+            AK_free(src_addr2);
+            return EXIT_ERROR;
+        }
+
+		 memset(row_root, 0, sizeof(struct list_node));
+		 AK_Init_L3(&row_root);
+		 
+		 //START ADDRESS: for each bit in the address
+		 for (i = 0; src_addr1->address_from[i] != 0; i++) {
+		 
+			 startAddress1 = src_addr1->address_from[i];
+			 //BLOCK: for each block in table1 extent until reaching the end of the allocated address of the table
+			 for (j = startAddress1; j < src_addr1->address_to[i]; j++) {
+			 
+				 //read block from first table
+				 //printf("DIFF DEBUG: about to AK_get_block(tbl1) with block_id=%d\n", j);
+				 tbl1_temp_block = (AK_mem_block *) AK_get_block(j); 
+				 //printf("DIFF DEBUG: returned tbl1_temp_block=%p\n", (void*)tbl1_temp_block);
+
+
+				 //Provjera uspješnog dohvaćanja bloka iz prve tablice
+				 if (!tbl1_temp_block) {
+					printf("DIFF ERROR: tbl1_temp_block == NULL at j=%d\n", j);
+					AK_free(src_addr1);
+					AK_free(src_addr2);
+					AK_DeleteAll_L3(&row_root);
+					AK_free(row_root);
+					AK_EPI;
+					return EXIT_ERROR;
+				}
+ 
+				 //if there is data in the block, continue
+				 if (tbl1_temp_block->block->AK_free_space != 0) {
+							 
+					 //TABLE2: for each extent in table2
+					 	//Prijašnji uvjet nije ispravno prolazio kroz sve ekstenzije: 
+						//usporedba src_addr2->address_from[k] != 0 vraćala je samo 0 ili 1, pa petlja nije iterirala sve blokove
+						 //for (k = 0; k < (src_addr2->address_from[k] != 0); k++) {
+
+						 //Ispravljen uvjet petlje: prolazi kroz sve ekstenzije druge tablice dok god address_from[k] != 0
+						 for (k = 0; src_addr2->address_from[k] != 0; k++) {
+							 startAddress2 = src_addr2->address_from[k];
+							 
+							 if (startAddress2 != 0) {
+								 //BLOCK: for each block in table2 extent
+								 for (l = startAddress2; l < src_addr2->address_to[k]; l++) {
+
+									//printf("DIFF DEBUG: about to AK_get_block(tbl2) with block_id=%d\n", l);
+									 tbl2_temp_block = (AK_mem_block *) AK_get_block(l);
+									//printf("DIFF DEBUG: returned tbl2_temp_block=%p\n", (void*)tbl2_temp_block);
+			
+
+									//Provjera NULL pokazivača nakon AK_get_block
+									if (!tbl2_temp_block) {
+										printf("DIFF ERROR: tbl2_temp_block == NULL at l=%d\n", l);
+										AK_free(src_addr1);
+										AK_free(src_addr2);
+										AK_DeleteAll_L3(&row_root);
+										AK_free(row_root);
+										AK_EPI;
+										return EXIT_ERROR;
+									}
+ 
+									 //if there is data in the block, continue
+									 if (tbl2_temp_block->block->AK_free_space != 0) {
+									 
+									 //check whether the next block is free for m and n
+									 //TUPLE_DICTS: for each tuple_dict in the block
+										 for (m = 0; m < DATA_BLOCK_SIZE; m += num_att) {
+											 if (tbl1_temp_block->block->tuple_dict[m + 1].type == FREE_INT)
+												 break;
+											 
+										 for (n = 0; n < DATA_BLOCK_SIZE; n += num_att) {
+											 if (tbl2_temp_block->block->tuple_dict[n + 1].type == FREE_INT)
+													 break;
+											 
+											 //for each element in row
+											 for (o = 0; o < num_att; o++) {
+												 address = tbl1_temp_block->block->tuple_dict[m + o].address;
+												 size = tbl1_temp_block->block->tuple_dict[m + o].size;
+												 type = tbl1_temp_block->block->tuple_dict[m + o].type;
+												 AK_difference_Print_By_Type(data1,address, size, type, tbl1_temp_block);
+ 
+												 address = tbl2_temp_block->block->tuple_dict[n + o].address;
+												 size = tbl2_temp_block->block->tuple_dict[n + o].size;
+												 type = tbl2_temp_block->block->tuple_dict[n + o].type;
+												 AK_difference_Print_By_Type(data2,address, size, type, tbl2_temp_block);
+ 
+												 //if they are the same
+												 if(strcmp(data1,data2)==0){
+													 different++;
+												 }
+												 /*if(different==(num_att-1)) 
+													 summ=1;*/
+
+												//popravljeno
+												if (different == num_att)
+													summ = 1;
+											 }
+											 
+											 //if same rows are found don't keep searching
+												 if(summ==1)
+													 break;
+										 }
+										 //if there is a difference between tuple_dicts
+										 if (summ == 0) {
+											 AK_DeleteAll_L3(&row_root);	
+											 for (o = 0; o < num_att; o++) {
+												 address = tbl1_temp_block->block->tuple_dict[m + o].address;
+												 size = tbl1_temp_block->block->tuple_dict[m + o].size;
+												 type = tbl1_temp_block->block->tuple_dict[m + o].type;
+														 
+												 memset(data1, '\0', MAX_VARCHAR_LENGTH);
+												 memcpy(data1, tbl1_temp_block->block->data + address, size);
+ 
+												 AK_Insert_New_Element(type, data1, dstTable, tbl1_temp_block->block->header[o].att_name, row_root);
+											 }
+ 
+											 AK_insert_row(row_root);
+										 }
+										 num_rows = different = summ = 0;
+									 }
+									 
+								 }
+							 } 
+
+						 } else break; 
+					 }
+				 }
+			 }
+		 }
+			
+		 //printf("DIFF DEBUG: about to AK_free(src_addr1=%p)\n", src_addr1);
+		 AK_free(src_addr1);
+		 //printf("DIFF DEBUG: returned from AK_free(src_addr1)\n");
+
+		 //printf("DIFF DEBUG: about to AK_free(src_addr2=%p)\n", src_addr2);
+		 AK_free(src_addr2);
+		 //printf("DIFF DEBUG: returned from AK_free(src_addr2)\n");
+		 
+		 // Ovi pokazivači dolaze iz funkcije AK_get_block i pripadaju internom cache sustavu.
+		// Njih se ne smije ručno oslobađati jer to rezultira SIGSEGV greškom.
+		 /*printf("DIFF DEBUG: before AK_free(tbl1_temp_block=%p)\n", tbl1_temp_block);
+		 AK_free(tbl1_temp_block);
+		 printf("DIFF DEBUG: after AK_free(tbl1_temp_block)\n");
+
+		 printf("DIFF DEBUG: before AK_free(tbl2_temp_block=%p)\n", tbl2_temp_block);
+		 AK_free(tbl2_temp_block);
+		 printf("DIFF DEBUG: after AK_free(tbl2_temp_block)\n");*/
+		 
+		 //printf("DIFF DEBUG: before AK_DeleteAll_L3(&row_root)\n");
+		 AK_DeleteAll_L3(&row_root);
+		 //printf("DIFF DEBUG: after AK_DeleteAll_L3(&row_root)\n");
+
+		 //printf("DIFF DEBUG: before AK_free(row_root=%p)\n", row_root);
+		 AK_free(row_root);
+		 //printf("DIFF DEBUG: after AK_free(row_root)\n");
+
+		 AK_dbg_messg(LOW, REL_OP, "DIFFERENCE_TEST_SUCCESS\n\n");
+		 AK_EPI;
+
+		 //Premješteno
+		 //AK_free(header);
+    	 //header = NULL;
+
+		 
+		 return EXIT_SUCCESS;
+	 } 
+	 
+	 else {
+		 AK_dbg_messg(LOW, REL_OP, "\nAK_difference: Table/s doesn't exist!");
+		 
+		 //printf("DIFF DEBUG: about to AK_free(src_addr1=%p)\n", src_addr1);
+		 AK_free(src_addr1);
+		 //printf("DIFF DEBUG: returned from AK_free(src_addr1)\n");
+
+		 //printf("DIFF DEBUG: about to AK_free(src_addr2=%p)\n", src_addr2);
+		 AK_free(src_addr2);
+		 //printf("DIFF DEBUG: returned from AK_free(src_addr2)\n");
+		 
+		 AK_EPI;
+		 return EXIT_ERROR;
+	 }
+	 AK_EPI;
+ }
+ 
+ /**
+  * @brief  Function for difference operator testing
+  * @author Dino Laktašić
+  */
+ /*TestResult AK_op_difference_test() {
+	 AK_PRO;
+	 char *sys_table = "AK_relation";
+	 char *destTable = "difference_test";
+	 char *tblName1 = "professor";
+	 char *tblName2 = "assistant";
+	 int test_difference;
+ 
+	 printf("\n********** DIFFERENCE TEST **********\n\n");
+	 if (AK_if_exist(destTable, sys_table) == 0) {
+		 printf("Table %s does not exist!\n", destTable);
+	 test_difference = AK_difference(tblName1, tblName2, destTable);
+	 }
+	 else {
+	 printf("Table %s already exists!\n", destTable);
+	 test_difference = EXIT_SUCCESS;
+	 }
+ 
+	 AK_print_table(destTable);
+	 
+	 int success=0;
+	 int failed=0;
+	 if (test_difference == EXIT_SUCCESS){
+		 printf("\n\nTest succeeded!\n");
+		 success++;
+	 }
+	 else{
+		 printf("\n\nTest failed!\n");
+		 failed++;
+	 }
+	 
+	 AK_EPI;
+	 return TEST_result(success,failed);
+ }*/
+
+
+ /**
  * @brief  Function for difference operator testing
- * @author Dino Laktašić
+ * @author Tea Radić
  */
 TestResult AK_op_difference_test() {
     AK_PRO;
-    char *sys_table = "AK_relation";
-    char *destTable = "difference_test";
-    char *tblName1 = "professor";
-    char *tblName2 = "assistant";
-    int test_difference;
+
+    int passed = 0, failed = 0;
+
+    AK_create_test_table_schema_mismatch();  
+    AK_create_test_table_empty();            
 
     printf("\n********** DIFFERENCE TEST **********\n\n");
-    if (AK_if_exist(destTable, sys_table) == 0) {
-    	printf("Table %s does not exist!\n", destTable);
-	test_difference = AK_difference(tblName1, tblName2, destTable);
-    }
-    else {
-	printf("Table %s already exists!\n", destTable);
-	test_difference = EXIT_SUCCESS;
+
+    //osnovni difference: professor - assistant
+    if (AK_difference("professor", "assistant", "difference_test") == EXIT_SUCCESS) {
+        AK_print_table("difference_test");
+        printf("Basic difference test succeeded!\n\n");
+        passed++;
+    } else {
+        printf("Basic difference test failed!\n\n");
+        failed++;
     }
 
-    AK_print_table(destTable);
-	
-	int success=0;
-    int failed=0;
-    if (test_difference == EXIT_SUCCESS){
-		printf("\n\nTest succeeded!\n");
-		success++;
+    //schema-mismatch: professor - UT_mismatch
+    printf("\n********** SCHEMA MISMATCH TEST **********\n\n");
+    if (AK_difference("professor", "UT_mismatch", "difference_mismatch_test") != EXIT_SUCCESS) {
+        printf("OK: difference s različitim shemama je ispravno odbijen.\n\n");
+        passed++;
+    } else {
+        printf("ERROR: difference s različitim shemama je neočekivano uspio.\n\n");
+        failed++;
     }
-    else{
-		printf("\n\nTest failed!\n");
-		failed++;
+
+    //difference with empty table
+    printf("\n********** DIFFERENCE WITH EMPTY TABLE **********\n\n");
+    int rc1 = AK_difference("UT_empty",   "assistant",      "difference_empty1");
+    int rc2 = AK_difference("professor",  "UT_empty",       "difference_empty2");
+
+    if (rc1 == EXIT_SUCCESS) {
+        printf("OK: difference(empty, assistant) uspješan.\n");
+        passed++;
+    } else {
+        printf("ERROR: difference(empty, assistant) nije uspio.\n");
+        failed++;
     }
-	
+    if (rc2 == EXIT_SUCCESS) {
+        printf("OK: difference(professor, empty) uspješan.\n\n");
+        passed++;
+    } else {
+        printf("ERROR: difference(professor, empty) nije uspio.\n\n");
+        failed++;
+    }
+
+    AK_print_table("difference_empty1");
+    AK_print_table("difference_empty2");
+
     AK_EPI;
-    return TEST_result(success,failed);
+    return TEST_result(passed, failed);
 }
-
-

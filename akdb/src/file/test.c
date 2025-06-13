@@ -288,7 +288,79 @@ void AK_create_test_tables() {
     AK_create_test_table_employee();
     AK_create_test_table_department();
     AK_create_test_table_course();
+    //Creates a test table with a different schema for schema mismatch testing
+    AK_create_test_table_schema_mismatch(); 
+    //Creates an empty test table for testing operations with no data
+    AK_create_test_table_empty();
 }
+
+/**
+ * @author Tea Radić
+ * @brief Creates a test table with a different schema for the schema mismatch test.
+ */
+void AK_create_test_table_schema_mismatch() {
+    const char *cols[]  = { "id_prof", "department" };
+    int         types[] = { TYPE_INT, TYPE_VARCHAR };
+
+    create_header_test("UT_prof_dept", (char**)cols, 2, types);
+
+    {
+        char *vals1[] = { "35891", "Computer Science" };
+        insert_data_test("UT_prof_dept", (char**)cols, vals1, 2, types);
+    }
+    {
+        char *vals2[] = { "35892", "Applied Mathematics" };
+        insert_data_test("UT_prof_dept", (char**)cols, vals2, 2, types);
+    }
+    {
+        char *vals3[] = { "35891", "Computer Science" };
+        insert_data_test("UT_prof_dept", (char**)cols, vals3, 2, types);
+    }
+}
+
+/**
+ * @author Tea Radić
+ * @brief Creates an empty table "UT_empty" (same schema as "assistant", but no rows).
+ */
+void AK_create_test_table_empty() {
+    const char *cols[]  = { "id_prof", "firstname", "lastname", "tel", "email", "web_page" };
+    int         types[] = { TYPE_INT, TYPE_VARCHAR, TYPE_VARCHAR, TYPE_INT, TYPE_VARCHAR, TYPE_VARCHAR };
+  
+    create_header_test("UT_empty", (char**)cols, 6, types);
+}
+
+
+/**
+ * @author Tea Radić
+ * @brief  Test table for multiple-union case (same header as professor).
+ */
+void AK_create_test_table_union3() {
+    const char *cols[]  = { "id_prof", "firstname", "lastname", "tel", "email", "web_page" };
+    int         types[] = { TYPE_INT, TYPE_VARCHAR, TYPE_VARCHAR, TYPE_INT, TYPE_VARCHAR, TYPE_VARCHAR };
+
+    create_header_test("UT_union3", (char**)cols, 6, types);
+
+    {
+        char *vals1[] = { "35891", "Miroslav", "Baca", "858928176",
+                          "miroslav.baca@foi.hr",
+                          "www.foi.hr/nastavnici/baca.miroslav/" };
+        insert_data_test("UT_union3", (char**)cols, vals1, 6, types);
+    }
+    {
+        char *vals2[] = { "36000", "Novi", "Profesor", "000111222",
+                          "novi.profesor@foi.hr",
+                          "www.foi.hr/nastavnici/novi.profesor/" };
+        insert_data_test("UT_union3", (char**)cols, vals2, 6, types);
+    }
+    {
+        char *vals3[] = { "36001", "Novi2", "Profesor2", "000222333",
+                          "novi.profesor2@foi.hr",
+                          "www.foi.hr/nastavnici/novi.profesor2/" };
+        insert_data_test("UT_union3", (char**)cols, vals3, 6, types);
+    }
+}
+
+
 
 /**
  * @author Žan Žlender

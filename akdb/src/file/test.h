@@ -94,5 +94,17 @@ int get_row_test(int num, char* tbl);
  */
 void AK_create_test_tables();
 
+/**
+ * @author Tea Radić
+ * @brief Creates two test tables with different schemas for the mismatch test.
+ */
+void AK_create_test_table_schema_mismatch(void);
+
+/**
+ * @author Tea Radić
+ * @brief Creates an empty table for a test union with an empty table.
+ */
+void AK_create_test_table_empty();
+
 #endif
 
