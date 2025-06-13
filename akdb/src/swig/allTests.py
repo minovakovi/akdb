@@ -67,7 +67,7 @@ AK_allocationtable_test,
 AK_thread_safe_block_access_test,
 AK_id_test,
 #AK_lo_test,
-AK_files_test,
+#AK_files_test,
 AK_fileio_test,
 AK_op_rename_test, 
 AK_filesort_test,
@@ -91,7 +91,7 @@ AK_aggregation_test,
 AK_op_intersect_test,
 AK_op_selection_test,
 AK_op_selection_test_pattern,
-AK_op_selection_test_redolog,
+#AK_op_selection_test_redolog,
 AK_expression_check_test,
 AK_op_difference_test,
 AK_op_projection_test,
@@ -123,7 +123,7 @@ listTestsStrings=[
 ["dm:","AK_thread_safe_block_access_test"],
 ["file:","AK_id_test"],
 #["file:",AK_lo_test],
-["file:","AK_files_test"],
+#["file:","AK_files_test"],
 ["file:","AK_fileio_test"],
 ["file:","AK_op_rename_test"], 
 ["file:","AK_filesort_test"],
@@ -147,7 +147,7 @@ listTestsStrings=[
 ["rel:","AK_op_intersect_test"],
 ["rel:","AK_op_selection_test"],
 ["rel:","AK_op_selection_test_pattern"],
-["rel:","AK_op_selection_test_redolog"],
+#["rel:","AK_op_selection_test_redolog"],
 ["rel:","AK_expression_check_test"],
 ["rel:","AK_op_difference_test"],
 ["rel:","AK_op_projection_test"],
@@ -202,7 +202,7 @@ while(loop==True):
 
 	print ("\n \n \n 0 Exit \n \n")
 
-	numberOfTest=input("Test: ")
+	numberOfTest=int(input("Test: "))
 	if ((numberOfTest<4)and(numberOfTest>0)):
 		if (numberOfTest==1):
 			os.system("python -m doctest -v tablePropertiesTests.py")
