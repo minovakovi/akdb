@@ -354,9 +354,13 @@ void AK_InsertAfter_L2(int type, char *data, int size,
   AK_PRO;
   struct list_node *new_elem;
 
+  assert(data != NULL); // forbid null pointers
+  assert(size > 0 && size <= MAX_VARCHAR_LENGTH); // forbid bad size
+
   new_elem = (struct list_node *)AK_malloc(sizeof(struct list_node));
   new_elem->size = size;
   new_elem->type = type;
+  memset(new_elem->data, 0, MAX_VARCHAR_LENGTH); // initialize memory
   memcpy(new_elem->data, data, MAX_VARCHAR_LENGTH);
   if ((*current) == NULL) {
     (*L)->next = new_elem;
@@ -401,9 +405,7 @@ void AK_InsertAtBegin_L3(int type, char *data, int size, struct list_node *L) {
 void AK_InsertAtEnd_L3(int type, char *data, int size, struct list_node *L) {
   AK_PRO;
   assert(L != NULL);
-  struct list_node *current;
-  current = NULL;
-  current = AK_End_L2(L);
+  struct list_node *current = AK_End_L2(L);
   AK_InsertAfter_L2(type, data, size, &current, &L);
 
   AK_EPI;
@@ -506,6 +508,24 @@ char *AK_Retrieve_L2(struct list_node *current, struct list_node *L) {
   AK_EPI;
   return data;
 }
+
+/**
+ * @author Fran Gabaldo
+ * @brief  Function that deallocates the list memory
+ * @param head head of the list node
+ * @return none
+ */
+
+ void AK_FreeList_L3(struct list_node *head) {
+  struct list_node *current = head->next;
+  struct list_node *next;
+  while (current != NULL) {
+    next = current->next;
+    free(current);
+    current = next;
+  }
+  head->next = NULL;
+ }
 
 /**
  * @author Matija Šestak.
