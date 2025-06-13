@@ -47,13 +47,13 @@ class Sql_executor:
     # commands for input
     # checks whether received command matches any of the defined commands for kalashnikovdb,
     # and call its execution if it matches
-    def commands_for_input(self, command):
-        if isinstance(command, str) and len(command) > 0:
-            for elem in self.commands:
-                if elem.matches(command) is not None:
-                    print(elem)
-                    return (elem.__class__.__name__, elem.execute(command))
-        return ("",  "Error. Wrong command: " + command)
+    def commands_for_input(self, command: str):
+        if command and isinstance(command, str):
+            for cmd in self.commands:
+                if cmd.matches(command):
+                    print(f"Matched command: {cmd}")
+                    return (cmd.__class__.__name__, cmd.execute(command))
+        return "", f"Error. Wrong command: {command}"
 
     # execute method
     # called when a new command is received (from client)
