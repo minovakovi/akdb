@@ -58,6 +58,8 @@
 #include "trans/transaction.h"
 #include "rec/recovery.h"
 #include "sql/view.h"
+#include "sql/api_functions.h"
+
 
 // NUMBERS ARE FOR COUNTING OLD IS BASED ON COMMIT FROM 2018 AND OLDER WHILE NEW IS 2022
 //COUNTED BCS THE TESTING() FUNCTION A LOT OF STUFF IS BASED ON IF(NUMBER) WHICH IS DOESNT MAKE SENSE
@@ -144,12 +146,13 @@ Test tests[] = {
 //14+39=53 total
 //trans:
 //----------
+{"sql: AK_api_functions", &AK_api_functions_test}, //sql/api.functions.c, new 56
 {"trans: AK_transaction", &AK_test_Transaction}, //src/trans/transaction.c
-//54
+//old 56, new 57
 //rec:
 //----------
-{"rec: AK_recovery", &AK_recovery_test} //rec/recovery.c
-//55
+{"rec: AK_recovery", &AK_recovery_test}, //rec/recovery.c
+//old 57 new 58
 };
 //here are all tests in a order like in the folders from the github
 void help()
