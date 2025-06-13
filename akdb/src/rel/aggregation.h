@@ -6,12 +6,12 @@
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
  * (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU Library General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor Boston, MA 02110-1301,  USA
@@ -33,75 +33,83 @@
 #define AGG_TASK_MAX 4
 #define AGG_TASK_MIN 5
 #define AGG_TASK_AVG 6
-#define AGG_TASK_AVG_COUNT 10 //used internaly
-#define AGG_TASK_AVG_SUM 11 //used internaly
+#define AGG_TASK_AVG_COUNT 10 // used internaly
+#define AGG_TASK_AVG_SUM 11   // used internaly
 
-//nove definicije @author Marin Bogešić
+// nove definicije @author Marin Bogešić
 #define MAX_RECORDS 100
 #define MAX_ATTRIBUTES 10
-#define AK_OP_EQUAL 0
-#define AK_OP_GREATER 1
+#define AK_OP_EQUAL "="
+#define AK_OP_GREATER ">"
+#define AK_OP_LESS "<"
 #define MAX_OP_NAME 10
 
-typedef struct expr_node {
-    char attribute[MAX_ATT_NAME];
-    char op[MAX_OP_NAME];
-    char value[MAX_VARCHAR_LENGTH];
-    struct expr_node* next;
+typedef struct expr_node
+{
+  char attribute[MAX_ATT_NAME];
+  char op[MAX_OP_NAME];
+  char value[MAX_VARCHAR_LENGTH];
+  struct expr_node *next;
 } ExprNode;
 
-typedef struct {
-    char att_name[MAX_ATT_NAME];
-    char data[MAX_VARCHAR_LENGTH];
+typedef struct
+{
+  char att_name[MAX_ATT_NAME];
+  char data[MAX_VARCHAR_LENGTH];
 } Record;
 
-typedef struct {
-    Record records[MAX_RECORDS];
-    int count;
+typedef struct
+{
+  Record records[MAX_RECORDS];
+  int count;
 } Table;
 
-typedef struct {
-    char att_name[MAX_ATT_NAME];
-    int agg_task;
+typedef struct
+{
+  char att_name[MAX_ATT_NAME];
+  int agg_task;
 } GroupByAttribute;
 
-
 /**
-  * @author Unknown
-  * @struct AK_agg_value
-  * @brief Structure that contains atribute name, date and aggregation task associated
-  */
-typedef struct {
-    char att_name[MAX_ATT_NAME];
-    char data[ MAX_VARCHAR_LENGTH ];
-    int agg_task;
+ * @author Unknown
+ * @struct AK_agg_value
+ * @brief Structure that contains atribute name, date and aggregation task associated
+ */
+typedef struct
+{
+  char att_name[MAX_ATT_NAME];
+  char data[MAX_VARCHAR_LENGTH];
+  int agg_task;
 } AK_agg_value;
 /**
-  * @author Unknown
-  * @struct AK_agg_input
-  * @brief Structure that contains attributes from table header, tasks for this table and counter value
-  */
-typedef struct {
-    AK_header attributes[MAX_ATTRIBUTES];
-    int tasks[MAX_ATTRIBUTES];
-    int counter;
+ * @author Unknown
+ * @struct AK_agg_input
+ * @brief Structure that contains attributes from table header, tasks for this table and counter value
+ */
+typedef struct
+{
+  AK_header attributes[MAX_ATTRIBUTES];
+  int tasks[MAX_ATTRIBUTES];
+  int counter;
 } AK_agg_input;
 
 /**
-  * @author Ena Dujak
-  * @struct rowroot_struct
-  * @brief Structure that defines a new row in table using list_node
-  */
-typedef struct{
-    struct list_node * row_root;
+ * @author Ena Dujak
+ * @struct rowroot_struct
+ * @brief Structure that defines a new row in table using list_node
+ */
+typedef struct
+{
+  struct list_node *row_root;
 } rowroot_struct;
 /**
-  * @author Ena Dujak
-  * @struct projection_att_struct
-  * @brief Structure that defines projection_att which is a new list_node
-  */
-typedef struct{
-    struct list_node * projection_att;
+ * @author Ena Dujak
+ * @struct projection_att_struct
+ * @brief Structure that defines projection_att which is a new list_node
+ */
+typedef struct
+{
+  struct list_node *projection_att;
 } projection_att_struct;
 
 /**
@@ -134,7 +142,7 @@ int AK_agg_input_add(AK_header header, int agg_task, AK_agg_input *input);
 /**
   @author Dejan Frankovic
   @brief Function that adds a header with a task on the beginning of the input object for aggregation.
-		 With the use of for loop existing attributes and tasks are moved from one place forward in input object
+     With the use of for loop existing attributes and tasks are moved from one place forward in input object
   @param header a header that is being aggregated
   @param agg_task  the task which is to be done on the header
   @param input the input object
@@ -159,9 +167,9 @@ void AK_agg_input_fix(AK_agg_input *input);
    @brief Function that aggregates a given table by given attributes. Firstly, AGG_TASK_AVG_COUNT and
           AGG_TASK_AVG_SUM are put on the beginning of the input object. Then for loop iterates through
           input tasks and assignes the type of aggregation operation according to aggregation operation.
-	  New table has to be created. For loop goes through given table. GROUP operation is executed separately
-	  from other operations. Addresses of records are put in needed_values array and
-	  results are put in new table.
+    New table has to be created. For loop goes through given table. GROUP operation is executed separately
+    from other operations. Addresses of records are put in needed_values array and
+    results are put in new table.
    @param input input object with list of atributes by which we aggregate and types of aggregations
    @param source_table - table name for the source table
    @param agg_table  table name for aggregated table
@@ -172,8 +180,8 @@ int AK_aggregation(AK_agg_input *input, char *source_table, char *agg_table);
 TestResult AK_aggregation_test();
 
 /*
-*@author: Marin Bogešić
-*/
+ *@author: Marin Bogešić
+ */
 void groupBy(Table *table, GroupByAttribute *groupByAttributes, int numGroupByAttributes);
 TestResult test_groupBy();
 

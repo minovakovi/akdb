@@ -1,23 +1,52 @@
-#ubuntu image
-FROM ubuntu:20.04
+FROM alpine:3.19
 
-#install required files
-RUN apt-get update -y
-RUN apt-get install git build-essential swig make doxygen python2.7 dos2unix libffi-dev libssl-dev curl python3 python3-pip -y
-RUN curl https://bootstrap.pypa.io/pip/2.7/get-pip.py -o get-pip.py
-RUN python2.7 get-pip.py
+# Build argument for LaTeX installation
+ARG BUILD_DOCS=false
 
-#installing latex takes some time, comment out the lines 12 and 13 if you do not plan to compile documentation(make doc)
-RUN DEBIAN_FRONTEND="noninteractive" apt-get -y install tzdata
-RUN apt-get install texlive -y
-RUN apt-get install texlive-latex-extra -y
-RUN pip3 install virtualenv
-RUN pip3 install paramiko
-RUN pip3 install pyparsing==2.4.7
-RUN pip3 install configparser
-RUN pip3 install langdetect
+# Dependencies
+RUN apk add --no-cache \
+    coreutils \
+    build-base \
+    swig \
+    coreutils \
+    make \
+    git \
+    curl \
+    dos2unix \
+    libffi-dev \
+    openssl-dev \
+    python3 \
+    python3-dev \
+    py3-pip \
+    ca-certificates \
+    tzdata
 
-RUN mkdir -p /usr/akdb
-VOLUME ["/usr/akdb"]
+# Install LaTeX tools
+RUN if [ "$BUILD_DOCS" = "true" ]; then \
+        apk add --no-cache \
+            texlive \
+            texlive-xetex \
+            texlive-luatex \
+            doxygen; \
+    fi
+
+# Python packages
+RUN pip3 install --no-cache-dir --break-system-packages \
+    --no-compile \
+    --disable-pip-version-check \
+    virtualenv \
+    paramiko \
+    pyparsing==2.4.7 \
+    configparser \
+    langdetect && \
+    pip3 cache purge && \
+    find /usr -type d -name '__pycache__' -exec rm -rf {} + 2>/dev/null || true && \
+    find /usr -name '*.pyc' -delete 2>/dev/null || true && \
+    find /usr -name '*.pyo' -delete 2>/dev/null || true && \
+    find /usr -type d -name '*.dist-info' -exec rm -rf {} + 2>/dev/null || true && \
+    rm -rf /root/.cache /tmp/* /var/tmp/*
+
 WORKDIR /usr/akdb
-RUN cd /usr/akdb
+VOLUME ["/usr/akdb"]
+
+
