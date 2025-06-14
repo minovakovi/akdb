@@ -140,7 +140,7 @@ int AK_create_theta_join_header(char *srcTable1, char * srcTable2, char *new_tab
 }
 
 /**
- * @author Tomislav Mikulček
+ * @author Tomislav Mikulček, edited by Marko Posavec
  * @brief Function that iterates through blocks of the two tables and copies the rows which pass the constraint check into the new table
  * @param tbl1_temp_block block of the first table
  * @param tbl2_temp_block block of the second join table
@@ -171,6 +171,7 @@ void AK_check_constraints(AK_block *tbl1_temp_block, AK_block *tbl2_temp_block, 
                 break;
 
             struct list_node *row_comb = (struct list_node *) AK_malloc(sizeof(struct list_node));
+
             AK_Init_L3(&row_comb);
 
             for (tbl1_att = 0; tbl1_att < tbl1_num_att; tbl1_att++) {
