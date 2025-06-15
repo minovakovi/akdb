@@ -31,6 +31,8 @@
  */
 int AK_add_to_redolog(int command, struct list_node *row_root);
 
+void AK_generate_select_query_identifier(const char *srcTable, struct list_node *attributes, struct list_node *condition, char* buffer, size_t buffer_size);
+
 /**
  * @author Danko Bukovac
  * @brief Function that adds a new select to redolog, commented code with the new select from select.c,
@@ -39,12 +41,16 @@ int AK_add_to_redolog(int command, struct list_node *row_root);
  */
 int AK_add_to_redolog_select(int command, struct list_node *condition, char *srcTable);
 
+int AK_add_to_redolog_select_with_result(int command, const char *srcTable, struct list_node *attributes, struct list_node *condition, AK_results *result, const char* query_identifier);
+
 /**
  * @author Danko Bukovac
  * @brief Function that checks redolog for select, works only with selection.c, not select.c
  * @return 0 if select was not found, otherwise 1
  */
 int AK_check_redo_log_select(int command, struct list_node *condition, char *srcTable);
+
+int AK_check_redo_log_select_for_caching(const char *srcTable, struct list_node *attributes, struct list_node *condition, const char* query_identifier, AK_results **out_result, time_t *out_logged_at_timestamp);
 
 /**
  * @author Krunoslav Bilić updated by Dražen Bandić, second update by Tomislav Turek
@@ -62,5 +68,10 @@ void AK_redolog_commit();
  * @return new attribute
  */
 char* AK_check_attributes(char *attributes);
+
+// NOVO: Dodane deklaracije za pomoćne funkcije
+void AK_free_cached_select_result_deep(AK_results* res);
+
+AK_results* AK_create_results_from_table(const char* tableName);
 
 #endif /* REDOLOG */

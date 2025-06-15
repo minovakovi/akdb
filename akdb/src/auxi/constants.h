@@ -25,6 +25,13 @@
  * @brief Constant declaring the maximum length of varchar data value
  */
 #define MAX_VARCHAR_LENGTH 200
+
+/**
+ * @def OPERATION_SELECT
+ * @brief Constant defining the SELECT operation, used for redo_log caching.
+*/
+#define OPERATION_SELECT 3
+
 /**
  * @def MAX_ATTRIBUTES
  * @brief Constant declaring the maximum number of attributes per block

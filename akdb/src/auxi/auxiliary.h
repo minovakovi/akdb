@@ -429,5 +429,7 @@ void AK_leave_critical_section(AK_synchronization_info* info);
 //void AK_copy_L(AK_list *src, AK_list *dest) ;
 //int AK_compare_L(AK_list *srcInput, AK_list *srcOriginal);
 
-
+struct list_node* AK_copy_list_deep(struct list_node *source_head);
+AK_results* AK_create_results_from_table(const char* tableName);
+void AK_free_results_struct(AK_results* res);
 #endif

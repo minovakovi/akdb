@@ -54,14 +54,10 @@ typedef struct {
 } AK_db_cache;
 
 /**
- * Structure that contains all vital information for the command
- * that is about to execute. It is defined by the operation (INSERT,
- * UPDATE, DELETE that are defined inside the const.c file), table
- * where the data is stored, and certain data that will be stored.
- * Updated can be used to save select operation
  * @author Tomislav Turek updated by Danko Bukovac
  * @struct AK_command_recovery_struct
- * @brief recovery structure used to recover commands from binary file
+ * @brief recovery structure used to recover commands from binary file.
+ * Prošireno za potrebe redo_log optimizacije (problem #143).
  */
 typedef struct {
     int operation;
@@ -69,6 +65,12 @@ typedef struct {
     char arguments[MAX_ATTRIBUTES][MAX_VARCHAR_LENGTH];
     char condition[MAX_ATTRIBUTES][MAX_VARCHAR_LENGTH];
     int finished;
+
+    // NOVO: Polja za problem #143 Integrirati redo_log (SELECT optimizacija)
+    AK_results* select_result;
+    time_t logged_at_timestamp;
+    char query_identifier[MAX_VARCHAR_LENGTH * 4]; // Povećan buffer
+
 } AK_command_recovery_struct;
 
 /**
@@ -115,18 +117,24 @@ typedef struct {
 /**
   * @author Mario Novoselec
   * @struct AK_results
-  * @brief Structure used for in-memory result caching
+  * @brief Structure used for in-memory result caching or representing query results.
+  * Prošireno za potrebe redo_log optimizacije (problem #143).
  */
 
-typedef struct{
-	unsigned long result_id;
-	int result_size;
-	char date_created[80];
-	short free;
-	char *source_table;
-	AK_block *result_block;
-	AK_header header[MAX_ATTRIBUTES];
-}AK_results;
+typedef struct AK_results {
+    unsigned long result_id;
+    int result_size;
+    char date_created[80];
+    short free;
+    char *source_table;
+    AK_block *result_block;
+    AK_header header[MAX_ATTRIBUTES];
+
+    // NOVO: Polja za spremanje rezultata kao liste redaka
+    struct list_node *result_rows;
+    int num_rows;
+    int num_cols;
+} AK_results;
 
 /**
   * @author Unknown

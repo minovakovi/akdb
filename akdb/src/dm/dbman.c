@@ -2118,13 +2118,15 @@ AK_init_system_catalog()
     };
 
 
-  AK_header hRelation[5] =
+  AK_header hRelation[6] = // Povećan broj elemenata za jedan
     {
-      { TYPE_INT, "obj_id", { 0 }, { { '\0' } }, { { '\0' } } },
-      { TYPE_VARCHAR, "name", 0, '\0', '\0' },
-      { TYPE_INT, "start_address", 0, '\0', '\0' },
-      { TYPE_INT, "end_address", 0, '\0', '\0' },
-      { 0, '\0', 0, '\0', '\0' }
+      { TYPE_INT,     "obj_id",        {FREE_INT}, { {FREE_CHAR} }, { {FREE_CHAR} } },
+      { TYPE_VARCHAR, "name",          {FREE_INT}, { {FREE_CHAR} }, { {FREE_CHAR} } },
+      { TYPE_INT,     "start_address", {FREE_INT}, { {FREE_CHAR} }, { {FREE_CHAR} } },
+      { TYPE_INT,     "end_address",   {FREE_INT}, { {FREE_CHAR} }, { {FREE_CHAR} } },
+      // NOVO: Polje za timestamp zadnje izmjene tablice
+      { TYPE_INT,     "ts_last_mod",   {FREE_INT}, { {FREE_CHAR} }, { {FREE_CHAR} } }, // Pohranjuje se kao long (TYPE_INT)
+      { TYPE_INTERNAL, "",             {FREE_INT}, { {FREE_CHAR} }, { {FREE_CHAR} } }  // Terminator headera
     };
 
   AK_header hAttribute[5] =

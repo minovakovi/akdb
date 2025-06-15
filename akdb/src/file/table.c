@@ -1559,3 +1559,78 @@ TestResult AK_op_rename_test() {
     }
 
 }
+
+
+// NOVO: Implementacija funkcija za problem #143
+void AK_update_table_timestamp(const char* tableName) {
+    AK_PRO;
+    if (tableName == NULL) {
+        AK_EPI;
+        return;
+    }
+
+    struct list_node *row_update_info = NULL;
+    AK_Init_L3(&row_update_info); 
+
+    AK_Insert_New_Element_For_Update(TYPE_VARCHAR, (void*)tableName, "AK_relation", "name", row_update_info, SEARCH_CONSTRAINT);
+    
+    time_t current_time = time(NULL);
+    long ts_val_long = (long)current_time; 
+
+    AK_Insert_New_Element_For_Update(TYPE_INT, &ts_val_long, "AK_relation", "ts_last_mod", row_update_info, NEW_VALUE);
+
+    AK_update_row(row_update_info); // Greške se ispisuju unutar AK_update_row
+
+    AK_DeleteAll_L3(&row_update_info); 
+    AK_free(row_update_info);          
+    
+    AK_EPI;
+}
+
+time_t AK_get_table_timestamp(const char* tableName) {
+    AK_PRO;
+    if (tableName == NULL) {
+        AK_EPI;
+        return 0;
+    }
+
+    time_t timestamp = 0;
+    int num_records_relation = AK_get_num_records("AK_relation");
+    
+    int name_attr_idx = AK_get_attr_index("AK_relation", "name");
+    int ts_attr_idx = AK_get_attr_index("AK_relation", "ts_last_mod");
+
+    if (name_attr_idx == EXIT_WARNING || ts_attr_idx == EXIT_WARNING) {
+        AK_EPI;
+        return 0;
+    }
+
+    for (int i = 0; i < num_records_relation; ++i) {
+        struct list_node* name_tuple_node = AK_get_tuple(i, name_attr_idx, "AK_relation");
+        
+        if (name_tuple_node && name_tuple_node->data && name_tuple_node->type == TYPE_VARCHAR) {
+            if (strcmp(name_tuple_node->data, tableName) == 0) {
+                AK_DeleteAll_L3(&name_tuple_node);
+                AK_free(name_tuple_node);
+
+                struct list_node* ts_tuple_node = AK_get_tuple(i, ts_attr_idx, "AK_relation");
+                if (ts_tuple_node && ts_tuple_node->data && ts_tuple_node->type == TYPE_INT) {
+                    memcpy(&timestamp, ts_tuple_node->data, sizeof(long)); 
+                }
+                if (ts_tuple_node) { 
+                    AK_DeleteAll_L3(&ts_tuple_node); 
+                    AK_free(ts_tuple_node); 
+                }
+                AK_EPI;
+                return timestamp;
+            }
+        }
+        if (name_tuple_node) { 
+            AK_DeleteAll_L3(&name_tuple_node); 
+            AK_free(name_tuple_node); 
+        }
+    }
+    
+    AK_EPI;
+    return 0;
+}

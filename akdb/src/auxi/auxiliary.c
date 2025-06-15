@@ -1195,3 +1195,114 @@ EXIT_FAILURE;
 
 }
 */
+
+
+/**
+ * Kreira i vraća duboku kopiju proslijeđene list_node liste.
+ * Alocira nove čvorove i kopira sadržaj koristeći postojeće AKDB funkcije.
+ * @param source_head Glava izvorne liste koja se kopira.
+ * @return Pokazivač na glavu nove, kopirane liste, ili NULL u slučaju greške.
+ * Pozivatelj je odgovoran za oslobađanje memorije nove liste.
+ */
+struct list_node* AK_copy_list_deep(struct list_node *source_head) {
+    AK_PRO;
+    if (!source_head) {
+        AK_EPI;
+        return NULL;
+    }
+
+    struct list_node *new_head = NULL;
+    AK_Init_L3(&new_head); // Inicijalizacija nove liste s dummy head čvorom
+
+    struct list_node *current_source = AK_First_L2(source_head);
+
+    while (current_source != NULL) {
+        struct list_node* new_node = AK_InsertAtEnd_L3(current_source->type, current_source->data, current_source->size, new_head);
+        
+        if (new_node) {
+            strncpy(new_node->table, current_source->table, sizeof(new_node->table) - 1);
+            strncpy(new_node->attribute_name, current_source->attribute_name, sizeof(new_node->attribute_name) - 1);
+            new_node->constraint = current_source->constraint;
+        } else {
+             AK_DeleteAll_L3(&new_head);
+             AK_free(new_head);
+             AK_EPI;
+             return NULL;
+        }
+        current_source = AK_Next_L2(current_source);
+    }
+    AK_EPI;
+    return new_head;
+}
+
+/**
+ * Kreira `AK_results` strukturu iz podataka postojeće tablice.
+ * @param tableName Ime tablice iz koje se čitaju podaci.
+ * @return Pokazivač na novoalociranu `AK_results` strukturu, ili NULL u slučaju greške.
+ * Pozivatelj je odgovoran za oslobađanje memorije s `AK_free_results_struct`.
+ */
+AK_results* AK_create_results_from_table(const char* tableName) {
+    AK_PRO;
+    if (!tableName || !AK_table_exist((char*)tableName)) {
+        AK_EPI;
+        return NULL;
+    }
+
+    AK_results* res_struct = (AK_results*)AK_malloc(sizeof(AK_results));
+    if (!res_struct) {
+        AK_EPI; return NULL;
+    }
+    memset(res_struct, 0, sizeof(AK_results));
+
+    res_struct->source_table = AK_strdup(tableName);
+
+    AK_header* header_data = AK_get_header((char*)tableName);
+    if (header_data) {
+        res_struct->num_cols = AK_num_attr((char*)tableName);
+        memcpy(res_struct->header, header_data, sizeof(AK_header) * res_struct->num_cols);
+        if (res_struct->num_cols < MAX_ATTRIBUTES) res_struct->header[res_struct->num_cols].type = TYPE_INTERNAL;
+        AK_free(header_data);
+    } else {
+        res_struct->num_cols = 0;
+    }
+    
+    res_struct->num_rows = AK_get_num_records((char*)tableName);
+    
+    // Dohvaćanje i spajanje svih redaka u jednu dugačku listu ćelija
+    AK_Init_L3(&res_struct->result_rows);
+    for (int i = 0; i < res_struct->num_rows; ++i) {
+        struct list_node* single_row_list = AK_get_row(i, (char*)tableName);
+        if (single_row_list) {
+            struct list_node* cell = AK_First_L2(single_row_list);
+            while(cell) {
+                AK_InsertAtEnd_L3(cell->type, cell->data, cell->size, res_struct->result_rows);
+                cell = AK_Next_L2(cell);
+            }
+            AK_DeleteAll_L3(&single_row_list);
+            AK_free(single_row_list);
+        }
+    }
+
+    AK_EPI;
+    return res_struct;
+}
+
+/**
+ * Oslobađa memoriju zauzetu od strane AK_results strukture.
+ * @param res Pokazivač na AK_results strukturu za oslobađanje.
+ */
+void AK_free_results_struct(AK_results* res) {
+    AK_PRO;
+    if (!res) {
+        AK_EPI; return;
+    }
+    if (res->source_table) {
+        AK_free(res->source_table);
+    }
+    if (res->result_rows) {
+        AK_DeleteAll_L3(&(res->result_rows));
+        AK_free(res->result_rows);
+    }
+    AK_free(res);
+    AK_EPI;
+}

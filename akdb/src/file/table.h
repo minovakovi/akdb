@@ -255,4 +255,8 @@ TestResult AK_table_test() ;
 int AK_rename(char *old_table_name, char *old_attr, char *new_table_name, char *new_attr);
 TestResult AK_op_rename_test() ;
 
+// NOVO: Deklaracije funkcija za problem #143
+void AK_update_table_timestamp(const char* tableName);
+time_t AK_get_table_timestamp(const char* tableName);
+
 #endif
