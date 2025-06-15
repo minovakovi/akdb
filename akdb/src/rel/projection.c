@@ -32,7 +32,7 @@
 void AK_create_block_header(int old_block, char *dstTable, struct list_node *att) {
 
     AK_PRO;	
-	AK_block *temp_block;
+    AK_block *temp_block;
 	
     temp_block = (AK_block *) AK_read_block(old_block);
     AK_header *temp;
@@ -42,61 +42,54 @@ void AK_create_block_header(int old_block, char *dstTable, struct list_node *att
 
     AK_header header[MAX_ATTRIBUTES];
     
-    int head = 0; //counter of the headers
-    int new_head = 0; //counter of the new headers created for the projection table
+    int head = 0;
+    int new_head = 0;
     int a_type;
     int b_type;
     int header_type = NULL;
 
-   
-    //iterates through header attributes and determinates if header already exists, if so copy the header, else create new header
     while (strcmp(temp_block->header[head].att_name, "") != 0) {
-   
-	list_elem = AK_First_L2(att);	
-        while (list_elem != NULL ) {
-            
-            //if header is found than copy header       
-            if (strcmp(list_elem->data, temp_block->header[head].att_name) == 0) {
 
-                memcpy(&header[new_head], &temp_block->header[head], sizeof (temp_block->header[head]));
-           
-                AK_dbg_messg(HIGH, REL_OP, "Copy attribute header: %s\n", header[new_head].att_name);
+        list_elem = AK_First_L2(att);	
+        while (list_elem != NULL) {
+            char *att_name = (char *) list_elem->data;
+
+            if (strcmp(att_name, temp_block->header[head].att_name) == 0) {
+                memcpy(&header[new_head], &temp_block->header[head], sizeof(temp_block->header[head]));
                 new_head++;
-
-            // if header is not found create new header
-            }else if(strstr(list_elem->data,temp_block->header[head].att_name)!=NULL){
-                           
-                char * exp = (char *) malloc(1 + strlen(list_elem->data));
-                strcpy(exp,list_elem->data);
-                AK_remove_substring(exp,temp_block->header[head].att_name);
+            } else if (strstr(att_name, temp_block->header[head].att_name) != NULL) {
+                char *exp = (char *) malloc(1 + strlen(att_name));
+                strcpy(exp, att_name);
+                AK_remove_substring(exp, temp_block->header[head].att_name);
                 int cached_head = head;
 
-                //iterates through given attributes, determinates their type and creates header
-                while(strcmp(temp_block->header[cached_head].att_name,"")!=0){
-                    
-                    if(strstr(exp,temp_block->header[cached_head].att_name)!=NULL){
-                    
-                        int type = AK_determine_header_type(temp_block->header[head].type,temp_block->header[cached_head].type); //finds out type of header that needs to be created                      
-                        temp = (AK_header*) 
-                        AK_create_header(list_elem->data, type, FREE_INT, FREE_CHAR, FREE_CHAR); // crates new header for given attributes
-                        memcpy(&header[new_head], temp, sizeof (AK_header));
+                while (strcmp(temp_block->header[cached_head].att_name, "") != 0) {
+                    if (strstr(exp, temp_block->header[cached_head].att_name) != NULL) {
+                        int type = AK_determine_header_type(temp_block->header[head].type, temp_block->header[cached_head].type);
+
+                        temp = (AK_header*) AK_create_header(att_name, type, FREE_INT, FREE_CHAR, FREE_CHAR);
+                        memcpy(&header[new_head], temp, sizeof(AK_header));
                         new_head++;
                         break;
                     }
                     cached_head++;
                 }
+
+                AK_free(exp);
             }
-          list_elem = list_elem->next;
-            
+
+            list_elem = list_elem->next;
         }
-       
+
         head++;     
     }
-    
-    memset(header + new_head, '\0', MAX_ATTRIBUTES - new_head);
+
+
+    memset(header + new_head, 0, sizeof(AK_header) * (MAX_ATTRIBUTES - new_head));
+    header[new_head].att_name[0] = '\0';
 
     AK_free(temp_block);
-    AK_temp_create_table(dstTable, header, SEGMENT_TYPE_TABLE); // creates new table - destination table with given attributes
+    AK_temp_create_table(dstTable, header, SEGMENT_TYPE_TABLE);
     AK_EPI;
 }
 
@@ -119,7 +112,8 @@ char *AK_get_operator(char *exp){
         return "%";
     else if(strstr(exp,"*"))
         return "*";
-
+    else
+        return NULL;
 }
 
 /**
@@ -150,22 +144,23 @@ void AK_remove_substring(char *s,const char *substring)
     * @return Integer - type
 
 */
-int AK_determine_header_type(int firstOperand,int secondOperand){
-
-    if(firstOperand == TYPE_VARCHAR || secondOperand == TYPE_VARCHAR){
+int AK_determine_header_type(int firstOperand, int secondOperand) {
+    if (firstOperand == TYPE_VARCHAR || secondOperand == TYPE_VARCHAR) {
         return TYPE_VARCHAR;
     }
-    else if(firstOperand == TYPE_NUMBER || secondOperand == TYPE_NUMBER){
-        return TYPE_NUMBER;
-    }
-    else if(firstOperand == TYPE_FLOAT || secondOperand == TYPE_FLOAT){
+    if (firstOperand == TYPE_FLOAT || secondOperand == TYPE_FLOAT) {
         return TYPE_FLOAT;
     }
-    else if(firstOperand == TYPE_INT || secondOperand == TYPE_INT){
+    if (firstOperand == TYPE_INT || secondOperand == TYPE_INT) {
         return TYPE_INT;
     }
+    if (firstOperand == TYPE_NUMBER || secondOperand == TYPE_NUMBER) {
+        return TYPE_NUMBER;
+    }
 
+    return TYPE_INT;
 }
+
 
 /**
     * @author Leon Palaić
@@ -177,14 +172,13 @@ int AK_determine_header_type(int firstOperand,int secondOperand){
     * @return Character - new name
 
 */
-char *AK_create_header_name(char * first,char *second, char * operator){
-    
-    char *name= (char *) malloc(1 + strlen(first)+strlen(operator));
-    strcpy(name,first);
-    strcat(name,operator);
-    char *finalName = (char *) malloc(1 + strlen(name)+strlen(second));
-    strcpy(finalName,name);
-    strcat(finalName,second);
+char *AK_create_header_name(char *first, char *operator, char *second) {
+    size_t len = strlen(first) + strlen(operator) + strlen(second) + 1;
+    char *finalName = (char *) malloc(len);
+
+    strcpy(finalName, first);
+    strcat(finalName, operator);
+    strcat(finalName, second);
     return finalName;
 }
 
@@ -276,27 +270,53 @@ void AK_copy_block_projection(AK_block *old_block, struct list_node *att, char *
                             while(strcmp(old_block->header[cached_head].att_name,"")!=0){
                                 if((strstr(exp,old_block->header[cached_head].att_name)!=NULL)&& (size2 != 0)
                                 && (overflow2 < old_block->AK_free_space + 1) && (overflow2 > -1)){
-                        
-                                memset(second->value, 0, MAX_VARCHAR_LENGTH);
-                                memcpy(second->value, old_block->data + old_block->tuple_dict[j].address, old_block->tuple_dict[j].size);
-                                second->type = old_block->header[cached_head].type;
+                                
+                                    memset(second->value, 0, MAX_VARCHAR_LENGTH);
+                                    memcpy(second->value, old_block->data + old_block->tuple_dict[j].address, old_block->tuple_dict[j].size);
+                                    second->type = old_block->header[cached_head].type;
 
-                                 //returns the second occurrence in data of the given header based on cached_head
-                                int positionSecond = strstr(list_elem->data,old_block->header[cached_head].att_name) - list_elem->data;
-                               
-                                int type = AK_determine_header_type(first->type,second->type); // determinate type of attributes to be in table
+                                    //returns the second occurrence in data of the given header based on cached_head
+                                    int positionSecond = strstr(list_elem->data,old_block->header[cached_head].att_name) - list_elem->data;
+                                    
+                                    int type = AK_determine_header_type(first->type,second->type); // determinate type of attributes to be in table
+                                    
+                                    char *operation_result = NULL;
+                                    void *casted_result = NULL;
 
-                                if(positionSecond < positionFirst)
-                                    //insert element to list to be inserted into new table
-                                    AK_Insert_New_Element(type, AK_perform_operation(AK_get_operator(list_elem->data),second,first,type), dstTable, list_elem->data, row_root);
-                                else
-                                    //insert element to list to be inserted into new table
-                                    AK_Insert_New_Element(type, AK_perform_operation(AK_get_operator(list_elem->data),first,second,type), dstTable, list_elem->data, row_root);
-                                break;
-                        }
-                        cached_head++;
-                        j++;
-                    }
+                                    if (positionSecond < positionFirst) {
+                                        operation_result = AK_perform_operation(AK_get_operator(list_elem->data), second, first, type);
+                                    } else {
+                                        operation_result = AK_perform_operation(AK_get_operator(list_elem->data), first, second, type);
+                                    }
+
+                                    // Pretvori string u binarni tip koji očekuje AK_Insert_New_Element
+                                    if (type == TYPE_INT) {
+                                        int *ival = (int *)AK_malloc(sizeof(int));
+                                        *ival = atoi(operation_result);
+                                        casted_result = ival;
+                                    } else if (type == TYPE_FLOAT) {
+                                        float *fval = (float *)AK_malloc(sizeof(float));
+                                        *fval = atof(operation_result);
+                                        casted_result = fval;
+                                    } else if (type == TYPE_NUMBER) {
+                                        double *dval = (double *)AK_malloc(sizeof(double));
+                                        *dval = atof(operation_result);
+                                        casted_result = dval;
+                                    } else {
+                                        casted_result = strdup(operation_result);
+                                    }
+
+                                    AK_Insert_New_Element(type, casted_result, dstTable, list_elem->data, row_root);
+
+                                    free(operation_result);
+                                    free(casted_result);
+
+                                    break;
+                                }
+                                cached_head++;
+                                j++;
+                            }
+                        free(exp);
                 }                
                 list_elem = list_elem->next;
             }
@@ -338,102 +358,101 @@ void AK_copy_block_projection(AK_block *old_block, struct list_node *att, char *
     * @return character
 
 */
-char *AK_perform_operation(char *op,struct AK_operand *firstOperand, struct AK_operand *secondOperand,int type){
+char *AK_perform_operation(char *op, struct AK_operand *firstOperand, struct AK_operand *secondOperand, int type) {
+    char *result_str = malloc(MAX_VARCHAR_LENGTH);
+    if (!result_str) return NULL;
 
-    char *entry_data_f[MAX_VARCHAR_LENGTH];
-    char *entry_data_i[MAX_VARCHAR_LENGTH];
-    char *entry_data_d[MAX_VARCHAR_LENGTH];
-    void * test;
+    if (type == TYPE_NUMBER) {
+        double a = 0, b = 0, result = 0;
 
-    if(type == TYPE_NUMBER){
-        double a,b,result;
-        if(firstOperand->type == TYPE_NUMBER)
+        if (firstOperand->type == TYPE_NUMBER)
             a = (*(double*)firstOperand->value);
-        if(secondOperand->type == TYPE_NUMBER)
+        else if (firstOperand->type == TYPE_FLOAT)
+            a = (double)(*(float*)firstOperand->value);
+        else if (firstOperand->type == TYPE_INT)
+            a = (double)(*(int*)firstOperand->value);
+
+        if (secondOperand->type == TYPE_NUMBER)
             b = (*(double*)secondOperand->value);
-        if(firstOperand->type == TYPE_FLOAT)
-            a = (*(float*)firstOperand->value);
-        if(secondOperand->type == TYPE_FLOAT)
-            b = (*(float*)secondOperand->value);
-        if(firstOperand->type == TYPE_INT)
-            a = (*(int*)firstOperand->value);
-        if(secondOperand->type == TYPE_INT)
-            b = (*(int*)secondOperand->value);
+        else if (secondOperand->type == TYPE_FLOAT)
+            b = (double)(*(float*)secondOperand->value);
+        else if (secondOperand->type == TYPE_INT)
+            b = (double)(*(int*)secondOperand->value);
 
-        if(strcmp(op, "+")==0)
+        if (strcmp(op, "+") == 0)
             result = a + b;
-        else if(strcmp(op, "-")==0)
+        else if (strcmp(op, "-") == 0)
             result = a - b;
-        else if(strcmp(op, "*")==0)
+        else if (strcmp(op, "*") == 0)
             result = a * b;
-        else if(strcmp(op, "/")==0)
+        else if (strcmp(op, "/") == 0)
             result = a / b;
-        
 
-        sprintf(entry_data_d,"%d",result);
-        test = &result;
+        snprintf(result_str, MAX_VARCHAR_LENGTH, "%f", result);
+
+    } else if (type == TYPE_FLOAT) {
+        float a = 0, b = 0, result = 0;
+
+        if (firstOperand->type == TYPE_NUMBER)
+            a = (float)(*(double*)firstOperand->value);
+        else if (firstOperand->type == TYPE_FLOAT)
+            a = *(float*)firstOperand->value;
+        else if (firstOperand->type == TYPE_INT)
+            a = (float)(*(int*)firstOperand->value);
+
+        if (secondOperand->type == TYPE_NUMBER)
+            b = (float)(*(double*)secondOperand->value);
+        else if (secondOperand->type == TYPE_FLOAT)
+            b = *(float*)secondOperand->value;
+        else if (secondOperand->type == TYPE_INT)
+            b = (float)(*(int*)secondOperand->value);
+
+        if (strcmp(op, "+") == 0)
+            result = a + b;
+        else if (strcmp(op, "-") == 0)
+            result = a - b;
+        else if (strcmp(op, "*") == 0)
+            result = a * b;
+        else if (strcmp(op, "/") == 0)
+            result = a / b;
+
+        snprintf(result_str, MAX_VARCHAR_LENGTH, "%f", result);
+
+    } else if (type == TYPE_INT) {
+        int a = 0, b = 0, result = 0;
+
+        if (firstOperand->type == TYPE_NUMBER)
+            a = (int)(*(double*)firstOperand->value);
+        else if (firstOperand->type == TYPE_FLOAT)
+            a = (int)(*(float*)firstOperand->value);
+        else if (firstOperand->type == TYPE_INT)
+            a = *(int*)firstOperand->value;
+
+        if (secondOperand->type == TYPE_NUMBER)
+            b = (int)(*(double*)secondOperand->value);
+        else if (secondOperand->type == TYPE_FLOAT)
+            b = (int)(*(float*)secondOperand->value);
+        else if (secondOperand->type == TYPE_INT)
+            b = *(int*)secondOperand->value;
+
+        if (strcmp(op, "+") == 0)
+            result = a + b;
+        else if (strcmp(op, "-") == 0)
+            result = a - b;
+        else if (strcmp(op, "*") == 0)
+            result = a * b;
+        else if (strcmp(op, "/") == 0)
+            result = a / b;
+        else if (strcmp(op, "%") == 0)
+            result = a % b;
+
+        snprintf(result_str, MAX_VARCHAR_LENGTH, "%d", result);
+    } else {
+        free(result_str);
+        return NULL;
     }
-    else if(type == TYPE_FLOAT){
-        float a1,b1,result1;
-        if(firstOperand->type == TYPE_NUMBER)
-            a1 = (*(double*)firstOperand->value);
-        if(secondOperand->type == TYPE_NUMBER)
-            b1 = (*(double*)secondOperand->value);
-        if(firstOperand->type == TYPE_FLOAT)
-            a1 = (*(float*)firstOperand->value);
-        if(secondOperand->type == TYPE_FLOAT)
-            b1 = (*(float*)secondOperand->value);
-        if(firstOperand->type == TYPE_INT)
-            a1 = (*(int*)firstOperand->value);
-        if(secondOperand->type == TYPE_INT)
-            b1 = (*(int*)secondOperand->value);
-        
-        if(strcmp(op, "+")==0)
-            result1 = a1 + b1;
-        else if(strcmp(op, "-")==0)
-            result1 = a1 - b1;
-        else if(strcmp(op, "*")==0)
-            result1 = a1 * b1;
-        else if(strcmp(op, "/")==0)
-            result1 = a1 / b1;
-        
 
-        sprintf(entry_data_f,"%f",result1);
-        test = &result1;
-    }
-    else if(type == TYPE_INT){
-        int a2,b2,result2;
-        if(firstOperand->type == TYPE_NUMBER)
-            a2 = (*(double*)firstOperand->value);
-        if(secondOperand->type == TYPE_NUMBER)
-            b2 = (*(double*)secondOperand->value);
-        if(firstOperand->type == TYPE_FLOAT)
-            a2 = (*(float*)firstOperand->value);
-        if(secondOperand->type == TYPE_FLOAT)
-            b2 = (*(float*)secondOperand->value);
-        if(firstOperand->type == TYPE_INT)
-            a2 = (*(int*)firstOperand->value);
-        if(secondOperand->type == TYPE_INT)
-            b2 = (*(int*)secondOperand->value);
-        
-        if(strcmp(op, "+")==0)
-            result2 = a2 + b2;
-        else if(strcmp(op, "-")==0)
-            result2 = a2 - b2;
-        else if(strcmp(op, "*")==0)
-            result2 = a2 * b2;
-        else if(strcmp(op, "/")==0)
-            result2 = a2 / b2;
-        else if(strcmp(op, "%")==0)
-            result2 = a2 % b2;
-
-        sprintf(entry_data_i,"%i",result2);
-        test = &result2;
-
-    }
-   
-    return test;
-    
+    return result_str;
 }
 
 /**
@@ -453,50 +472,50 @@ int AK_projection(char *srcTable, char *dstTable, struct list_node *att, struct 
     AK_PRO;
     table_addresses *src_addr = (table_addresses *) AK_get_table_addresses(srcTable);
 
-    if (src_addr->address_from[0] != 0) {
-        //create new segmenet for the projection table
-        AK_create_block_header(src_addr->address_from[0], dstTable, att);
-
-        AK_dbg_messg(LOW, REL_OP, "TABLE %s CREATED from %s!\n", dstTable, srcTable);
-        AK_dbg_messg(MIDDLE, REL_OP, "\nAK_projection: start copying data\n");
-
-        int startAddress = 0, i = 0, j;
-
-        //for each extent that contains blocks needed for projection
-        for (i = 0; src_addr->address_from[i] != 0; i++) { 
-            startAddress = src_addr->address_from[i];
-
-            if (startAddress != 0) {
-                AK_dbg_messg(MIDDLE, REL_OP, "\nAK_projection: copy extent: %d\n", i);
-
-                //for each block in extent
-                for (j = startAddress; j <= src_addr->address_to[i]; j++) {
-                    AK_mem_block *temp = (AK_mem_block *) AK_get_block(j);
-
-                    if (temp->block->last_tuple_dict_id == 0) { //if empty do not copy
-                        break;
-                    }
-
-                    AK_dbg_messg(MIDDLE, REL_OP, "\nAK_projection: copy block: %d\n", j);
-
-                    //get projection tuples from block
-                    AK_copy_block_projection(temp->block, att, dstTable,expr);
-                }
-            } else break;
-        }
-		
-        AK_free(src_addr);
-        AK_dbg_messg(LOW, REL_OP, "PROJECTION_TEST_SUCCESS\n\n");
-	    AK_EPI;
-        return EXIT_SUCCESS;
-
-    } else { //if there is no data to copy - no projection table
-		AK_free(src_addr);
-        AK_dbg_messg(LOW, REL_OP, "\n AK_projection: Table doesn't exist!");
+    if (!src_addr) {
+        AK_dbg_messg(LOW, REL_OP, "AK_projection: Failed to get table addresses for %s\n", srcTable);
         AK_EPI;
         return EXIT_ERROR;
     }
+
+    if (src_addr->address_from[0] == 0) {
+        AK_dbg_messg(LOW, REL_OP, "\nAK_projection: Table doesn't exist or has no data.\n");
+        AK_free(src_addr);
+        AK_EPI;
+        return EXIT_ERROR;
+    }
+
+    if (!att) {
+        AK_dbg_messg(LOW, REL_OP, "AK_projection: Attribute list is missing.\n");
+        AK_free(src_addr);
+        AK_EPI;
+        return EXIT_ERROR;
+    }
+
+    AK_create_block_header(src_addr->address_from[0], dstTable, att);
+    AK_dbg_messg(LOW, REL_OP, "TABLE %s CREATED from %s!\n", dstTable, srcTable);
+    AK_dbg_messg(MIDDLE, REL_OP, "\nAK_projection: start copying data\n");
+
+    for (int i = 0; src_addr->address_from[i] != 0; i++) {
+        int startAddress = src_addr->address_from[i];
+        AK_dbg_messg(MIDDLE, REL_OP, "\nAK_projection: copy extent: %d\n", i);
+
+        for (int j = startAddress; j <= src_addr->address_to[i]; j++) {
+            AK_mem_block *temp = (AK_mem_block *) AK_get_block(j);
+
+            if (!temp || temp->block->last_tuple_dict_id == 0) {
+                break; // empty or invalid block
+            }
+
+            AK_dbg_messg(MIDDLE, REL_OP, "\nAK_projection: copy block: %d\n", j);
+            AK_copy_block_projection(temp->block, att, dstTable, expr);
+        }
+    }
+
+    AK_free(src_addr);
+    AK_dbg_messg(LOW, REL_OP, "PROJECTION_TEST_SUCCESS\n\n");
     AK_EPI;
+    return EXIT_SUCCESS;
 }
 
 /**
@@ -510,133 +529,119 @@ TestResult AK_op_projection_test() {
     AK_PRO;
     printf("\n********** PROJECTION TEST **********\n\n");
   
+    int success=0;
+    int failed=0;
 
     // Tests projection when is given expresson and operator ILIKE
-    struct list_node * att4 = (struct list_node *) AK_malloc(sizeof(struct list_node));
-    struct list_node * expr4 = (struct list_node *) AK_malloc(sizeof(struct list_node));
-    AK_Init_L3(&att4);   
-    char expression4 []= "%dino%";
+    struct list_node * att1 = (struct list_node *) AK_malloc(sizeof(struct list_node));
+    struct list_node * expr1 = (struct list_node *) AK_malloc(sizeof(struct list_node));
+    AK_Init_L3(&att1);   
+    char expression1 []= "%Dino%";
 
     printf("\nSelect firstname,lastname from student where firstname ILIKE dino\n\n");
 
-    AK_InsertAtEnd_L3(TYPE_ATTRIBS, "firstname", sizeof ("firstname"), expr4);
-    AK_InsertAtEnd_L3(TYPE_VARCHAR, &expression4, sizeof (char), expr4);
-    AK_InsertAtEnd_L3(TYPE_OPERATOR, "ILIKE", sizeof ("ILIKE"), expr4);
-    AK_InsertAtEnd_L3(TYPE_ATTRIBS, "lastname", sizeof ("lastname"), att4);
+    AK_InsertAtEnd_L3(TYPE_ATTRIBS, "firstname", sizeof ("firstname"), expr1);
+    AK_InsertAtEnd_L3(TYPE_VARCHAR, expression1, strlen(expression1)+1, expr1);
+    AK_InsertAtEnd_L3(TYPE_OPERATOR, "ILIKE", sizeof ("ILIKE"), expr1);
+    AK_InsertAtEnd_L3(TYPE_ATTRIBS, "lastname", sizeof ("lastname"), att1);
     
-    int test_projection4 = AK_projection("student", "projection_test4", att4, expr4);
-    AK_print_table("projection_test4");
-    AK_DeleteAll_L3(&att4);
+    int test_projection1 = AK_projection("student", "projection_test1", att1,  expr1);
+    AK_print_table("projection_test1");
+    AK_DeleteAll_L3(&att1);
+    AK_DeleteAll_L3(&expr1);
     
-   
-    struct list_node * att5 = (struct list_node *) AK_malloc(sizeof(struct list_node));
-    struct list_node * expr5 = (struct list_node *) AK_malloc(sizeof(struct list_node));
-    AK_Init_L3(&att5);  
-    char expression5 []= "%(d|i)%";
-
-   
-   
-    AK_DeleteAll_L3(&att5);
-
+    if (test_projection1 == EXIT_SUCCESS){
+		printf("\n\nTest succeeded!\n");
+        success++;
+    }
+    else{
+		printf("\n\nTest failed!\n");
+        failed++;
+    }
 
     // Tests projection to work with given aritmetic operations
 
-    struct list_node * att = (struct list_node *) AK_malloc(sizeof(struct list_node));
-    struct list_node * expr = (struct list_node *) AK_malloc(sizeof(struct list_node));   
-    AK_Init_L3(&att);  
-   
-    printf("\nSelect firstname,lastname,year,weight,weight+year,weight-year,year*year,year-weight,year/weight,year%weight from student\n\n");
+    struct list_node * att2 = (struct list_node *) AK_malloc(sizeof(struct list_node));
+    AK_Init_L3(&att2);  
 
-    AK_InsertAtEnd_L3(TYPE_ATTRIBS, "firstname", sizeof ("firstname"), att);
-    AK_InsertAtEnd_L3(TYPE_ATTRIBS, "lastname", sizeof ("lastname"), att);
-    AK_InsertAtEnd_L3(TYPE_ATTRIBS, "year", sizeof ("year"), att);
-    AK_InsertAtEnd_L3(TYPE_ATTRIBS, "weight", sizeof ("weight"), att);
-    AK_InsertAtEnd_L3(TYPE_ATTRIBS, "weight+year", sizeof("weight+year"),att);
-    AK_InsertAtEnd_L3(TYPE_ATTRIBS, "weight-year", sizeof("weight-year"),att);
-    AK_InsertAtEnd_L3(TYPE_ATTRIBS, "year*year", sizeof("year*year"),att);
-    AK_InsertAtEnd_L3(TYPE_ATTRIBS, "year-weight", sizeof("year-weight"),att);
-    AK_InsertAtEnd_L3(TYPE_ATTRIBS, "year/weight", sizeof("year/weight"),att);
-    AK_InsertAtEnd_L3(TYPE_ATTRIBS, "year%weight", sizeof("year%weight"),att);
-     
-    int test_projection1 = AK_projection("student", "projection_test", att,  NULL);
-    AK_print_table("projection_test");
-    AK_DeleteAll_L3(&att);
+    struct list_node * expr2 = (struct list_node *) AK_malloc(sizeof(struct list_node));   
+    AK_Init_L3(&expr2); 
+
+    printf("\nSelect firstname,lastname,year,weight,weight+year,weight-year,year*year,year-weight,year/weight from student\n\n");
+
+    AK_InsertAtEnd_L3(TYPE_ATTRIBS, "firstname", sizeof ("firstname"), att2);
+    AK_InsertAtEnd_L3(TYPE_ATTRIBS, "lastname", sizeof ("lastname"), att2);
+    AK_InsertAtEnd_L3(TYPE_ATTRIBS, "year", sizeof ("year"), att2);
+    AK_InsertAtEnd_L3(TYPE_ATTRIBS, "weight", sizeof ("weight"), att2);
+    AK_InsertAtEnd_L3(TYPE_ATTRIBS, "weight+year", sizeof("weight+year"),att2);
+    AK_InsertAtEnd_L3(TYPE_ATTRIBS, "weight-year", sizeof("weight-year"),att2);
+    AK_InsertAtEnd_L3(TYPE_ATTRIBS, "year*year", sizeof("year*year"),att2);
+    AK_InsertAtEnd_L3(TYPE_ATTRIBS, "year-weight", sizeof("year-weight"),att2);
+    AK_InsertAtEnd_L3(TYPE_ATTRIBS, "year/weight", sizeof("year/weight"),att2);
+
+    int test_projection2 = AK_projection("student", "projection_test2", att2,  NULL);
+    AK_print_table("projection_test2");
+    AK_DeleteAll_L3(&att2);
+    AK_DeleteAll_L3(&expr2);
+    
+    if (test_projection2 == EXIT_SUCCESS){
+		printf("\n\nTest succeeded!\n");
+        success++;
+    }
+    else{
+		printf("\n\nTest failed!\n");
+        failed++;
+    }
     
     //Tests projection when is given expresson and operator LIKE
 
-    struct list_node * att2 = (struct list_node *) AK_malloc(sizeof(struct list_node));
-    struct list_node * expr2 = (struct list_node *) AK_malloc(sizeof(struct list_node));
-    AK_Init_L3(&att2);   
+    struct list_node * att3 = (struct list_node *) AK_malloc(sizeof(struct list_node));
+    struct list_node * expr3 = (struct list_node *) AK_malloc(sizeof(struct list_node));
+    AK_Init_L3(&att3);   
     char expression []= "%in%";
 
-    printf("\nSelect firstname,lastname from student where firstname LIKE %in%\n\n");
+    printf("\nSelect firstname,lastname from student where firstname LIKE %%in%\n\n");
 
-    AK_InsertAtEnd_L3(TYPE_ATTRIBS, "firstname", sizeof ("firstname"), expr2);
-    AK_InsertAtEnd_L3(TYPE_VARCHAR, &expression, sizeof (char), expr2);
-    AK_InsertAtEnd_L3(TYPE_OPERATOR, "LIKE", sizeof ("LIKE"), expr2);
-    AK_InsertAtEnd_L3(TYPE_ATTRIBS, "lastname", sizeof ("lastname"), att2);  
+    AK_InsertAtEnd_L3(TYPE_ATTRIBS, "firstname", sizeof ("firstname"), expr3);
+    AK_InsertAtEnd_L3(TYPE_VARCHAR, &expression, strlen(expression)+1, expr3);
+    AK_InsertAtEnd_L3(TYPE_OPERATOR, "LIKE", sizeof ("LIKE"), expr3);
+    AK_InsertAtEnd_L3(TYPE_ATTRIBS, "lastname", sizeof ("lastname"), att3);  
     
-    int test_projection2 = AK_projection("student", "projection_test2", att2, expr2);
-    AK_print_table("projection_test2");
-    AK_DeleteAll_L3(&att2);
-
-
-    // Test for usual projection
-
-    struct list_node * att3 = (struct list_node *) AK_malloc(sizeof(struct list_node)); 
-    AK_Init_L3(&att3);   
-    
-    printf("\nSelect firstname,lastname from student \n\n");
-
-    AK_InsertAtEnd_L3(TYPE_ATTRIBS, "firstname", sizeof ("firstname"), att3);
-    AK_InsertAtEnd_L3(TYPE_ATTRIBS, "lastname", sizeof ("lastname"), att3);
-        
-    int test_projection3 = AK_projection("student", "projection_test3", att3, NULL);
+    int test_projection3 = AK_projection("student", "projection_test3", att3, expr3);
     AK_print_table("projection_test3");
     AK_DeleteAll_L3(&att3);
 
-
-	int success=0;
-    int failed=0;
-	if (test_projection1 == EXIT_SUCCESS){
-		printf("\n\nTest succeeded!\n");
-        AK_print_table("projection_test");
-        success++;
+    if (test_projection3 == EXIT_SUCCESS){
+            printf("\n\nTest succeeded!\n");
+            success++;
     }
     else{
 		printf("\n\nTest failed!\n");
         failed++;
     }
 
-    if (test_projection2 == EXIT_SUCCESS){
-		printf("\n\nTest succeeded!\n");
-        AK_print_table("projection_test2");
-        success++;
-    }
-    else{
-		printf("\n\nTest failed!\n");
-        failed++;
-    }
+    // Test for usual projection
+
+    struct list_node * att4 = (struct list_node *) AK_malloc(sizeof(struct list_node)); 
+    AK_Init_L3(&att4);   
     
-	if (test_projection3 == EXIT_SUCCESS){
-		printf("\n\nTest succeeded!\n");
-        AK_print_table("projection_test3");
-        success++;
-    }
-    else{
-		printf("\n\nTest failed!\n");
-        failed++;
-    }
-    if (test_projection4 == EXIT_SUCCESS){
-		printf("\n\nTest succeeded!\n");
-        AK_print_table("projection_test4");
-        success++;
-    }
-    else{
-		printf("\n\nTest failed!\n");
-        failed++;
-    }
+    printf("\nSelect firstname,lastname from student \n\n");
 
+    AK_InsertAtEnd_L3(TYPE_ATTRIBS, "firstname", sizeof ("firstname"), att4);
+    AK_InsertAtEnd_L3(TYPE_ATTRIBS, "lastname", sizeof ("lastname"), att4);
+        
+    int test_projection4 = AK_projection("student", "projection_test4", att4, NULL);
+    AK_print_table("projection_test4");
+    AK_DeleteAll_L3(&att4);
+
+    if (test_projection4 == EXIT_SUCCESS){
+            printf("\n\nTest succeeded!\n");
+            success++;
+    }
+    else{
+		printf("\n\nTest failed!\n");
+        failed++;
+    }
   
     AK_EPI;
     return TEST_result(success,failed);
