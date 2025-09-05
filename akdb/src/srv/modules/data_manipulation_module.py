@@ -268,7 +268,7 @@ class Select_command:
 # @parama expr the expression to be executed
 class Update_command:
 
-    update_command_regex = r"^(?i)update(\s([a-zA-Z0-9_]+))+?$"
+    update_command_regex = r"(?i)^update\s+\w+\s+set\s+.*"
     pattern = None
     matcher = None
 

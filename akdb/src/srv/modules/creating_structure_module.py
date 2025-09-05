@@ -141,7 +141,7 @@ class Create_table_command:
 
 
 class Create_index_command:
-    create_table_regex = r"^(?i)create index(\s([a-zA-Z0-9_]+))+?$"
+    create_table_regex = r"(?i)^create\s+index\s+\w+\s+on\s+\w+\s*\(\s*[\w\s,]+\)(\s+using\s+\w+)?"
     pattern = None
     matcher = None
     expr = None
@@ -250,6 +250,6 @@ class Create_trigger_command:
             AK47.AK_trigger_add(trigger, token.whatOption,
                                 p, table_name, token.functionName)
             result = "Trigger created"
-        except:
+        except Exception as e:
             result = "Error. Creating trigger failed."
         return result

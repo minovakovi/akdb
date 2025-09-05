@@ -1,7 +1,7 @@
 #Class that contains functions for automatic client-server communication testing 
 #Written by : Marko Vertus
 import sys
-import time
+import datetime
 from colors import bcolors
 import datetime
 
@@ -12,27 +12,28 @@ import datetime
 #Test for creating a table
 def CreateTableTest():
     return "create table test(redak varchar(20))"
+    #return "create table test(redak varchar)"
 
 #Test for listing out all the commands currently supported
 def AllCommandsTest():
-    return "\?"
+    return r"\?"
 
 #Test for printing out details on a given table
 def TableDetailsTest():
-    return "\d test"
+    return r"\d test"
 
 #Test for printing out the table
 def PrintTableTest():
-    return "\p test"
+    return r"\p test"
 
 #Test for checking if the table exists or not
 def TableExistsTest():
-    return "\t test?"
+    return r"\t test?"
 
 #Test for creating a new index on a table
 #Currently not really supported/implemented
 def CreateIndexTest():
-    return "create index testniIndex on table test(redak)"
+    return "create index testniIndex on test(redak)"
 
 #Test for creating a new user with a new password
 def CreateUserTest():
