@@ -64,6 +64,10 @@
  * @brief Constant declaring maximum number of child constraints
 */
 #define MAX_CHILD_CONSTRAINTS 20 // how many references can be made on one parent table, this will be deprecated by the use of a list
+
+//void AK_run_all_reference_tests();
+
+
 /**
  * @author Dejan Franković
  * @struct AK_ref_item

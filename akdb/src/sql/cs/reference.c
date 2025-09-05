@@ -18,6 +18,20 @@
  17 */
 
 #include "reference.h"
+#include <string.h>
+
+// Added helper function for pointer party
+struct list_node* AK_nth_next(struct list_node* node, int n) {
+	while (node != NULL && n-- > 0) {
+		node = node->next;
+	}
+	return node;
+}
+
+void safe_string_copy(char *dest, const char *src, size_t size) {
+	strncpy(dest, src, size - 1);
+	dest[size - 1] = '\0';
+}
 
 /**
  * @author Dejan Frankovic
@@ -40,6 +54,10 @@ int AK_add_reference(char *childTable, char *childAttNames[], char *parentTable,
     }
 
     struct list_node *row_root = (struct list_node *) AK_malloc(sizeof (struct list_node));
+    if (!row_root) {
+    	AK_EPI;
+	return 0;
+    }
     AK_Init_L3(&row_root);
 
     for (i = 0; i < attNum; i++) {
@@ -75,14 +93,15 @@ AK_ref_item AK_get_reference(char *tableName, char *constraintName) {
     reference.attributes_number = 0;
 
     while ((list = AK_get_row(i, "AK_reference")) != NULL) {
-        if (strcmp(list->next->data, tableName) == 0 &&
-                strcmp(list->next->next->data, constraintName) == 0) {
-            strcpy(reference.table, tableName);
-            strcpy(reference.constraint, constraintName);
-            strcpy(reference.attributes[reference.attributes_number], list->next->next->next->data);
-            strcpy(reference.parent, list->next->next->next->next->data);
-            strcpy(reference.parent_attributes[reference.attributes_number], list->next->next->next->next->next->data);
-            memcpy(&reference.type, list->next->next->next->next->next->next->data, sizeof (int));
+        if (strncmp(AK_nth_next(list, 1)->data, tableName, MAX_ATT_NAME) == 0 &&
+                strncmp(AK_nth_next(list, 2)->data, constraintName, MAX_ATT_NAME) == 0) {
+            
+	    safe_string_copy(reference.table, tableName, MAX_ATT_NAME);
+	    safe_string_copy(reference.constraint, constraintName, MAX_ATT_NAME);
+            safe_string_copy(reference.attributes[reference.attributes_number], AK_nth_next(list, 3)->data, MAX_ATT_NAME);
+            safe_string_copy(reference.parent, AK_nth_next(list, 4)->data, MAX_ATT_NAME);
+            safe_string_copy(reference.parent_attributes[reference.attributes_number], AK_nth_next(list, 5)->data, MAX_ATT_NAME);
+            memmove(&reference.type, AK_nth_next(list, 6)->data, sizeof (int));
             reference.attributes_number++;
         }
         i++;
@@ -100,28 +119,46 @@ AK_ref_item AK_get_reference(char *tableName, char *constraintName) {
  * @return EXIT ERROR if check failed, EXIT_SUCCESS if referential integrity is ok
  */
 int AK_reference_check_attribute(char *tableName, char *attribute, char *value) {
-    int i;
+    int i = 0;
     int att_index;
 
-    struct list_node *list_row, *list_col;
+    struct list_node *list_row = NULL, *list_col = NULL;
     AK_PRO;
+
     while ((list_row = AK_get_row(i, "AK_reference")) != NULL) {
-        if (strcmp(list_row->next->data, tableName) == 0 &&
-                strcmp(list_row->next->next->next->data, attribute) == 0) {
-            att_index = AK_get_attr_index(list_row->next->next->next->next->data, list_row->next->next->next->next->next->data);
-            list_col = AK_get_column(att_index, list_row->next->next->next->next->data);
-            while (strcmp(list_col->data, value) != 0) {
-                list_col = list_col->next;
-                if (list_col == NULL){
-		    AK_EPI;
-                    return EXIT_ERROR;
-		}
+        if (strncmp(AK_nth_next(list_row, 1)->data, tableName, MAX_ATT_NAME) == 0 &&
+                strncmp(AK_nth_next(list_row, 3)->data, attribute, MAX_ATT_NAME) == 0) {
+            att_index = AK_get_attr_index(AK_nth_next(list_row, 4)->data, AK_nth_next(list_row, 5)->data);
+            if (att_index < 0) {
+                printf("ERROR: Attribute index not found for '%s' in table '%s'\n",
+                       AK_nth_next(list_row, 5)->data, AK_nth_next(list_row, 4)->data);
+                AK_EPI;
+                return EXIT_ERROR;
             }
+            list_col = AK_get_column(att_index, AK_nth_next(list_row, 4)->data);
+            if (list_col == NULL) {
+                printf("ERROR: Could not retrieve column data for table '%s'\n",
+                       AK_nth_next(list_row, 4)->data);
+                AK_EPI;
+                return EXIT_ERROR;
+            }             
+            while (list_col != 0) {
+		if (strncmp(list_col->data, value, MAX_VARCHAR_LENGTH) == 0) {
+			AK_free(list_row);
+			AK_EPI;
+			return EXIT_SUCCESS;
+		}
+                list_col = AK_nth_next(list_col, 1);
+            }
+	    AK_free(list_row);
+	    AK_EPI;
+            return EXIT_ERROR;
         }
+	AK_free(list_row);
         i++;
     }
     AK_EPI;
-    return EXIT_SUCCESS;
+    return EXIT_ERROR;
 }
 
 /**
@@ -140,14 +177,14 @@ int AK_reference_check_if_update_needed(struct list_node *lista, int action) {
     struct list_node *row;
     AK_PRO;
     while ((row = AK_get_row(i, "AK_reference")) != NULL) {
-        if (strcmp(row->next->next->next->next->data, lista->next->table) == 0) {
+        if (strncmp(AK_nth_next(row, 4)->data, AK_nth_next(lista, 1)->table, MAX_ATT_NAME) == 0) {
 	    temp = AK_First_L2(lista);
             while (temp != NULL) {
-                if (action == UPDATE && temp->constraint == 0 && strcmp(row->next->next->next->next->next->data, temp->attribute_name) == 0){
+                if (action == UPDATE && temp->constraint == 0 && strncmp(AK_nth_next(row, 5)->data, temp->attribute_name, MAX_ATT_NAME) == 0){
 		    AK_EPI;
                     return EXIT_SUCCESS;
 		}
-                else if (action == DELETE && strcmp(row->next->next->next->next->next->data, temp->attribute_name) == 0){
+                else if (action == DELETE && strncmp(AK_nth_next(row, 5)->data, temp->attribute_name, MAX_ATT_NAME) == 0){
 		    AK_EPI;
                     return EXIT_SUCCESS;
 		}
@@ -175,15 +212,15 @@ int AK_reference_check_restricion(struct list_node *lista, int action) {
     struct list_node *row;
     AK_PRO;
     while ((row = AK_get_row(i, "AK_reference")) != NULL) {
-        if (strcmp(row->next->next->next->next->data, lista->next->table) == 0) {
+        if (strncmp(AK_nth_next(row, 4)->data, AK_nth_next(lista, 1)->table, MAX_ATT_NAME) == 0) {
 
 	    temp = AK_First_L2(lista);
             while (temp != NULL) {
-                if (action == UPDATE && temp->constraint == 0 && memcmp(row->next->next->next->next->next->data, temp->attribute_name, row->next->next->next->next->next->size) == 0 && (int) * row->next->next->next->next->next->next->data == REF_TYPE_RESTRICT){
+                if (action == UPDATE && temp->constraint == 0 && strncmp(AK_nth_next(row, 5)->data, temp->attribute_name, MAX_ATT_NAME) == 0 && *((int *) AK_nth_next(row, 6)->data) == REF_TYPE_RESTRICT){
 		    AK_EPI;
                     return EXIT_ERROR;
 		}
-                else if (action == DELETE && memcmp(row->next->next->next->next->next->data, temp->attribute_name, row->next->next->next->next->next->size) == 0 && (int) * row->next->next->next->next->next->next->data == REF_TYPE_RESTRICT){
+                else if (action == DELETE && strncmp(AK_nth_next(row, 5)->data, temp->attribute_name, MAX_ATT_NAME) == 0 && *((int *) AK_nth_next(row, 6)->data) == REF_TYPE_RESTRICT){
 		    AK_EPI;
                     return EXIT_ERROR;
 		}
@@ -223,15 +260,15 @@ int AK_reference_update(struct list_node *lista, int action) {
     AK_Init_L3(&row_root);
 
     while ((ref_row = AK_get_row(ref_i, "AK_reference")) != NULL) {
-        if (strcmp(ref_row->next->next->next->next->data, lista->next->table) == 0) { // we're searching for PARENT table here
+        if (strncmp(AK_nth_next(ref_row, 4)->data, AK_nth_next(lista, 1)->table, MAX_ATT_NAME) == 0) { // we're searching for PARENT table here
             for (j = 0; j < con_num; j++) {
-                if (strcmp(constraints[j], ref_row->next->next->data) == 0 && strcmp(child_tables[j], ref_row->next->data) == 0) {
+                if (strncmp(constraints[j], AK_nth_next(ref_row, 2)->data, MAX_ATT_NAME) == 0 && strncmp(child_tables[j], AK_nth_next(ref_row, 1)->data, MAX_ATT_NAME) == 0) {
                     break;
                 }
             }
             if (j == con_num) {
-                strcpy(constraints[con_num], ref_row->next->next->data);
-                strcpy(child_tables[con_num], ref_row->next->data);
+                safe_string_copy(constraints[con_num], AK_nth_next(ref_row, 2)->data, MAX_ATT_NAME);
+                safe_string_copy(child_tables[con_num], AK_nth_next(ref_row, 1)->data, MAX_ATT_NAME);
                 con_num++;
             }
         }
@@ -261,9 +298,9 @@ int AK_reference_update(struct list_node *lista, int action) {
 	AK_InsertAtEnd_L3(TYPE_OPERAND, "AND", 3, expr);
     }
     char tempTable[MAX_ATT_NAME];
-    sprintf(tempTable, "ref_tmp_%s", lista->next->table);
+    sprintf(tempTable, "ref_tmp_%s", AK_nth_next(lista, 1)->table);
     
-    AK_selection(lista->next->table, tempTable, expr);
+    AK_selection(AK_nth_next(lista, 1)->table, tempTable, expr);
     
     AK_DeleteAll_L3(&expr);
 
@@ -279,7 +316,7 @@ int AK_reference_update(struct list_node *lista, int action) {
             for (j = 0; j < reference.attributes_number; j++) {
 		 tempcell = AK_GetNth_L2(AK_get_attr_index(reference.parent, reference.parent_attributes[j]), parent_row); // from the row of parent table, take the value of attribute with name from parent_attribute
 	      
-                memcpy(tempData, tempcell->data, tempcell->size);
+                memmove(tempData, tempcell->data, tempcell->size);
                 tempData[tempcell->size] = '\0';
 
                 AK_Update_Existing_Element(tempcell->type, tempData, reference.table, reference.attributes[j], row_root);
@@ -290,8 +327,8 @@ int AK_reference_update(struct list_node *lista, int action) {
                             
 			    temp = AK_First_L2(lista);
                             while (temp != NULL) {
-                                if (strcmp(temp->attribute_name, reference.parent_attributes[j]) == 0 && temp->constraint == 0) {
-                                    memcpy(tempData, tempcell->data, tempcell->size);
+                                if (strncmp(temp->attribute_name, reference.parent_attributes[j], MAX_ATT_NAME) == 0 && temp->constraint == 0) {
+                                    memmove(tempData, tempcell->data, tempcell->size);
                                     //tempData[tempcell->size] == '\0';
                                     AK_Insert_New_Element(tempcell->type, tempData, reference.table, reference.attributes[j], row_root);
                                     break;
@@ -313,7 +350,7 @@ int AK_reference_update(struct list_node *lista, int action) {
 
 			  temp = AK_First_L2(lista);
                             while (temp != NULL) {
-                                if (strcmp(temp->attribute_name, reference.parent_attributes[j]) == 0 && temp->constraint == 0) {
+                                if (strncmp(temp->attribute_name, reference.parent_attributes[j], MAX_ATT_NAME) == 0 && temp->constraint == 0) {
                                     AK_Insert_New_Element(0, "", reference.table, reference.attributes[j], row_root);
                                     break;
                                 }
@@ -369,26 +406,27 @@ int AK_reference_check_entry(struct list_node *lista) {
 	temp = AK_Next_L2(temp);
     }
 
-    while ((row = AK_get_row(i, "AK_reference")) != NULL) 
-	{
-        if (strcmp(row->next->data, lista->next->table) == 0) 
-		{
-            for (j = 0; j < con_num; j++) 
-			{
-                if (strcmp(constraints[j], row->next->next->data) == 0) 
-				{
+    while ((row = AK_get_row(i, "AK_reference")) != NULL)
+        {
+        if (strncmp(AK_nth_next(row, 1)->data, AK_nth_next(lista, 1)->table, MAX_ATT_NAME) == 0)
+                {
+            for (j = 0; j < con_num; j++)
+                        {
+                if (strncmp(constraints[j], AK_nth_next(row, 2)->data, MAX_ATT_NAME) == 0)
+                                {
                     break;
                 }
             }
-            if (j == con_num) 
-			{
-                strcpy(constraints[con_num], row->next->next->data);
+            if (j == con_num)
+                        {
+                safe_string_copy(constraints[con_num], AK_nth_next(row, 2)->data, MAX_ATT_NAME);
                 con_num++;
             }
         }
         i++;
-		AK_free(row);
+                AK_free(row);
     }
+
 
     if (con_num == 0){
 	AK_EPI;
@@ -396,17 +434,17 @@ int AK_reference_check_entry(struct list_node *lista) {
     }
 
     for (i = 0; i < con_num; i++) { // reference
-        reference = AK_get_reference(lista->next->table, constraints[i]);
+        reference = AK_get_reference(AK_nth_next(lista, 1)->table, constraints[i]);
 
         // fetching relevant attributes from entry list...
         // attributes = AK_malloc(sizeof(char)*MAX_VARCHAR_LENGHT*reference.attributes_number);
         for (j = 0; j < reference.attributes_number; j++) {
-            temp = lista->next;
+            temp = AK_nth_next(lista, 1);
             while (temp != NULL) {
 
-                if (temp->constraint == 0 && strcmp(temp->attribute_name, reference.attributes[j]) == 0) {
-                    strcpy(attributes[j], temp->data);
-                    if (reference.type == REF_TYPE_SET_NULL && strcmp(temp->data, "\0") == 0) //if type is 0, the value is PROBABLY null
+                if (temp->constraint == 0 && strncmp(temp->attribute_name, reference.attributes[j], MAX_ATT_NAME) == 0) {
+                    safe_string_copy(attributes[j], temp->data, MAX_VARCHAR_LENGTH);
+                    if (reference.type == REF_TYPE_SET_NULL && temp->data[0] == '\0') //if type is 0, the value is PROBABLY null
                         is_att_null[j] = 1;
                     else
                         is_att_null[j] = 0;
@@ -431,7 +469,7 @@ int AK_reference_check_entry(struct list_node *lista) {
             for (k = 0; k < reference.attributes_number; k++) { // attributes in reference
 		temp1 = AK_GetNth_L2(AK_get_attr_index(reference.parent, reference.parent_attributes[k]), row);
                 if (temp1 != 0x0) {
-                  if (is_att_null[k] || strcmp(temp1->data, attributes[k]) != 0) {
+                  if (is_att_null[k] || strncmp(temp1->data, attributes[k], MAX_VARCHAR_LENGTH) != 0) {
                       success = 0;
                       break;
                   }
@@ -473,16 +511,16 @@ TestResult AK_reference_test() {
 
     char *att[2];
     att[0] = AK_malloc(sizeof (char) *20);
-    strcpy(att[0], "FK");
+    safe_string_copy(att[0], "FK", MAX_ATT_NAME);
     att[1] = AK_malloc(sizeof (char) *20);
-    strcpy(att[1], "Value");
+    safe_string_copy(att[1], "Value", MAX_ATT_NAME);
 
 
     char *patt[2];
     patt[0] = AK_malloc(sizeof (char) *20);
-    strcpy(patt[0], "mbr");
+    safe_string_copy(patt[0], "mbr", MAX_ATT_NAME);
     patt[1] = AK_malloc(sizeof (char) *20);
-    strcpy(patt[1], "firstname");
+    safe_string_copy(patt[1], "firstname", MAX_ATT_NAME);
 
     AK_add_reference("ref_test", att, "student", patt, 2, "constraint", REF_TYPE_SET_NULL);
     AK_print_table("AK_reference");
@@ -492,7 +530,7 @@ TestResult AK_reference_test() {
     
     struct list_node *row_root = (struct list_node *) AK_malloc(sizeof (struct list_node));
     AK_Init_L3(&row_root);
-    AK_DeleteAll_L3(&row_root);
+    //AK_DeleteAll_L3(&row_root);
     AK_Insert_New_Element(TYPE_INT, &a, "ref_test", "FK", row_root);
     AK_Insert_New_Element(TYPE_VARCHAR, "Dude", "ref_test", "Value", row_root);
     AK_Insert_New_Element(TYPE_VARCHAR, "TheRippah", "ref_test", "Rnd", row_root);
@@ -519,7 +557,238 @@ TestResult AK_reference_test() {
 
     AK_print_table("student");
     AK_print_table("ref_test");
-    AK_EPI;
 
+    // Free dynamically allocated attribute arrays and delete all temporary rows
+    // to ensure memory is properly released after running the reference integrity test.    
+    AK_DeleteAll_L3(&row_root);
+    AK_free(att[0]);
+    AK_free(att[1]);
+    AK_free(patt[0]);
+    AK_free(patt[1]);	
+
+    AK_EPI;
     return TEST_result(0,1);
 }
+
+// ====================== TEST FUNCTIONS =========================
+/**
+
+TestResult test_AK_reference_check_attribute() {
+    AK_PRO;
+    printf("Running test: AK_reference_check_attribute...\n");
+
+    int broj = 35891;
+    AK_Insert_New_Element(TYPE_INT, &broj, "student", "mbr", NULL);
+
+    int result = AK_reference_check_attribute("student", "mbr", "35891");
+    if (result == EXIT_SUCCESS) {
+        printf("Test passed: Value found.\n");
+    } else {
+        printf("Test failed: Value not found (should exist).\n");
+        return TEST_result(1, 1);  // fail
+    }
+
+    result = AK_reference_check_attribute("student", "mbr", "99999");
+    if (result == EXIT_ERROR) {
+        printf("Test passed: Value not found as expected.\n");
+    } else {
+        printf("Test failed: Unexpected success for non-existent value.\n");
+        return TEST_result(1, 1);  // fail
+    }
+
+    AK_EPI;
+    return TEST_result(0, 2); // all passed
+}
+
+
+TestResult test_AK_reference_check_entry() {
+    AK_PRO;
+    printf("Running test: AK_reference_check_entry...\n");
+        
+    char *child_attrs[] = {"FK"};
+    char *parent_attrs[] = {"mbr"};
+    AK_add_reference("ref_test", child_attrs, "student", parent_attrs, 1, "FK_constraint", REF_TYPE_RESTRICT);
+
+    int a = 35891;
+    AK_Insert_New_Element(TYPE_INT, &a, "student", "mbr", NULL);
+
+    struct list_node *row = (struct list_node *) AK_malloc(sizeof(struct list_node));
+    AK_Init_L3(&row);
+
+    AK_Insert_New_Element(TYPE_INT, &a, "ref_test", "FK", row);
+    AK_Insert_New_Element(TYPE_VARCHAR, "Dude", "ref_test", "Value", row);
+    AK_Insert_New_Element(TYPE_VARCHAR, "Something", "ref_test", "Rnd", row);
+
+    int result = AK_reference_check_entry(row);
+    if (result == EXIT_SUCCESS) {
+        printf("Test passed: Referential integrity OK.\n");
+    } else {
+        printf("Test failed: Referential integrity check failed (should pass).\n");
+        return TEST_result(1, 1);
+    }
+    AK_DeleteAll_L3(&row);
+
+    struct list_node *row2 = (struct list_node *) AK_malloc(sizeof(struct list_node));
+    AK_Init_L3(&row2);    
+
+    int wrong = 99999;
+    AK_Insert_New_Element(TYPE_INT, &wrong, "ref_test", "FK", row2);
+    AK_Insert_New_Element(TYPE_VARCHAR, "Wrong", "ref_test", "Value", row2);
+    AK_Insert_New_Element(TYPE_VARCHAR, "Nope", "ref_test", "Rnd", row2);
+
+    result = AK_reference_check_entry(row2);
+    if (result == EXIT_ERROR) {
+        printf("Test passed: Referential integrity violated as expected.\n");
+    } else {
+        printf("Test failed: Referential integrity falsely passed.\n");
+        return TEST_result(1, 1);
+    }
+
+    AK_DeleteAll_L3(&row2);
+    AK_EPI;
+    return TEST_result(0, 2);
+}
+
+TestResult test_AK_reference_check_restriction() {
+    AK_PRO;
+    printf("Running test: AK_reference_check_restriction...\n");
+    
+    char *child_attrs[] = {"FK"};
+    char *parent_attrs[] = {"mbr"};
+    AK_add_reference("ref_test", child_attrs, "student", parent_attrs, 1, "FK_constraint", REF_TYPE_RESTRICT);
+
+    int a = 35891;
+    AK_Insert_New_Element(TYPE_INT, &a, "student", "mbr", NULL);
+    AK_insert_row(NULL);
+    struct list_node *row = (struct list_node *) AK_malloc(sizeof(struct list_node));
+    AK_Init_L3(&row);
+
+    AK_Insert_New_Element(TYPE_INT, &a, "ref_test", "FK", row);
+    AK_Insert_New_Element(TYPE_VARCHAR, "Dude", "ref_test", "Value", row);
+    AK_Insert_New_Element(TYPE_VARCHAR, "X", "ref_test", "Rnd", row);
+    
+    AK_insert_row(row);
+
+    int result = AK_reference_check_restricion(row, DELETE);
+    if (result == EXIT_ERROR) {
+        printf("Test passed: DELETE restriction correctly detected.\n");
+    } else {
+        printf("Test failed: DELETE restriction not detected.\n");
+        return TEST_result(1, 1);
+    }
+
+    result = AK_reference_check_restricion(row, UPDATE);
+    if (result == EXIT_ERROR || result == EXIT_SUCCESS) {
+        printf("Test passed: UPDATE restriction checked without crash.\n");
+    } else {
+        printf("Test failed: Unexpected result for UPDATE.\n");
+        return TEST_result(1, 1);
+    }
+
+    AK_DeleteAll_L3(&row);
+    AK_EPI;
+    return TEST_result(0, 2);
+}
+
+TestResult test_AK_reference_check_if_update_needed() {
+    AK_PRO;
+    printf("Running test: AK_reference_check_if_update_needed...\n");
+    
+    char *child_attrs[] = {"FK"};
+    char *parent_attrs[] = {"mbr"};
+    AK_add_reference("ref_test", child_attrs, "student", parent_attrs, 1, "FK_constraint", REF_TYPE_RESTRICT);
+
+    int a = 35891;
+    AK_Insert_New_Element(TYPE_INT, &a, "student", "mbr", NULL);
+    
+    struct list_node *row = (struct list_node *) AK_malloc(sizeof(struct list_node));
+    AK_Init_L3(&row);
+    row->constraint = 1;
+    AK_Insert_New_Element(TYPE_INT, &a, "ref_test", "FK", row); 
+    AK_Insert_New_Element(TYPE_VARCHAR, "Dude", "ref_test", "Value", row);
+    AK_Insert_New_Element(TYPE_VARCHAR, "Test", "ref_test", "Rnd", row);
+
+    int result = AK_reference_check_if_update_needed(row, UPDATE);
+
+    if (result == EXIT_SUCCESS || result == EXIT_ERROR) {
+        printf("Test passed: update check completed (result = %d)\n", result);
+    } else {
+        printf("Test failed: Unexpected result (%d)\n", result);
+        return TEST_result(1, 1);
+    }
+
+    AK_DeleteAll_L3(&row);
+    AK_EPI;
+    return TEST_result(0, 1);
+}
+
+
+TestResult test_AK_reference_update() {
+    AK_PRO;
+    printf("Running test: AK_reference_update...\n");
+   
+    char *child_attrs[] = {"FK"};
+    char *parent_attrs[] = {"mbr"};
+    AK_add_reference("ref_test", child_attrs, "student", parent_attrs, 1, "FK_constraint", REF_TYPE_RESTRICT);
+
+    int a = 1;
+    AK_Insert_New_Element(TYPE_INT, &a, "parent", "id", NULL);
+
+    struct list_node *lista = AK_malloc(sizeof(struct list_node));
+    AK_Init_L3(&lista);
+    AK_Insert_New_Element(TYPE_INT, &a, "ref_test", "FK", lista);
+    lista->constraint = 0;
+
+    int result = AK_reference_update(lista, UPDATE);
+
+    AK_DeleteAll_L3(&lista);
+
+    if (result == EXIT_SUCCESS) {
+        printf("Test passed: AK_reference_update returned EXIT_SUCCESS.\n");
+    } else {
+        printf("Test failed: AK_reference_update returned %d.\n", result);
+    }
+
+    AK_EPI;
+    return TEST_result(result == EXIT_SUCCESS, 1);
+}
+
+
+TestResult test_AK_get_reference() {
+    AK_PRO;
+    printf("Running test: AK_get_reference...\n");
+
+    char *child_attrs[] = {"FK"};
+    char *parent_attrs[] = {"mbr"};
+    AK_add_reference("ref_test", child_attrs, "student", parent_attrs, 1, "FK_constraint", REF_TYPE_RESTRICT);
+
+
+    AK_ref_item ref = AK_get_reference("ref_test", "constraint");
+
+    int valid = (strncmp(ref.table, "ref_test", MAX_ATT_NAME) == 0) &&
+                (strncmp(ref.constraint, "constraint", MAX_ATT_NAME) == 0) &&
+                (ref.attributes_number > 0);
+
+    if (valid) {
+        printf("Test passed: AK_get_reference returned valid structure.\n");
+    } else {
+        printf("Test failed: Invalid reference structure.\n");
+    }
+
+    AK_EPI;
+    return TEST_result(valid, 1);
+}
+
+
+void AK_run_all_reference_tests() {
+   // test_AK_reference_check_if_update_needed();
+   // test_AK_reference_check_restriction();
+    test_AK_reference_check_entry();
+    test_AK_reference_check_attribute();
+    test_AK_get_reference();
+    test_AK_reference_update();
+}
+**/
+
+
+

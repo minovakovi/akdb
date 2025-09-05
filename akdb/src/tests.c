@@ -136,6 +136,7 @@ Test tests[] = {
 {"sql: AK_unique", &AK_unique_test}, //sql/cs/unique.c //old 44, new 46
 {"sql: AK_function", &AK_function_test}, //sql/function.c //old 45, new 47
 {"sql: AK_privileges", &AK_privileges_test}, //sql/privileges.c
+//{"sql: AK_reference_all", &AK_run_all_reference_tests},
 {"sql: AK_reference", &AK_reference_test}, //sql/cs/reference.c //old 47, new 49
 {"sql: AK_constraint_between", &AK_constraint_between_test}, //sql/cs/between.c
 {"sql: AK_check_constraint", &AK_check_constraint_test}, //sql/cs/check_constraint.c //old 49, new 51

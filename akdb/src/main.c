@@ -35,11 +35,14 @@
 //Other
 #include "rec/redo_log.h"
 #include "projectDetails.h"
-
+//#include "sql/cs/reference.h"
 /**
 Main program function
 @return EXIT_SUCCESS if successful, EXIT_ERROR otherwise
 */
+
+
+
 int main(int argc, char * argv[])
 {
     /*FILE *archiveLog;
@@ -127,9 +130,11 @@ int main(int argc, char * argv[])
     	AK_EPI;
         return ( EXIT_ERROR );
     }
+
+
     // delete critical sections
     AK_destroy_critical_section(dbmanFileLock.ptr);
     AK_EPI;
-    return(EXIT_SUCCESS);
+    return(EXIT_SUCCESS); 
 }
 
