@@ -19,7 +19,7 @@ def getcommentsFiles():
     """
     with open("files.txt", "r") as fi:
         for f in fi:
-            if f.rstrip().endswith(tuple("py")):
+            if f.rstrip().endswith(".py"):
                 pyFiles.append(f.rstrip()[2:])
             else:
                 cFiles.append(f.rstrip()[2:])
@@ -38,13 +38,13 @@ def detectLanguage():
         lineNum = 1
         for line in f:
             lineNum += 1
-            if len(line) < 10 or "author" in line:
-                pass
-            else:
-                try:
-                    if detect(line.encode('utf-8')) == 'hr' or detect(line.encode('utf-8')) == 'sl':
-                        failed.append(line)
-                except:
+            if len(line) < 10 or "author" in line.lower():
+                continue
+            try:
+                lang=detect(line)
+                if lang in ('hr', 'sl'):
+                    failed.append(line)
+            except Exception:
                     pass
 
     print("Found " + str(len(failed)) + " suspicious comments: ")
