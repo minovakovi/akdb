@@ -250,6 +250,6 @@ class Create_trigger_command:
             AK47.AK_trigger_add(trigger, token.whatOption,
                                 p, table_name, token.functionName)
             result = "Trigger created"
-        except:
+        except Exception as e:
             result = "Error. Creating trigger failed."
         return result
