@@ -25,6 +25,7 @@
 //      header
 #include "dbman.h"
 #include "../mm/memoman.h"
+#include <stdbool.h> 
 pthread_mutex_t fileLockMutex = PTHREAD_MUTEX_INITIALIZER;
 
 PtrContainer db;
@@ -1008,7 +1009,7 @@ AK_read_block(int address)
 {
   AK_PRO;
   //TODO: line 999 needs variable names
-  int true = 1, false = 0;
+  //int true = 1, false = 0
   int locked_for_writing, locked_for_reading;
   int thread_id;
     
@@ -1118,7 +1119,6 @@ AK_write_block(AK_block * block)
 {
   AK_PRO;
   //TODO: line 1107 needs variable names
-  int true = 1, false = 0;
   int locked_for_reading = false, locked_for_writing = false, address;
   int thread_id;
 
@@ -2712,9 +2712,17 @@ TestResult AK_allocationbit_test()
 		}
 	}
 	printf("\n");
+  
 	if(failed==0)
-		printf("All bit values O.K.\n");
-	
+    printf("TEST PASSED: All checks successful.\n");
+else
+    printf("Found %d error(s) in bit values.\n", failed);
+    printf("TEST FAILED: %d issue(s) detected.\n", failed);
+
+int total = success + failed;
+float percentage = (total > 0) ? ((float)success / total) * 100.0f : 0.0f;
+printf("TEST RESULT: %d/%d successful (%.2f%%)\n", success, total, percentage);
+
     AK_EPI;
     return TEST_result(success,failed);
 }
@@ -2722,21 +2730,30 @@ TestResult AK_allocationbit_test()
 TestResult AK_allocationtable_test()
 {
     AK_PRO;
-    int success=0;
-    int failed=0;
-    int result=AK_allocationtable_dump(1);
-    AK_EPI;
-    if(result==EXIT_ERROR)
+    int success = 0;
+    int failed = 0;
+    int result = AK_allocationtable_dump(1);
+
+    if (result == EXIT_ERROR)
     {
-      failed++;
+        failed++;
+        printf("TEST FAILED: Error in allocation table.\n");
     }
     else
     {
-      success++;
+        success++;
+        printf("TEST PASSED: Allocation table is valid.\n");
     }
-    
-    return TEST_result(success,failed);
+
+    // Added percentage calculation
+    int total = success + failed;
+    float percentage = (total > 0) ? ((float)success / total) * 100.0f : 0.0f;
+    printf("TEST RESULT: %d/%d successful (%.2f%%)\n", success, total, percentage);
+
+    AK_EPI;
+    return TEST_result(success, failed);
 }
+
 
 /**
  * @author Domagoj Šitum
@@ -2745,83 +2762,89 @@ TestResult AK_allocationtable_test()
  * Each reading thread should read
  * the data (character) that was set by last writing thread
  */
-TestResult AK_thread_safe_block_access_test()
-{
-  int i, j, sum_of_suceeded_tests = 0;
-  int block_address = 0;
-  //Error: expected an identifier
-  int true = 1, false = 0;
-  AK_block *backup_block = (AK_block *) AK_malloc(sizeof(AK_block));
-  AK_block *block;
-  pthread_t *threads;
-  AK_PRO;
-    
-  srand(time(NULL));
-    
-  printf("N reading threads + N writing threads are trying to read/write "
-	 "to the same block. Result is printed to the screen.\n\n");
-    
-  // first we have to read original value of the first block
-  // (so that we can save it somewhere and restore it after the whole operation is over)
-  block = AK_read_block(block_address);
-    
-  // we have to backup that first block, because we will make changes to it
-  // (explanation of the text above)
-  memcpy((void *)backup_block, (void *)block, sizeof(AK_block));
-    
-  for (j=1; j<=50; j++)
-    {
-      printf("%d+%d threads: ", j, j);
-        
-      // we read first block of actual data (after allocation bit-vector)
-      block = AK_read_block(block_address);
-        
-      testMode = TEST_MODE_ON;
-        
-      // then we create j reading and j writing threads
-      threads = (pthread_t *) AK_malloc(2 * j * sizeof(pthread_t));
-
-      // and send them to read and write to the same block (block with index 0)
-      for (i = 0; i < j; i++)
-	{
-	  pthread_create(&threads[2*i], NULL, AK_write_block_for_testing, (void *)block);
-	  pthread_create(&threads[2*i+1], NULL, AK_read_block_for_testing, (void *)&block_address);
-        }
-        
-      // and then, we just have to wait all threads to finish
-      for (i = 0; i < 2*j; i++) 
-	pthread_join(threads[i],NULL);
-        
-      testMode = TEST_MODE_OFF;
-        
-      AK_free((void*)threads);
-        
-      // and at the end of each iteration,
-      // we check if thread safe block access (reading/writing) succeeded.
-      // if it failed, we count it
-      if (test_threadSafeBlockAccessSucceeded == true)
-	{
-	  printf("Success\n");
-	  sum_of_suceeded_tests++;
-        }
-      else
-	{
-	  printf("Failed\n");
-        }
-    
-      test_lastCharacterWritten = '\0';
-      test_threadSafeBlockAccessSucceeded = true;
-    }
-    
-  // and at the end, we write backup block back to the file
-  AK_write_block(backup_block);
-  AK_free((void*)backup_block);
-    
-  printf("\n%d out of 50 tests succeeded.", sum_of_suceeded_tests);
-    
-  AK_EPI;
-  return TEST_result(sum_of_suceeded_tests,50-sum_of_suceeded_tests);
-}
+ TestResult AK_thread_safe_block_access_test()
+ {
+   int i, j, sum_of_suceeded_tests = 0;
+   int block_address = 0;
+   //Error: expected an identifier
+   //int true = 1, false = 0;
+   AK_block *backup_block = (AK_block *) AK_malloc(sizeof(AK_block));
+   AK_block *block;
+   pthread_t *threads;
+   AK_PRO;
+     
+   srand(time(NULL));
+     
+   printf("N reading threads + N writing threads are trying to read/write "
+    "to the same block. Result is printed to the screen.\n\n");
+     
+   // first we have to read original value of the first block
+   // (so that we can save it somewhere and restore it after the whole operation is over)
+   block = AK_read_block(block_address);
+     
+   // we have to backup that first block, because we will make changes to it
+   // (explanation of the text above)
+   memcpy((void *)backup_block, (void *)block, sizeof(AK_block));
+     
+   for (j=1; j<=50; j++)
+     {
+       printf("%d+%d threads: ", j, j);
+         
+       // we read first block of actual data (after allocation bit-vector)
+       block = AK_read_block(block_address);
+         
+       testMode = TEST_MODE_ON;
+         
+       // then we create j reading and j writing threads
+       threads = (pthread_t *) AK_malloc(2 * j * sizeof(pthread_t));
+ 
+       // and send them to read and write to the same block (block with index 0)
+       for (i = 0; i < j; i++)
+   {
+     pthread_create(&threads[2*i], NULL, AK_write_block_for_testing, (void *)block);
+     pthread_create(&threads[2*i+1], NULL, AK_read_block_for_testing, (void *)&block_address);
+         }
+         
+       // and then, we just have to wait all threads to finish
+       for (i = 0; i < 2*j; i++) 
+   pthread_join(threads[i],NULL);
+         
+       testMode = TEST_MODE_OFF;
+         
+       AK_free((void*)threads);
+         
+       // and at the end of each iteration,
+       // we check if thread safe block access (reading/writing) succeeded.
+       // if it failed, we count it
+       if (test_threadSafeBlockAccessSucceeded == true)
+   {
+     printf("Success\n");
+     sum_of_suceeded_tests++;
+         }
+       else
+   {
+     printf("Failed\n");
+         }
+     
+       test_lastCharacterWritten = '\0';
+       test_threadSafeBlockAccessSucceeded = true;
+     }
+     
+   // and at the end, we write backup block back to the file
+   AK_write_block(backup_block);
+   AK_free((void*)backup_block);
+ 
+   // Added clear test outcome report
+   printf("\n%d out of 50 tests succeeded.\n", sum_of_suceeded_tests);
+   float percentage = (50 > 0) ? ((float)sum_of_suceeded_tests / 50.0f) * 100.0f : 0.0f;
+   if (sum_of_suceeded_tests == 50)
+     printf("TEST PASSED: All thread-safe block access tests successful (%.2f%%).\n", percentage);
+   else
+     printf("TEST FAILED: %d issue(s) detected (%.2f%% success).\n", 50 - sum_of_suceeded_tests, percentage);
+ 
+   AK_EPI;
+   return TEST_result(sum_of_suceeded_tests, 50 - sum_of_suceeded_tests);
+ }
 
 
 /**
